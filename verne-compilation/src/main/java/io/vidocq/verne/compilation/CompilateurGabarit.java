@@ -48,11 +48,22 @@ final class CompilateurGabarit {
         try {
             analyser();
             var instructions = new ArrayList<String>();
-            String resultat = "$verneResultat";
-            while (parametres.containsKey(resultat)) resultat += "_";
+            var valeurs = new ArrayList<String>();
+            var longueurs = new ArrayList<String>();
+            int longueurStatique = parties.stream().filter(partie -> !partie.interpolation())
+                    .mapToInt(partie -> partie.contenu().length()).sum();
+            boolean grandDocument = longueurStatique >= 4_000;
+            String resultat = nomLibre("$verneResultat");
             for (Partie partie : parties) {
                 if (partie.interpolation()) {
-                    instructions.add(resultat + ".append(" + resoudre(partie) + ");\n");
+                    String expression = resoudre(partie);
+                    if (grandDocument) {
+                        String valeur = nomLibre("$verneValeur" + valeurs.size());
+                        valeurs.add("var " + valeur + " = valueOf(" + expression + ");\n");
+                        longueurs.add(valeur + ".length()");
+                        expression = valeur;
+                    }
+                    instructions.add(resultat + ".append(" + expression + ");\n");
                 } else {
                     String contenu = partie.contenu();
                     for (int debut = 0; debut < contenu.length();) {
@@ -68,6 +79,7 @@ final class CompilateurGabarit {
             try (var sortie = source.openWriter()) {
                 sortie.write("package io.vidocq.verne.genere;\n"
                         + "import static java.util.Objects.requireNonNull;\n"
+                        + (grandDocument ? "import static java.lang.String.valueOf;\nimport static java.lang.Math.min;\n" : "")
                         + "/** Gabarit textuel compilé, sans analyse à la demande. */\n"
                         + "public final class " + classe + " {\nprivate " + classe + "() {}\n");
                 sortie.write("/** Produit le document texte ; aucun état partagé entre appels.\n");
@@ -86,13 +98,24 @@ final class CompilateurGabarit {
                     sortie.write("requireNonNull(" + parametre.nom()
                             + ", \"VERNE-REN-001 : paramètre obligatoire nul.\");\n");
                 }
-                sortie.write("var " + resultat + " = new java.lang.StringBuilder();\n");
+                for (String valeur : valeurs) sortie.write(valeur);
+                String capacite = grandDocument
+                        ? "(int) min(2_147_483_647L, " + longueurStatique + "L"
+                            + (longueurs.isEmpty() ? "" : " + " + String.join(" + ", longueurs)) + ")"
+                        : "";
+                sortie.write("var " + resultat + " = new java.lang.StringBuilder(" + capacite + ");\n");
                 for (String instruction : instructions) sortie.write(instruction);
                 sortie.write("return " + resultat + ".toString();\n}\n}\n");
             }
         } catch (Refus refus) {
             environnement.getMessager().printMessage(Diagnostic.Kind.ERROR, refus.getMessage());
         }
+    }
+
+    /** Les deux familles de variables locales restent distinctes et évitent tous les paramètres. */
+    private String nomLibre(String nom) {
+        while (parametres.containsKey(nom)) nom += "_";
+        return nom;
     }
 
     /** Reconnaît uniquement les directives du sous-ensemble annoncé ; les autres sont refusées. */

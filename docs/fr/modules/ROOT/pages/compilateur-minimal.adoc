@@ -121,6 +121,14 @@ Le texte est fractionné en fragments d'au plus 4 000 unités UTF-16, sans scind
 Cette borne évite de dépasser la taille d'une constante de classe Java, même avec des caractères dont l'encodage modifié nécessite plusieurs octets.
 Le contrat n'inclut pas encore une sortie en flux, un plafond de caractères rendus ou un rendu asynchrone.
 
+=== Préparation du tampon des grands documents
+
+À partir de 4 000 unités UTF-16 de texte statique rendu, la génération prépare la capacité du tampon à partir du texte et des valeurs interpolées. Les déclarations et commentaires retirés ne participent pas à cette longueur.
+Chaque interpolation est évaluée une seule fois, dans l'ordre du gabarit, après le contrôle des paramètres obligatoires. Sa représentation textuelle est conservée dans une variable locale avant l'assemblage ; les primitives gardent la représentation de leur ajout au tampon Java.
+Les chaînes vides, les diagnostics de nullité et le découpage des constantes restent inchangés. Les noms locaux évitent ceux de tous les paramètres. Aucun état partagé, dépendance tierce ou second appel d'accesseur n'est introduit.
+La somme des longueurs est calculée en `long`, puis saturée à la capacité entière maximale du tampon pour éviter un débordement arithmétique. Ce calcul n'ajoute pas de limite de rendu ; une allocation impossible reste soumise aux erreurs de ressources de la JVM.
+Les documents plus petits conservent leur stratégie d'assemblage. Le contrôle d'allocations de vérification utilise `jdk.management` uniquement dans son application de test : sur le JDK 25 de référence, le rendu d'un bloc ASCII de 65 536 caractères suivi d'une valeur Unicode doit allouer moins de sept octets par caractère statique après échauffement. Ce budget ciblé n'est pas une garantie globale de mémoire ni un seuil de temps d'exécution.
+
 === Nombre d'interpolations
 
 Chaque gabarit accepte au plus 1 024 occurrences d'interpolation, borne incluse. Répéter la même expression compte à chaque occurrence ; les déclarations, commentaires et délimiteurs échappés ne comptent pas.
@@ -210,8 +218,8 @@ Les limites de taille de méthode, de profondeur des navigations, de déclaratio
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 22 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
-Les essais Linux, les mesures JMH, les charges concurrentes, les versions de dépendances alternatives et le raccordement à Vidocq restent à réaliser.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 28 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations et grands documents ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
 
@@ -219,7 +227,8 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
-Résultat sur Mac : 64 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
+Résultat sur Mac : 70 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -233,5 +242,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`RacinesEtLiensGabaritsTest` |9 |0 |0 |0
 |`NombreGabaritsTest` |4 |0 |0 |0
 |`NombreInterpolationsTest` |5 |0 |0 |0
-|Total |64 |0 |0 |0
+|`GrandsDocumentsTest` |6 |0 |0 |0
+|Total |70 |0 |0 |0
 |===
