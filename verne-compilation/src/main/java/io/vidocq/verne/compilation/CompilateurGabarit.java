@@ -21,6 +21,7 @@ import javax.tools.Diagnostic;
  * Les symboles proviennent du compilateur Java ; aucune classe métier n'est chargée.
  */
 final class CompilateurGabarit {
+    private static final int NOMBRE_MAXIMAL_INTERPOLATIONS = 1_024;
     private final ProcessingEnvironment environnement;
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
     private final List<Partie> parties = new ArrayList<>();
@@ -96,6 +97,7 @@ final class CompilateurGabarit {
 
     /** Reconnaît uniquement les directives du sous-ensemble annoncé ; les autres sont refusées. */
     private void analyser() {
+        int nombreInterpolations = 0;
         var fragment = new StringBuilder();
         for (int position = 0; position < texte.length();) {
             char caractere = texte.charAt(position);
@@ -120,6 +122,9 @@ final class CompilateurGabarit {
                     else {
                         if (!nomQualifie(contenu)) {
                             refuser("VERNE-SYN-002", position, "expression ou directive non prise en charge.");
+                        }
+                        if (++nombreInterpolations > NOMBRE_MAXIMAL_INTERPOLATIONS) {
+                            refuser("VERNE-LIM-003", position, "plus de 1 024 interpolations dans un gabarit.");
                         }
                         parties.add(new Partie(contenu, true, position));
                     }

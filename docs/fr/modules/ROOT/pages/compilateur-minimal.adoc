@@ -121,6 +121,13 @@ Le texte est fractionné en fragments d'au plus 4 000 unités UTF-16, sans scind
 Cette borne évite de dépasser la taille d'une constante de classe Java, même avec des caractères dont l'encodage modifié nécessite plusieurs octets.
 Le contrat n'inclut pas encore une sortie en flux, un plafond de caractères rendus ou un rendu asynchrone.
 
+=== Nombre d'interpolations
+
+Chaque gabarit accepte au plus 1 024 occurrences d'interpolation, borne incluse. Répéter la même expression compte à chaque occurrence ; les déclarations, commentaires et délimiteurs échappés ne comptent pas.
+Le compteur appartient à l'analyse du fichier courant et repart de zéro pour chaque gabarit, sans état partagé entre compilations ni modification du rendu dans la borne.
+La 1 025e interpolation syntaxiquement admissible provoque `VERNE-LIM-003`, positionné sur son accolade ouvrante selon les règles de ligne et colonne existantes. L'analyse du fichier s'arrête avant résolution des expressions et avant ouverture de sa source générée ; les autres fichiers restent vérifiés.
+Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux supplémentaire n'est ouvert. Cette première borne limite le nombre d'interpolations conservées, sans garantir la taille de la méthode Java générée ni borner la profondeur des navigations, le nombre de déclarations ou le volume total de texte.
+
 == Diagnostics livrés
 
 [cols="1,3",options="header"]
@@ -131,6 +138,7 @@ Le contrat n'inclut pas encore une sortie en flux, un plafond de caractères ren
 |`VERNE-LIA-001` |Nom de gabarit inadmissible ou collision de classe générée
 |`VERNE-LIM-001` |Source supérieure à un mébioctet
 |`VERNE-LIM-002` |Plus de 1 024 ressources de gabarits dans une compilation
+|`VERNE-LIM-003` |Plus de 1 024 interpolations dans un gabarit
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
 |`VERNE-SYN-001` |Interpolation, déclaration ou commentaire non fermé
 |`VERNE-SYN-002` |Syntaxe, directive, identifiant ou échappement non pris en charge
@@ -192,10 +200,17 @@ Avant correction, le dépassement n'était pas détecté : les gabarits invalide
 Après limitation de l'inventaire à 1 025 entrées et contrôle avant génération, la vérification complète réussit avec 59 tests sur Mac. Le dépassement produit le diagnostic attendu, sans analyse des expressions ni source générée.
 Cette preuve ne valide pas les budgets de volume total, de diagnostics, de taille de méthode ou de rendu, et n'établit aucune performance.
 
+== Première borne du nombre d'interpolations
+
+Les cinq tests de `NombreInterpolationsTest` couvrent 1 023 et 1 024 interpolations avec rendu exact, le dépassement à 1 025 après CRLF et emoji, l'exclusion des commentaires, déclarations et délimiteurs échappés, ainsi que deux gabarits atteignant chacun la borne.
+Avant correction, le cas de dépassement échouait parce que la compilation réussissait et produisait une source Java, sans `VERNE-LIM-003` ni position Verne ; les quatre autres tests réussissaient déjà.
+Après ajout du contrôle dans l'analyseur, les 64 tests réussissent sur Mac. Le dépassement est signalé à `bonjour.verne:2:2`, sans génération pour ce fichier ni modification des rendus acceptés.
+Les limites de taille de méthode, de profondeur des navigations, de déclarations et de volume total restent distinctes et ne sont pas validées par ces tests.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 17 nouveaux tests de noms, racines, liens symboliques et nombre de gabarits ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 22 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les mesures JMH, les charges concurrentes, les versions de dépendances alternatives et le raccordement à Vidocq restent à réaliser.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -203,8 +218,8 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 == Vérification finale observée
 
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
-Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques et nombre de gabarits ; les rapports Surefire XML ont été contrôlés.
-Résultat sur Mac : 59 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
+Résultat sur Mac : 64 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -217,5 +232,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`PortabiliteGabaritsTest` |4 |0 |0 |0
 |`RacinesEtLiensGabaritsTest` |9 |0 |0 |0
 |`NombreGabaritsTest` |4 |0 |0 |0
-|Total |59 |0 |0 |0
+|`NombreInterpolationsTest` |5 |0 |0 |0
+|Total |64 |0 |0 |0
 |===
