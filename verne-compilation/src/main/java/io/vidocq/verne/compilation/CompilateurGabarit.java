@@ -24,6 +24,7 @@ final class CompilateurGabarit {
     private static final int NOMBRE_MAXIMAL_INTERPOLATIONS = 1_024;
     private static final int NOMBRE_MAXIMAL_PARAMETRES = 255;
     private static final int PROFONDEUR_MAXIMALE_NAVIGATION = 32;
+    private static final int COUT_MAXIMAL_GENERATION = 60_000;
     private final ProcessingEnvironment environnement;
     private final Consumer<String> rapporterErreur;
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
@@ -52,6 +53,7 @@ final class CompilateurGabarit {
         this.identifiant = identifiant;
         try {
             analyser();
+            verifierBudgetGeneration();
             var instructions = new ArrayList<String>();
             var valeurs = new ArrayList<String>();
             var longueurs = new ArrayList<String>();
@@ -72,8 +74,7 @@ final class CompilateurGabarit {
                 } else {
                     String contenu = partie.contenu();
                     for (int debut = 0; debut < contenu.length();) {
-                        int fin = Math.min(debut + 4_000, contenu.length());
-                        if (fin < contenu.length() && Character.isHighSurrogate(contenu.charAt(fin - 1))) fin--;
+                        int fin = finFragment(contenu, debut);
                         instructions.add(resultat + ".append(\""
                                 + ProcesseurVerne.echapper(contenu.substring(debut, fin)) + "\");\n");
                         debut = fin;
@@ -115,6 +116,32 @@ final class CompilateurGabarit {
         } catch (Refus refus) {
             rapporterErreur.accept(refus.getMessage());
         }
+    }
+
+    /** Budget conventionnel du générateur actuel ; les pondérations sont fixées dans le contrat. */
+    private void verifierBudgetGeneration() {
+        long cout = 128 + 12L * parametres.size();
+        for (Partie partie : parties) {
+            if (partie.interpolation()) {
+                cout += 48 + 16L * partie.contenu().chars()
+                        .filter(caractere -> caractere == '.').count();
+            } else {
+                for (int debut = 0; debut < partie.contenu().length();
+                        debut = finFragment(partie.contenu(), debut)) {
+                    cout += 12;
+                }
+            }
+            if (cout > COUT_MAXIMAL_GENERATION) {
+                refuser("VERNE-LIM-008", 0, "coût de génération de la méthode supérieur à 60 000 unités.");
+            }
+        }
+    }
+
+    /** Même découpage pour le budget et la génération, sans séparer une paire de substituts. */
+    private static int finFragment(String contenu, int debut) {
+        int fin = Math.min(debut + 4_000, contenu.length());
+        if (fin < contenu.length() && Character.isHighSurrogate(contenu.charAt(fin - 1))) fin--;
+        return fin;
     }
 
     /** Les deux familles de variables locales restent distinctes et évitent tous les paramètres. */
