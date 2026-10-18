@@ -2,7 +2,7 @@
 :lang: fr
 :toc:
 
-État au 17 octobre 2026 : conception et première implémentation du compilateur minimal.
+État au 18 octobre 2026 : compilateur minimal implémenté et vérifié sur Windows et Mac.
 Les objectifs de conception restent distincts des capacités effectivement livrées, décrites dans link:compilateur-minimal.adoc[le contrat du compilateur minimal].
 
 == Origine du nom
@@ -27,7 +27,7 @@ Le composant transforme des gabarits et des données en documents textuels, avec
 
 * Tout nouveau texte maîtrisé par le projet est en français : code, noms métier, documentation, diagnostics et messages de contribution.
 * Les mots réservés Java, signatures imposées par une interface existante et noms des outils tiers conservent leur orthographe obligatoire.
-* Tout changement se fait sur une branche. L'auteur des contributions est `sidevconcept`, sans attribution à un assistant.
+* Tout changement se fait sur une branche. L'auteur des contributions est `sidneycohen`, avec DCO et signature GPG, sans attribution à un assistant.
 * Le développement suit le cycle test en échec, implémentation minimale, test réussi, amélioration et nouvelle vérification.
 * Chaque capacité comporte une description, ses limites, ses erreurs, des exemples et des preuves de test.
 * Les décisions architecturales, coûts mémoire et mesures de performances sont documentés avec leurs conditions de validité.
@@ -35,11 +35,11 @@ Le composant transforme des gabarits et des données en documents textuels, avec
 
 == Implantation du dossier
 
-Le moteur dispose désormais de son dépôt Git autonome local `E:\Dev\Projects\verne`, sur la branche `fonctionnalite/premiers-tests`.
+Le moteur dispose d'un dépôt Git autonome, sur la branche `fonctionnalite/premiers-tests`.
 Ce dossier constitue la documentation de référence du moteur ; la copie de conception préparée dans Vidocq est antérieure à sa création.
 L'extension sera développée séparément dans le dépôt Vidocq.
 La documentation Antora réside dans `docs/fr`, avec l'attribut `lang: fr`, sans personnalisation de l'interface commune.
-Le dépôt autonome utilise désormais le distant fourni par l'utilisateur : https://github.com/sidevconcept/verne-extension-vidocq.git. Les contributions locales suivent la règle DCO et l'exception temporaire de signature décrites dans `AGENTS.md`.
+Le dépôt autonome utilise le distant fourni par l'utilisateur : https://github.com/sidevconcept/verne-extension-vidocq.git. Les consignes de contribution sont définies dans `AGENTS.md`, à la racine du dépôt. L'écosystème Vidocq conserve sa forge CodeFloe ; cette exception est propre à Verne.
 
 == Ordre de réalisation proposé
 
@@ -58,3 +58,16 @@ Une version ne revendique que les capacités effectivement testées.
 La suite comporte désormais 42 tests réussis : 4 témoins, 7 tests de compilation initiaux, 10 tests de rendu initiaux et 21 tests limites. Voir link:compilateur-minimal.adoc[les étapes et limites de validation].
 Aucun chiffre de performance n'est disponible.
 Le sous-ensemble texte est implémenté ; le reste de la matrice demeure à réaliser avec les tests correspondants.
+
+== Prochaines priorités
+
+. Maintenir les 42 tests réussis sur Windows et Mac, sans affaiblir leurs assertions.
+. Compléter les tests de portabilité : normalisation Unicode, casse des noms, racines, liens symboliques et encodages.
+. Stabiliser le contrat de chaque nouvelle capacité et observer ses tests nominaux et invalides en échec avant son implémentation ; les conditions et boucles restent à réaliser.
+. Encadrer les limites globales : nombre de ressources, nombre d'expressions, taille des méthodes générées et volume de diagnostics.
+. Qualifier les types générés par d'autres processeurs, la découverte automatique, le raccordement Maven et les reconstructions incrémentales.
+. Introduire les autres profils de sortie, la composition, la diffusion et l'asynchronisme avec leurs contrats de sécurité et leurs tests.
+. Préparer les mesures selon link:mesures-performance.adoc[le protocole de qualification], sans revendiquer de gain avant des résultats reproductibles.
+. Intégrer Verne à Vidocq par une extension sur sa propre branche, sans rattacher le moteur au réacteur Vidocq.
+
+Le périmètre des prochaines fonctionnalités reste soumis à la revue de l'utilisateur.

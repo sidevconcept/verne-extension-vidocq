@@ -12,11 +12,18 @@ Le compilateur est un module Java explicite `io.vidocq.verne.compilation`, dépe
 Il fournit `javax.annotation.processing.Processor` par `module-info.java`.
 Le banc l'appelle explicitement sur le chemin des processeurs ; la découverte automatique de l'application Maven finale reste à qualifier.
 
-Exécuter depuis la racine :
+Exécuter depuis la racine, sous Windows :
 
 [source,powershell]
 ----
 .\mvnw.cmd clean verify
+----
+
+Sous Unix, dont macOS :
+
+[source,shell]
+----
+./mvnw clean verify
 ----
 
 Les applications du banc compilent les gabarits et leurs modèles Java sources dans la même invocation de javac, puis s'exécutent sur le chemin des modules.
@@ -138,7 +145,8 @@ Le test de texte volumineux vérifie l'égalité exacte de 72 000 unités UTF-16
 
 == Limites de validation
 
-Les tests observés concernent Windows 11 amd64, OpenJDK 25.0.1 et Maven 3.9.16.
+Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
+La réussite Mac concerne les 42 tests existants ; elle ne qualifie pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les mesures JMH, les charges concurrentes, les versions de dépendances alternatives et le raccordement à Vidocq restent à réaliser.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -146,5 +154,16 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 == Vérification finale observée
 
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
+Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS` ; les rapports Surefire XML ont été contrôlés.
 Résultat : 42 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites.
-Le journal de cette commande est `target/verification-propre.log` ; les rapports détaillés sont dans `verne-verification/target/surefire-reports`.
+Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
+
+[cols="3,1,1,1,1",options="header"]
+|===
+|Classe |Tests |Échecs |Erreurs |Ignorés
+|`OutillageCompilationTest` |4 |0 |0 |0
+|`CompilationGabaritsTest` |7 |0 |0 |0
+|`RenduGabaritsTest` |10 |0 |0 |0
+|`CasLimitesCompilationTest` |21 |0 |0 |0
+|Total |42 |0 |0 |0
+|===
