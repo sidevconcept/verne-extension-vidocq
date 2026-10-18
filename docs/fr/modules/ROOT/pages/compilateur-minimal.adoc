@@ -155,6 +155,13 @@ Le compteur appartient à l'analyse du fichier courant et repart de zéro pour c
 La 1 025e interpolation syntaxiquement admissible provoque `VERNE-LIM-003`, positionné sur son accolade ouvrante selon les règles de ligne et colonne existantes. L'analyse du fichier s'arrête avant résolution des expressions et avant ouverture de sa source générée ; les autres fichiers restent vérifiés.
 Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux supplémentaire n'est ouvert. Cette première borne limite le nombre d'interpolations conservées, sans garantir la taille de la méthode Java générée ni borner le volume total de texte. Les bornes des déclarations et de profondeur des navigations sont définies séparément ci-dessus.
 
+=== Budget de génération de la méthode de rendu
+
+Chaque gabarit accepte un coût pondéré de génération d'au plus 60 000 unités, borne incluse. Le coût est fixé pour le générateur actuel : 128 unités fixes, 12 par paramètre déclaré, 12 par fragment de texte émis (au plus 4 000 unités UTF-16, sans couper une paire de substituts), 48 par occurrence d'interpolation et 16 par accès de record dans ces occurrences. Les commentaires et déclarations ne produisent aucun fragment ; un commentaire séparant deux textes empêche leur fusion dans le générateur actuel et leurs fragments sont comptés séparément.
+Ce budget prudent encadre le cumul d'opérations dans une méthode, au-delà des bornes indépendantes d'interpolations et de profondeur. Il s'agit d'unités conventionnelles, et non d'une mesure exacte des octets de bytecode ou d'une garantie sur toutes les limites de javac et de la JVM. Les pondérations devront être réexaminées avant toute modification de la forme du code généré.
+Après analyse syntaxique et déclarations, le dépassement produit `VERNE-LIM-008` à `identifiant.verne:1:1`, avant résolution des expressions et ouverture de la source Java du fichier. Le message ne contient ni expression, ni valeur source, ni chemin machine. Les autres fichiers continuent à être vérifiés dans les budgets existants ; les sources déjà produites ne sont pas retirées et la compilation entière échoue.
+Le coût est propre au fichier et calculé sans état partagé ni ressource supplémentaire. Dans la borne, le code généré et les règles de nullité, d'ordre d'évaluation et de concurrence ne changent pas. Aucun compteur ni contrôle supplémentaire n'est ajouté au rendu.
+
 === Nombre de diagnostics de compilation
 
 Une invocation du processeur émet au plus 64 erreurs Verne détaillées. Toutes les erreurs issues de la découverte, de la lecture et de l'analyse des gabarits partagent ce budget ; les avertissements et erreurs propres à javac ou à d'autres processeurs n'en font pas partie.
@@ -176,6 +183,7 @@ La compilation échoue dès la première erreur ; les sources déjà générées
 |`VERNE-LIM-005` |Plus de 32 accès de record dans une interpolation
 |`VERNE-LIM-006` |Plus de huit mébioctets lus pour les sources dans une compilation
 |`VERNE-LIM-007` |Saturation après 64 erreurs Verne détaillées ; arrêt de la vérification
+|`VERNE-LIM-008` |Coût pondéré de génération supérieur à 60 000 unités pour un gabarit
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
 |`VERNE-SYN-001` |Interpolation, déclaration ou commentaire non fermé
 |`VERNE-SYN-002` |Syntaxe, directive, identifiant ou échappement non pris en charge
@@ -268,10 +276,17 @@ Les six tests de `NombreDiagnosticsTest` couvrent 63 et 64 erreurs détaillées 
 Avant correction, trois tests de saturation échouaient : aucune borne Verne ni marqueur ne contrôlait les erreurs, les diagnostics pouvaient atteindre la limite de javac et une source valide suivante pouvait encore être générée. Les trois tests dans la borne ou d'isolation réussissaient déjà.
 Après centralisation de l'émission des erreurs Verne et contrôle de saturation avant chaque nouvelle ressource, les six tests réussissent. La vérification propre complète totalise 99 tests sur Mac sans échec, erreur ni test ignoré. Les erreurs et limites de javac restent distinctes ; aucun code de rendu n'est modifié et aucune mesure de performance n'est ajoutée.
 
+== Premier budget pondéré de génération
+
+Les sept tests de `BudgetGenerationTest` couvrent 59 996, 60 000 et 60 004 unités, le cumul de 1 024 navigations profondes, le découpage Unicode sans séparation des substituts, l'isolation de deux gabarits à la borne après refus d'un autre, et la combinaison de 255 paramètres, 1 024 interpolations et 900 000 unités de texte statique.
+Avant correction, trois tests échouaient : les cas au-delà du budget étaient générés et le cas massif atteignait `compiler.err.limit.code` (« code too large »), sans diagnostic Verne. Les quatre autres tests réussissaient déjà.
+Après vérification du budget avant résolution et génération, les sept tests réussissent. Les quatre rendus acceptés sont comparés à des sorties indépendantes et leur bytecode est inspecté avec l'API standard du JDK 25 : les tailles observées vont de 39 251 à 40 430 octets, identiques avant et après correction. Ces observations ne transforment pas les unités de coût en mesure exacte de bytecode et ne qualifient pas toutes les limites de la JVM.
+La vérification complète propre totalise 106 tests sur Mac sans échec, erreur ni test ignoré. Le code de rendu des gabarits admissibles est conservé ; aucune nouvelle mesure de durée ni campagne de performances n'est ajoutée.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 57 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources et nombre de diagnostics ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 64 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics et budget de génération ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -281,7 +296,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 99 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 106 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -300,5 +315,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`ProfondeurNavigationsTest` |8 |0 |0 |0
 |`VolumeSourcesTest` |9 |0 |0 |0
 |`NombreDiagnosticsTest` |6 |0 |0 |0
-|Total |99 |0 |0 |0
+|`BudgetGenerationTest` |7 |0 |0 |0
+|Total |106 |0 |0 |0
 |===
