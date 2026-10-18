@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
@@ -14,7 +15,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeMirror;
-import javax.tools.Diagnostic;
 
 /**
  * Analyse et génère un gabarit du sous-ensemble texte, paramètres et composants de records.
@@ -25,6 +25,7 @@ final class CompilateurGabarit {
     private static final int NOMBRE_MAXIMAL_PARAMETRES = 255;
     private static final int PROFONDEUR_MAXIMALE_NAVIGATION = 32;
     private final ProcessingEnvironment environnement;
+    private final Consumer<String> rapporterErreur;
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
     private final List<Partie> parties = new ArrayList<>();
     private String texte;
@@ -39,8 +40,10 @@ final class CompilateurGabarit {
         Refus(String message) { super(message, null, false, false); }
     }
 
-    CompilateurGabarit(ProcessingEnvironment environnement) {
+    /** Les deux arguments non nuls sont propres à l'invocation et partagent son budget d'erreurs. */
+    CompilateurGabarit(ProcessingEnvironment environnement, Consumer<String> rapporterErreur) {
         this.environnement = environnement;
+        this.rapporterErreur = rapporterErreur;
     }
 
     /** Vérifie entièrement le fichier avant d'en ouvrir la source Java générée. */
@@ -110,7 +113,7 @@ final class CompilateurGabarit {
                 sortie.write("return " + resultat + ".toString();\n}\n}\n");
             }
         } catch (Refus refus) {
-            environnement.getMessager().printMessage(Diagnostic.Kind.ERROR, refus.getMessage());
+            rapporterErreur.accept(refus.getMessage());
         }
     }
 

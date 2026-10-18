@@ -155,6 +155,12 @@ Le compteur appartient à l'analyse du fichier courant et repart de zéro pour c
 La 1 025e interpolation syntaxiquement admissible provoque `VERNE-LIM-003`, positionné sur son accolade ouvrante selon les règles de ligne et colonne existantes. L'analyse du fichier s'arrête avant résolution des expressions et avant ouverture de sa source générée ; les autres fichiers restent vérifiés.
 Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux supplémentaire n'est ouvert. Cette première borne limite le nombre d'interpolations conservées, sans garantir la taille de la méthode Java générée ni borner le volume total de texte. Les bornes des déclarations et de profondeur des navigations sont définies séparément ci-dessus.
 
+=== Nombre de diagnostics de compilation
+
+Une invocation du processeur émet au plus 64 erreurs Verne détaillées. Toutes les erreurs issues de la découverte, de la lecture et de l'analyse des gabarits partagent ce budget ; les avertissements et erreurs propres à javac ou à d'autres processeurs n'en font pas partie.
+Les 64 premières erreurs conservent leurs codes et positions. Si une 65e erreur Verne est rencontrée, elle est remplacée par un unique diagnostic global `VERNE-LIM-007` signalant la saturation ; aucun identifiant, expression, donnée source ni chemin machine n'est ajouté à ce message. Le nombre maximal de diagnostics Verne est donc 65, marqueur compris. Les ressources suivantes ne sont ni résolues, lues, analysées ni générées. Un fichier valide rencontré après la 64e erreur reste vérifié tant qu'aucune 65e erreur n'est rencontrée.
+La compilation échoue dès la première erreur ; les sources déjà générées ne sont pas retirées. Les ressources et flux ouverts sont fermés par les contrôles existants. Le compteur et l'état de saturation appartiennent à l'invocation et ne sont pas partagés entre compilations, y compris concurrentes. Les erreurs d'exécution `VERNE-REN-001` et le code de rendu ne changent pas. Cette borne ne garantit ni un budget mémoire global ni la taille des messages et des méthodes Java générées. Une configuration de javac limitant les erreurs à moins de 65 peut masquer des diagnostics, y compris le marqueur.
+
 == Diagnostics livrés
 
 [cols="1,3",options="header"]
@@ -169,6 +175,7 @@ Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux 
 |`VERNE-LIM-004` |Plus de 255 paramètres déclarés dans un gabarit
 |`VERNE-LIM-005` |Plus de 32 accès de record dans une interpolation
 |`VERNE-LIM-006` |Plus de huit mébioctets lus pour les sources dans une compilation
+|`VERNE-LIM-007` |Saturation après 64 erreurs Verne détaillées ; arrêt de la vérification
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
 |`VERNE-SYN-001` |Interpolation, déclaration ou commentaire non fermé
 |`VERNE-SYN-002` |Syntaxe, directive, identifiant ou échappement non pris en charge
@@ -182,9 +189,9 @@ Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux 
 
 Les diagnostics d'analyse portent `identifiant.verne:ligne:colonne`, avec indices commençant à un et colonnes comptées en points de code.
 CRLF désigne une seule fin de ligne. Le diagnostic pointe le délimiteur ouvrant de la directive fautive.
-La première erreur d'analyse arrête le fichier courant ; le processeur poursuit les autres fichiers.
+La première erreur d'analyse arrête le fichier courant ; le processeur poursuit les autres fichiers tant que les budgets le permettent.
 Une erreur empêche la compilation réussie de l'application, même si le gabarit n'est jamais appelé.
-Le remappage de toute erreur javac issue du code généré, la limitation du nombre global de diagnostics et les types fournis par un processeur voisin restent à implémenter.
+Le remappage des erreurs javac issues du code généré et les types fournis par un processeur voisin restent à implémenter. Le budget ci-dessus limite les seuls diagnostics Verne.
 
 == Traçabilité du développement piloté par les tests
 
@@ -255,10 +262,16 @@ Les neuf tests de `VolumeSourcesTest` couvrent 8 Mio moins un octet, la borne ex
 Avant correction, six tests échouaient pour l'absence de contrôle cumulé : des ressources supplémentaires étaient lues et pouvaient être générées ou produire des diagnostics d'analyse au lieu de `VERNE-LIM-006`. Les trois cas d'acceptation et d'isolation réussissaient déjà.
 Après ajout du compteur local et réduction de chaque lecture au budget disponible plus un octet, les neuf tests réussissent. La vérification propre complète totalise 93 tests sur Mac sans échec, erreur ni test ignoré. Les fixtures vérifient les tailles UTF-8 avec des commentaires contenant des accents ; le budget porte donc bien sur les octets lus, même sans texte rendu. Cette preuve ne constitue ni une borne globale de mémoire, ni une nouvelle mesure de performance.
 
+== Première borne du nombre de diagnostics
+
+Les six tests de `NombreDiagnosticsTest` couvrent 63 et 64 erreurs détaillées avec conservation des positions et génération du fichier valide suivant, la substitution de la 65e erreur par le marqueur, le partage du budget entre nommage et analyse, mille noms invalides et l'isolation de deux compilations concurrentes.
+Avant correction, trois tests de saturation échouaient : aucune borne Verne ni marqueur ne contrôlait les erreurs, les diagnostics pouvaient atteindre la limite de javac et une source valide suivante pouvait encore être générée. Les trois tests dans la borne ou d'isolation réussissaient déjà.
+Après centralisation de l'émission des erreurs Verne et contrôle de saturation avant chaque nouvelle ressource, les six tests réussissent. La vérification propre complète totalise 99 tests sur Mac sans échec, erreur ni test ignoré. Les erreurs et limites de javac restent distinctes ; aucun code de rendu n'est modifié et aucune mesure de performance n'est ajoutée.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 51 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations et volume des sources ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 57 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources et nombre de diagnostics ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -268,7 +281,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 93 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 99 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -286,5 +299,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`NombreParametresTest` |6 |0 |0 |0
 |`ProfondeurNavigationsTest` |8 |0 |0 |0
 |`VolumeSourcesTest` |9 |0 |0 |0
-|Total |93 |0 |0 |0
+|`NombreDiagnosticsTest` |6 |0 |0 |0
+|Total |99 |0 |0 |0
 |===
