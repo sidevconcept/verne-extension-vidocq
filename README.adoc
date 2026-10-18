@@ -10,6 +10,10 @@ Première tranche du compilateur : gabarits textuels UTF-8, paramètres typés, 
 Les 42 tests de la suite passent, dont les 17 tests métier initiaux. Les classes générées n'exigent que le JDK à l'exécution.
 Lire link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat livré et ses limites]. Aucune performance n'est encore revendiquée.
 
+== Reprise sur un autre poste
+
+Lire link:REPRISE.adoc[la passation vers le Mac] : état du dépôt, installation, règles de contribution et prochaines étapes.
+
 == Vérification
 
 Le lanceur Maven fourni fixe Maven 3.9.16 ; utiliser un JDK 25.

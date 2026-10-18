@@ -1,0 +1,186 @@
+= Verne — Reprise sur Mac
+:lang: fr
+:toc:
+
+Document de passation du 18 octobre 2026.
+Il permet de reprendre le dépôt sans accéder à l'historique de conversation ni au journal privé des prompts.
+
+== Point de départ
+
+* Projet : Verne, en hommage à Jules Verne, composant autonome de gabarits textuels pour Java 25 et l'écosystème Vidocq.
+* Dépôt local d'origine : `E:\Dev\Projects\verne`, distinct du dépôt Vidocq et de ses branches.
+* Branche de travail : `fonctionnalite/premiers-tests`.
+* Commit de référence de l'implémentation : `3e129e9cbe6ad6a9e6e343b567de021157b85513`, « Créer Verne et son compilateur minimal de gabarits textuels ».
+* Identité des contributions : `sidevconcept <sidev.concept06@gmail.com>`, auteur et créateur des commits ; DCO obligatoire.
+* Exception utilisateur du 18 octobre 2026 : commits locaux temporairement sans signature GPG. Cette exception concerne uniquement Verne et ne change aucune politique d'un autre dépôt.
+* Aucun dépôt distant configuré et aucun envoi effectué au moment de la passation. L'utilisateur créera le dépôt distant et communiquera son adresse.
+
+Le commit de passation suit celui de l'implémentation ; `git log -2` permet de consulter les deux sans figer dans ce fichier sa propre empreinte.
+
+== Règles à conserver
+
+Lire `AGENTS.md` avant de modifier les fichiers.
+Tous les ajouts maîtrisés par le projet sont en français : code, noms métier, commentaires, documentation, diagnostics et messages de commit.
+Les signatures imposées par Java et les API existantes gardent leur nom obligatoire.
+Aucun moteur d'inspiration n'est cité dans les sources, les documents ou les contributions.
+
+Toujours travailler sur une branche, écrire le test avant le comportement, observer la bonne cause d'échec, implémenter le minimum puis vérifier les régressions.
+Les erreurs, cas limites, contrats de nullité et effets sur les ressources font partie du travail, ainsi que leur documentation.
+Utiliser Ponytail par défaut lorsqu'il est disponible sur le poste ; cela ne réduit jamais les exigences de tests et de documentation.
+L'installation locale de ce plugin sur Windows n'est pas transférée par Git.
+
+Les Java Modules sont explicites. Le rendu ne charge pas de classes métier par réflexion et n'analyse pas les gabarits à l'exécution.
+Ne pas ajouter de dépendance tierce au rendu ; les outils de vérification restent isolés.
+La forge de l'écosystème est CodeFloe ; ne pas gérer ses contributions avec des outils propres à une autre forge.
+
+== Transfert vers le dépôt créé par l'utilisateur
+
+Créer de préférence un dépôt distant vide, sans initialisation de README, licence ou fichier d'exclusion : l'historique local contient déjà ces fichiers.
+Attendre l'adresse réelle ; ne pas inventer de dépôt ni créer une branche principale artificielle.
+Une fois l'adresse reçue et la publication demandée, les commandes prévues depuis le dépôt Windows sont :
+
+[source,powershell]
+----
+git remote add origin "URL_DU_DEPOT"
+git push --set-upstream origin fonctionnalite/premiers-tests
+----
+
+`URL_DU_DEPOT` est une valeur à remplacer. Ne pas réexécuter `remote add` si le dépôt possède déjà un `origin` ; vérifier d'abord `git remote -v`.
+Si le dépôt distant contient déjà un historique, l'inspecter et décider de son rapprochement ; ne pas forcer son remplacement.
+Le choix de la branche par défaut distante reste à l'utilisateur.
+
+Le transfert via Git contient sources, tests, documentation, licences et lanceurs Maven.
+Il ne contient ni résultats `target`, ni journal privé, ni paramètres Git locaux, ni cache Maven, ni clé GPG, ni configuration du plugin.
+Ne pas copier aveuglément tout le répertoire Windows pour reconstituer le dépôt Mac.
+
+== Installation et vérification sur Mac
+
+Installer un JDK 25. La référence de l'écosystème est Temurin 25 ; l'exécution déjà observée est sous OpenJDK 25.0.1 sur Windows.
+Le fichier `.sdkmanrc` déclare `java=25-tem` et `maven=3.9.16` pour un poste utilisant SDKMAN.
+Le lanceur Maven télécharge sa version 3.9.16 et les dépendances nécessaires ; aucune installation Maven globale n'est requise.
+
+Après publication de la branche :
+
+[source,shell]
+----
+git clone --branch fonctionnalite/premiers-tests "URL_DU_DEPOT" verne
+cd verne
+
+git config --local user.name "sidevconcept"
+git config --local user.email "sidev.concept06@gmail.com"
+git config --local commit.gpgsign false
+
+printf '%s\n' '/PROMPTS.md' >> .git/info/exclude
+
+java -version
+./mvnw --version
+./mvnw clean verify
+----
+
+Vérifier que Java annonce bien la version 25 avant la construction.
+Si plusieurs JDK sont installés, le choix peut être explicité dans le terminal :
+
+[source,shell]
+----
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)
+export PATH="$JAVA_HOME/bin:$PATH"
+----
+
+Le lanceur `mvnw` est versionné avec le mode exécutable `100755` et des fins de ligne LF ; le clonage doit suffire pour l'exécuter.
+En cas de problème, vérifier `git ls-files --stage mvnw` et le montage du répertoire avant de modifier le projet.
+
+L'exclusion locale `.git/info/exclude` ne voyage pas avec le dépôt : la recréer sur le Mac avant de commencer un nouveau `PROMPTS.md` local.
+Ne pas transférer le journal Windows ; il reste sur son poste d'origine conformément à la consigne utilisateur.
+La passation fournit le contexte nécessaire pour démarrer un journal Mac neuf.
+
+Résultat attendu : 42 tests, zéro échec, zéro erreur et zéro test ignoré.
+Une réussite sous Windows ne prouve pas encore cette réussite sur Mac : conserver le premier rapport Mac et documenter tout écart avant de continuer le développement.
+Rapports : `verne-verification/target/surefire-reports`. Les journaux placés dans `target` sont supprimables par `clean` ; ne pas rediriger un journal ouvert vers ce répertoire pendant le nettoyage sous Windows.
+
+Les commits suivants utilisent toujours :
+
+[source,shell]
+----
+git commit -s -m "Décrire clairement le changement en français"
+----
+
+Le réglage `commit.gpgsign=false` est strictement local au clone ; ne pas désactiver globalement la signature des autres projets.
+Si la signature est rétablie plus tard, configurer la vraie clé de l'utilisateur sur le poste puis ajuster explicitement cette règle.
+
+== État effectivement livré
+
+Le réacteur contient :
+
+* `verne-compilation` : processeur `ProcesseurVerne`, analyse et génération `CompilateurGabarit`, module Java et déclaration de fournisseur.
+* `verne-verification` : banc javac, exécution de vraies applications modulaires et suite JUnit. Une dépendance de test impose la construction préalable du compilateur.
+
+Les gabarits UTF-8 `.verne` sont compilés dans la même invocation que les modèles Java sources.
+Le profil livré est uniquement `texte`, avec paramètres obligatoires, interpolation de valeurs scalaires, navigation par composants de records, commentaires et échappements.
+Les sources et classes Java sont générées au build ; les documents rendus ne demandent aucun JAR Verne à l'exécution.
+L'intégralité des ressources déclarées est vérifiée, même lorsqu'un programme ne les appelle pas.
+
+La taille d'une source est limitée à 1 048 576 octets, borne incluse.
+Les constantes textuelles sont fractionnées sans couper une paire de substituts ; les caractères de contrôle et les littéraux Java sont protégés.
+Les diagnostics sont français, avec codes stables et positions en points de code Unicode.
+Les sources générées sont déterministes et sans chemin absolu.
+
+Les détails normatifs et limites se trouvent dans link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat du compilateur minimal].
+Le profil texte ne protège pas une sortie HTML : aucun profil HTML sûr n'est encore livré.
+
+== Preuves disponibles
+
+Dernière commande complète déjà observée : `.\mvnw.cmd clean verify`, sur Windows 11 amd64, OpenJDK 25.0.1, Maven 3.9.16.
+Les rapports de cette exécution ont été inspectés avant la passation :
+
+[cols="3,1,1,1,1",options="header"]
+|===
+|Classe |Tests |Échecs |Erreurs |Ignorés
+|`OutillageCompilationTest` |4 |0 |0 |0
+|`CompilationGabaritsTest` |7 |0 |0 |0
+|`RenduGabaritsTest` |10 |0 |0 |0
+|`CasLimitesCompilationTest` |21 |0 |0 |0
+|Total |42 |0 |0 |0
+|===
+
+Les 17 tests métier initiaux ont été observés en échec avant l'implémentation, puis réussis sans affaiblir leurs assertions.
+Les étapes rouge-vert et les cas supplémentaires sont transcrits dans la documentation.
+L'analyse `jdeps` de l'archive de compilation indique seulement `java.base,java.compiler`.
+Le descripteur de module déclare le fournisseur de processeur attendu.
+Aucun résultat de performance, essai Linux ou essai Mac n'est encore revendiqué.
+
+Les rapports bruts sous `target` ne sont pas transférés par Git ; ils sont recréés par la commande de vérification sur le nouveau poste.
+
+== Documents de référence
+
+* link:AGENTS.md[Consignes de contribution].
+* link:docs/fr/modules/ROOT/pages/index.adoc[Sommaire du dossier].
+* link:docs/fr/modules/ROOT/pages/architecture.adoc[Architecture cible].
+* link:docs/fr/modules/ROOT/pages/matrice-fonctionnelle.adoc[Matrice de 40 capacités].
+* link:docs/fr/modules/ROOT/pages/cas-de-test.adoc[Plan de 105 scénarios].
+* link:docs/fr/modules/ROOT/pages/premiers-tests.adoc[Phase rouge initiale historique].
+* link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[Sous-ensemble réellement livré et progression TDD].
+* link:docs/fr/modules/ROOT/pages/mesures-performance.adoc[Protocole de qualification des performances].
+
+La matrice et les 105 scénarios constituent un objectif plus large que les 42 tests exécutables actuels.
+Ne pas déclarer une famille entière validée parce qu'un de ses contrats élémentaires passe.
+La documentation Antora est dans `docs/fr` ; elle n'embarque aucune interface visuelle spécifique.
+
+== Priorités de reprise
+
+. Cloner la branche et confirmer les 42 tests sur Mac, sans changer leur sens pour obtenir un résultat vert.
+. Compléter les tests de portabilité : normalisation Unicode, casse des noms, racines, liens symboliques et encodages. Les essais de liens symboliques n'ont pas été qualifiés sur plusieurs systèmes.
+. Avant toute nouvelle capacité, stabiliser son contrat dans la grammaire et écrire ses tests invalides et nominaux. Les conditions et boucles ne sont pas encore livrées.
+. Encadrer les limites restantes : nombre de ressources, grand nombre d'expressions, taille de méthode Java générée et volume de diagnostics. La seule limite par fichier ne prouve pas des bornes globales.
+. Qualifier les types générés par des processeurs voisins, la découverte automatique, le raccordement Maven et les reconstructions incrémentales avant d'affirmer une intégration de production complète.
+. Introduire les autres profils de sortie, la composition, la diffusion et l'asynchronisme uniquement avec leurs contrats de sécurité et leurs tests.
+. Préparer le module de mesures selon le protocole documenté ; ne publier aucun gain sans résultats reproductibles.
+. Intégrer ensuite Verne au dépôt Vidocq par une extension sur sa propre branche, sans rattacher le moteur au réacteur Vidocq.
+
+Cette passation n'autorise pas à ignorer la revue de l'utilisateur sur le périmètre des prochaines fonctionnalités.
+
+== Message de reprise à copier dans la nouvelle conversation
+
+[quote]
+____
+Travaille dans le dépôt autonome Verne sur la branche fonctionnalite/premiers-tests. Lis AGENTS.md, REPRISE.adoc et le contrat du compilateur minimal. Vérifie d'abord Java 25, Maven 3.9.16 et les 42 tests via ./mvnw clean verify. Respecte le français, la documentation stricte et le TDD. Les commits locaux sont autorisés sous sidevconcept avec DCO et sans GPG temporairement. Crée un nouveau journal PROMPTS.md local, exclu de Git, sans récupérer celui de Windows. Commence par signaler le résultat réel de la vérification Mac et les limites encore ouvertes avant d'étendre le langage.
+____
