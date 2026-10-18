@@ -22,6 +22,7 @@ import javax.tools.Diagnostic;
  */
 final class CompilateurGabarit {
     private static final int NOMBRE_MAXIMAL_INTERPOLATIONS = 1_024;
+    private static final int NOMBRE_MAXIMAL_PARAMETRES = 255;
     private final ProcessingEnvironment environnement;
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
     private final List<Partie> parties = new ArrayList<>();
@@ -177,6 +178,9 @@ final class CompilateurGabarit {
         }
         if (parametres.containsKey(morceaux[1])) {
             refuser("VERNE-TYP-002", position, "paramètre déclaré plusieurs fois.");
+        }
+        if (parametres.size() >= NOMBRE_MAXIMAL_PARAMETRES) {
+            refuser("VERNE-LIM-004", position, "plus de 255 paramètres déclarés dans un gabarit.");
         }
         TypeElement type = environnement.getElementUtils().getTypeElement(morceaux[0]);
         if (type == null || !type.getTypeParameters().isEmpty()
