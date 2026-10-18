@@ -7,7 +7,7 @@ Le nom rend hommage à Jules Verne.
 == État du projet
 
 Première tranche du compilateur : gabarits textuels UTF-8, paramètres typés, accès directs aux composants de records, commentaires et échappements.
-Les 46 tests de la suite passent sur Mac, dont les 17 tests métier initiaux. Les classes générées n'exigent que le JDK à l'exécution.
+Les 55 tests de la suite passent sur Mac, dont les 17 tests métier initiaux. Les classes générées n'exigent que le JDK à l'exécution.
 Lire link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat livré et ses limites]. Aucune performance n'est encore revendiquée.
 
 == Installation
@@ -52,8 +52,8 @@ java -version
 ./mvnw clean verify
 ----
 
-Résultat attendu : 46 tests, zéro échec, zéro erreur et zéro test ignoré, puis construction des archives.
-La suite initiale de 42 tests a été confirmée sur Windows et sur Mac ; les 4 nouveaux tests de portabilité ont été vérifiés sur Mac. Les environnements et limites sont consignés dans link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat du compilateur minimal].
+Résultat attendu : 55 tests, zéro échec, zéro erreur et zéro test ignoré, puis construction des archives.
+La suite initiale de 42 tests a été confirmée sur Windows et sur Mac ; les 13 nouveaux tests de noms, racines et liens symboliques ont été vérifiés sur Mac. Les environnements et limites sont consignés dans link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat du compilateur minimal].
 Pour relancer uniquement la compilation et les tests, utiliser `./mvnw test` ou `.\mvnw.cmd test`.
 Le lanceur Unix est versionné exécutable avec des fins de ligne LF ; en cas de problème, vérifier `git ls-files --stage mvnw` et le montage du répertoire.
 
@@ -61,34 +61,6 @@ Lire link:docs/fr/modules/ROOT/pages/premiers-tests.adoc[la phase rouge historiq
 Les rapports se trouvent dans `verne-verification/target/surefire-reports`.
 Le compilateur est attendu dans `verne-compilation/target/classes` ; un autre emplacement peut être fourni par `-Dverne.chemin.processeur=...`.
 Les journaux sous `target` sont supprimables par `clean` ; ne pas rediriger un journal ouvert vers ce répertoire pendant le nettoyage sous Windows.
-
-== Contributions
-
-Lire link:AGENTS.md[les consignes de contribution] avant toute modification : branche dédiée, français, contrats documentés et développement piloté par les tests.
-L'identité Git est `sidneycohen <sidev.concept06@gmail.com>` ; le compte GitHub est `sidevconcept`.
-Les commits portent le DCO et une signature GPG. Aucun changement n'est publié sans demande correspondante.
-
-Sur le Mac actuel, GnuPG et `pinentry-mac` sont installés ; `~/.gnupg/gpg-agent.conf` sélectionne `/opt/homebrew/bin/pinentry-mac` pour saisir la phrase secrète.
-La clé enregistrée sur GitHub porte l'empreinte `D3BCB8134714D5475AD7B88075167D5F1230C554` et expire le 17 octobre 2028.
-Avant de reprendre les commandes suivantes sur un autre poste, installer GnuPG et disposer de la clé privée correspondante. Une autre clé exige son empreinte réelle et l'ajout de sa clé publique au compte GitHub.
-
-[source,shell]
-----
-git config --local user.name "sidneycohen"
-git config --local user.email "sidev.concept06@gmail.com"
-git config --local gpg.format openpgp
-git config --local gpg.program "$(command -v gpg)"
-git config --local user.signingkey D3BCB8134714D5475AD7B88075167D5F1230C554
-git config --local commit.gpgsign true
-printf '%s\n' '/PROMPTS.md' >> .git/info/exclude
-
-git commit -S -s -m "Décrire clairement le changement en français"
-git verify-commit HEAD
-----
-
-Le journal `PROMPTS.md` reste strictement local, hors Git et des distributions. Recréer son exclusion à chaque clonage, sans transférer le journal d'un autre poste.
-Le clonage ne transfère ni les clés privées, ni les paramètres Git locaux, ni le cache Maven, ni les rapports `target`.
-La signature du commit link:https://github.com/sidevconcept/verne-extension-vidocq/commit/e7759d1bf12a37ec757bd224bda7aa7ee0419115[`e7759d1`] a été vérifiée localement et reconnue `Verified` sur GitHub.
 
 == Documentation
 

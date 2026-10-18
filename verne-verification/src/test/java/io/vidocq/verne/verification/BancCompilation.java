@@ -34,6 +34,13 @@ final class BancCompilation {
      */
     static Compilation compiler(Path racine, Map<String, String> gabarits,
                                 Map<String, String> sources, boolean avecVerne) throws IOException {
+        return compiler(racine, gabarits, sources, avecVerne, racine.resolve("gabarits"));
+    }
+
+    /** La racine déclarée, non nulle, peut différer des fixtures pour vérifier les refus et les alias. */
+    static Compilation compiler(Path racine, Map<String, String> gabarits,
+                                Map<String, String> sources, boolean avecVerne,
+                                Path racineDeclaree) throws IOException {
         Path repertoireJava = Files.createDirectories(racine.resolve("java"));
         Path repertoireGabarits = Files.createDirectories(racine.resolve("gabarits"));
         Path classes = Files.createDirectories(racine.resolve("classes"));
@@ -63,7 +70,7 @@ final class BancCompilation {
                     projet.resolve("verne-compilation/target/classes").toString());
             options.addAll(List.of("-proc:full", "-processorpath", cheminProcesseur,
                     "-processor", "io.vidocq.verne.compilation.ProcesseurVerne",
-                    "-Averne.racine.gabarits=" + repertoireGabarits,
+                    "-Averne.racine.gabarits=" + racineDeclaree,
                     "-Averne.profil.sortie=texte"));
         } else {
             options.add("-proc:none");

@@ -45,15 +45,28 @@ public final class ProcesseurVerne extends AbstractProcessor {
         }
         try {
             Path racine = Path.of(racineDeclaree).toRealPath();
+            if (!Files.isDirectory(racine)) {
+                erreur("VERNE-CFG-001", "la racine des gabarits doit être un répertoire.");
+                return false;
+            }
             List<Path> fichiers;
             try (var parcours = Files.walk(racine)) {
                 fichiers = parcours.filter(chemin -> chemin.toString().endsWith(".verne"))
-                        .filter(Files::isRegularFile).sorted().toList();
+                        .filter(chemin -> Files.isRegularFile(chemin)
+                                || (Files.isSymbolicLink(chemin) && !Files.exists(chemin)))
+                        .sorted().toList();
             }
             var noms = new HashSet<String>();
             for (Path fichier : fichiers) {
                 String identifiant = racine.relativize(fichier).toString().replace('\\', '/');
-                if (!fichier.toRealPath().startsWith(racine)) {
+                Path cible;
+                try {
+                    cible = fichier.toRealPath();
+                } catch (IOException exception) {
+                    erreur("VERNE-IO-001", identifiant + ":1:1 : impossible de résoudre la ressource déclarée.");
+                    continue;
+                }
+                if (!cible.startsWith(racine)) {
                     erreur("VERNE-SEC-001", identifiant + ":1:1 : ressource hors de la racine autorisée.");
                     continue;
                 }
