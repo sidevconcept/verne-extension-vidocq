@@ -24,6 +24,7 @@ import javax.tools.Diagnostic;
 public final class ProcesseurVerne extends AbstractProcessor {
     private boolean traite;
     private static final int TAILLE_MAXIMALE = 1_048_576;
+    private static final int VOLUME_MAXIMAL_SOURCES = 8 * 1_048_576;
     private static final int NOMBRE_MAXIMAL_GABARITS = 1_024;
 
     /** Constructeur public exigé par le chargement des processeurs du compilateur Java. */
@@ -62,6 +63,7 @@ public final class ProcesseurVerne extends AbstractProcessor {
                 return false;
             }
             var noms = new HashSet<String>();
+            int volumeLu = 0;
             for (Path fichier : fichiers) {
                 String identifiant = racine.relativize(fichier).toString().replace('\\', '/');
                 Path cible;
@@ -91,7 +93,12 @@ public final class ProcesseurVerne extends AbstractProcessor {
                 }
                 byte[] octets;
                 try (var entree = Files.newInputStream(fichier)) {
-                    octets = entree.readNBytes(TAILLE_MAXIMALE + 1);
+                    octets = entree.readNBytes(Math.min(TAILLE_MAXIMALE, VOLUME_MAXIMAL_SOURCES - volumeLu) + 1);
+                }
+                volumeLu += octets.length;
+                if (volumeLu > VOLUME_MAXIMAL_SOURCES) {
+                    erreur("VERNE-LIM-006", identifiant + ":1:1 : volume cumulé de lecture supérieur à huit mébioctets.");
+                    return false;
                 }
                 if (octets.length > TAILLE_MAXIMALE) {
                     erreur("VERNE-LIM-001", identifiant + ":1:1 : source supérieure à un mébioctet.");
