@@ -23,6 +23,7 @@ import javax.tools.Diagnostic;
 final class CompilateurGabarit {
     private static final int NOMBRE_MAXIMAL_INTERPOLATIONS = 1_024;
     private static final int NOMBRE_MAXIMAL_PARAMETRES = 255;
+    private static final int PROFONDEUR_MAXIMALE_NAVIGATION = 32;
     private final ProcessingEnvironment environnement;
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
     private final List<Partie> parties = new ArrayList<>();
@@ -149,6 +150,10 @@ final class CompilateurGabarit {
                         }
                         if (++nombreInterpolations > NOMBRE_MAXIMAL_INTERPOLATIONS) {
                             refuser("VERNE-LIM-003", position, "plus de 1 024 interpolations dans un gabarit.");
+                        }
+                        if (contenu.chars().filter(caractereExpression -> caractereExpression == '.').count()
+                                > PROFONDEUR_MAXIMALE_NAVIGATION) {
+                            refuser("VERNE-LIM-005", position, "plus de 32 accès de record dans une interpolation.");
                         }
                         parties.add(new Partie(contenu, true, position));
                     }
