@@ -1,0 +1,94 @@
+= Verne — Matrice fonctionnelle et critères d'acceptation
+:lang: fr
+:toc:
+
+État : exigences de référence. Un sous-ensemble est implémenté et décrit dans link:compilateur-minimal.adoc[son contrat] ; aucune certification externe n'est revendiquée.
+Cette matrice confronte les besoins de l'application aux choix de Verne et à leurs preuves d'acceptation.
+Les identifiants `F-*` sont stables et reliés aux scénarios de link:cas-de-test.adoc[cas de test].
+
+== Lecture des étapes
+
+* A : contrats et chaîne de compilation, puis premier rendu autonome.
+* B : langage et composition.
+* C : formats, extensions, internationalisation et asynchronisme.
+* D : intégration Vidocq, développement et qualification de livraison.
+
+L'étape indique un ordre de travail, pas une capacité abandonnée ni une date promise.
+Un scénario de sécurité s'écrit avant la fonctionnalité qu'il protège, même si sa ligne se trouve dans une étape ultérieure.
+La première phase rouge est conservée dans link:premiers-tests.adoc[son rapport historique]. La suite actuelle de 42 tests est verte ; seuls les contrats effectivement exercés sont livrés. Les familles F-02, F-03, F-04, F-05, F-13, F-14 et F-23 restent plus larges que ce sous-ensemble, notamment pour l'incrémental et les formats.
+
+== Construction et langage
+
+[cols="1,2,4,1,2",options="header"]
+|===
+|Identifiant |Capacité |Contrat ou arbitrage |Étape |Preuves attendues
+|F-01 |Usage autonome |Java 25 ; aucune dépendance tierce du moteur à l'exécution ; sans serveur ni CDI |A |T-CON-01, T-MOD-01
+|F-02 |Compilation des gabarits |Validation de toutes les ressources déclarées ; génération Java compilée avant déploiement |A |T-COM-01 à 08
+|F-03 |Paramètres typés |Déclarations obligatoires, accesseurs de records et membres explicitement exposés |A |T-TYP-01 à 06, 08
+|F-04 |Texte et interpolations |Conservation des espaces et fins de ligne ; distinction texte littéral et expression |A |T-SYN-01 à 06, 08 à 10
+|F-05 |Commentaires et blocs littéraux |Commentaires sans sortie ; blocs non analysés pour les documents contenant des délimiteurs |B |T-SYN-03, 07
+|F-06 |Expressions |Littéraux, navigation, indexation, parenthèses et opérateurs avec précédence documentée ; pas d'évaluation Java arbitraire |B |T-EXP-01 à 06
+|F-07 |Absence et nullité |Erreur par défaut ; navigation optionnelle et remplacement explicites ; chaîne vide conservée |A |T-TYP-02, 03 ; T-EXP-02
+|F-08 |Conditions et choix |Booléens stricts, branches alternatives et choix multiples ; une seule branche évaluée |B |T-CTL-01, 02, 05
+|F-09 |Boucles |Tableaux, collections et tables associatives ; variables locales et métadonnées d'itération |B |T-CTL-03, 04, 06
+|F-10 |Variables locales |Affectation de portée locale, masquage explicite et fin de portée vérifiée |B |T-CTL-07
+|F-11 |Espaces de noms et fonctions |Fonctions explicitement déclarées, signatures vérifiables, ambiguïtés refusées |B |T-EXP-05, 06 ; T-EXT-01
+|F-12 |Accès dynamiques encadrés |Tables typées et cibles incluses dans un ensemble fermé ; erreurs résiduelles documentées |B |T-TYP-07 ; T-CMP-06
+|F-13 |Construction incrémentale |Ajout, modification, suppression et dépendants transitifs ; pas de classes périmées |A |T-COM-04, 05, 08
+|F-14 |Diagnostics |Français, code stable, source et position ; absence de données sensibles |A |T-DIA-01 à 04
+|===
+
+== Composition et personnalisation
+
+[cols="1,2,4,1,2",options="header"]
+|===
+|Identifiant |Capacité |Contrat ou arbitrage |Étape |Preuves attendues
+|F-15 |Inclusions |Chemins logiques, paramètres vérifiés et résolution sous les racines autorisées |B |T-CMP-01, 02 ; T-SEC-01
+|F-16 |Gabarits parents |Emplacements nommés, valeurs par défaut et substitutions vérifiées |B |T-CMP-03
+|F-17 |Fragments |Rendu autonome d'une partie nommée, avec ses propres paramètres |B |T-CMP-04
+|F-18 |Composants réutilisables |Arguments et contenu imbriqué avec portée explicite ; pas de capture cachée |B |T-CMP-05
+|F-19 |Graphes de composition |Cycles statiques refusés, profondeur dynamique bornée, dépendances inverses connues |B |T-CMP-02, 06 ; T-LIM-02
+|F-20 |Sections personnalisées |Contrat de validation au build et implémentation d'exécution compatibles |C |T-EXT-01 à 03
+|F-21 |Localisation des ressources |Ressources locales déclarées ; extensions possibles avec inventaire disponible au build |C |T-COM-03 ; T-SEC-01, 02
+|F-22 |Évaluation de texte reçu à l'exécution |Exclue de la production ; choisir un gabarit déjà compilé ne crée pas une source exécutable |A |T-SEC-02
+|===
+
+== Sorties et données différées
+
+[cols="1,2,4,1,2",options="header"]
+|===
+|Identifiant |Capacité |Contrat ou arbitrage |Étape |Preuves attendues
+|F-23 |Choix du document |Type de média et jeu de caractères explicites ; aucune restriction à HTML |A |T-SOR-01 à 04
+|F-24 |Échappement contextuel |Profils distincts ; contextes non pris en charge refusés ; pas de promesse de validité par simple échappement |C |T-SEC-03 à 07 ; T-CMP-07
+|F-25 |Contenu déclaré fiable |Type dédié au contexte, création explicite ; jamais réinterprété comme sûr dans un autre contexte |C |T-SEC-05, 06
+|F-26 |Sorties personnalisées |Encodeur déclaré ; mêmes contrôles de types, limites et propagation des erreurs |C |T-SOR-04 ; T-EXT-03
+|F-27 |Rendu matérialisé et en flux |Chaîne ou sortie fournie ; mémoire bornée hors matérialisation explicite |A |T-SOR-02, 05 ; T-PER-02
+|F-28 |Rendu asynchrone |Données différées standard ; ordre textuel stable, échec et annulation propagés |C |T-ASY-01 à 05
+|F-29 |Langue, fuseau et messages |Catalogues typés, repli explicite, paramètres, pluriels et variantes ; contexte par rendu |C |T-LOC-01 à 05
+|F-30 |Formats de valeurs |Nombres, dates et heures selon locale et fuseau explicites ; indépendance de la machine |C |T-LOC-03, 05
+|F-31 |Variantes de documents |Sélection déterministe selon un ensemble déclaré, type et langue ; erreur si ambiguïté |C |T-LOC-04 ; T-INT-03
+|===
+
+== Intégration et qualité
+
+[cols="1,2,4,1,2",options="header"]
+|===
+|Identifiant |Capacité |Contrat ou arbitrage |Étape |Preuves attendues
+|F-32 |Injection CDI |Gabarits et paramètres exposés au build, portées respectées, absence d'accès hors contexte |D |T-INT-01, 02
+|F-33 |Réponse REST |Type de média conservé, négociation déclarée, encodage et erreurs partielles explicites |D |T-INT-03 à 05
+|F-34 |Cycle de vie Vidocq |Enregistrement explicite, configuration auditée, arrêt sûr après échec partiel |D |T-INT-06, 07
+|F-35 |Rechargement en développement |Recompilation atomique des dépendants ; diagnostics visibles ; génération servie identifiable |D |T-DEV-01 à 04
+|F-36 |Séparation de production |Compilateur, observateurs, tests et outils de mesure absents du livrable |D |T-MOD-01, 02
+|F-37 |Concurrence |Gabarits immuables ; contextes isolés ; fils virtuels ; propriété des ressources définie |A/D |T-CON-01 à 04
+|F-38 |Limites et résilience |Bornes documentées, annulation coopérative, erreurs d'entrée-sortie propagées |A |T-LIM-01 à 05 ; T-SEC-08 ; T-SYN-09
+|F-39 |Performances qualifiées |Sorties équivalentes, échauffement, répétitions, allocations et résultats bruts |D |T-PER-01 à 04
+|F-40 |Documentation complète |Contrats, exemples, erreurs, limites, migration et preuve des capacités réellement livrées |A à D |T-DOC-01 à 03
+|===
+
+== Conditions de passage entre étapes
+
+* Aucun cas de test d'une capacité livrée ne reste silencieusement ignoré ; une exclusion porte une raison et un effet sur le périmètre revendiqué.
+* La chaîne de compilation doit échouer sur les projets invalides avant de prétendre valider les gabarits au build.
+* Le rendu ne se mesure qu'après vérification indépendante de sa sortie.
+* La qualification distingue les erreurs prouvables à la compilation des erreurs dépendant des données reçues à l'exécution.
+* Un point non implémenté reste visible dans cette matrice et dans la documentation de version.

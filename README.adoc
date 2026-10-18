@@ -1,0 +1,44 @@
+= Verne
+:lang: fr
+
+Moteur de gabarits textuels compilés pour Java 25, autonome et destiné à l'écosystème Vidocq.
+Le nom rend hommage à Jules Verne.
+
+== État du projet
+
+Première tranche du compilateur : gabarits textuels UTF-8, paramètres typés, accès directs aux composants de records, commentaires et échappements.
+Les 42 tests de la suite passent, dont les 17 tests métier initiaux. Les classes générées n'exigent que le JDK à l'exécution.
+Lire link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat livré et ses limites]. Aucune performance n'est encore revendiquée.
+
+== Vérification
+
+Le lanceur Maven fourni fixe Maven 3.9.16 ; utiliser un JDK 25.
+Le premier lancement peut télécharger cette distribution et les dépendances de test.
+
+Sous Windows :
+
+[source,powershell]
+----
+.\mvnw.cmd test
+----
+
+Sous Unix :
+
+[source,shell]
+----
+./mvnw test
+----
+
+Lire link:docs/fr/modules/ROOT/pages/premiers-tests.adoc[la phase rouge historique] et link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[la phase verte actuelle]. Un test en échec ne doit plus être considéré normal pour les capacités livrées.
+Les rapports se trouvent dans `verne-verification/target/surefire-reports`.
+Le compilateur est attendu dans `verne-compilation/target/classes` ; un autre emplacement peut être fourni par `-Dverne.chemin.processeur=...`.
+
+== Documentation
+
+Le link:docs/fr/modules/ROOT/pages/index.adoc[dossier de conception] contient architecture, matrice fonctionnelle, cas de test et protocole de performances.
+La documentation Antora est en français dans `docs/fr` et utilise l'interface commune de l'écosystème ; aucune interface spécifique n'est embarquée.
+
+== Licence
+
+EPL-2.0 OU EUPL-1.2 OU GPL-2.0-or-later, au choix du destinataire.
+Voir `LICENSE` et `licenses/`.

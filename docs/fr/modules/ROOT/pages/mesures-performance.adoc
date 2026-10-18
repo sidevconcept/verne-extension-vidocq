@@ -1,0 +1,112 @@
+= Verne — Protocole de qualification des performances
+:lang: fr
+:toc:
+
+État : protocole proposé avant implémentation. Aucun résultat mesuré et aucun gain revendiqué.
+
+== Questions à mesurer
+
+* Combien coûte un rendu préparé, en temps et en octets alloués ?
+* Quel coût ajoute le moteur par rapport à une écriture Java directe de la même sortie ?
+* Comment évoluent ce coût, le débit et la latence avec taille, composition et concurrence ?
+* Que coûtent compilation propre, recompilation incrémentale, chargement et premier rendu ?
+* Quelle mémoire reste résidente après chargement et après plusieurs générations de développement ?
+
+Le moteur autonome et son intégration HTTP sont mesurés séparément.
+Une amélioration de temps de rendu ne prouve ni un meilleur démarrage ni une meilleure consommation mémoire.
+
+== Comparaisons permises
+
+. Écriture Java directe, produisant strictement les mêmes caractères et les mêmes transformations de sécurité : mesure du surcoût nécessaire.
+. Révision stable de Verne contre branche candidate : détection des régressions et qualification des optimisations.
+. Première utilisation contre rendu préparé : coût payé avant et après préparation.
+. Sortie matérialisée contre flux équivalent : coût de la commodité et comportement mémoire.
+
+Le rapport public reste centré sur ces configurations de Verne et sur les témoins reproductibles décrits ici.
+Un témoin qui omet échappement, contrôle d'absence ou composition n'est pas équivalent et ne sert pas à annoncer un gain.
+
+== Corpus versionné
+
+[cols="1,3,3",options="header"]
+|===
+|Identifiant |Charge |Vérification préalable
+|M-01 |Texte statique : 0, 128 caractères, 4 Kio et 1 Mio |Longueur, contenu exact et empreinte ; distinguer caractères et taille encodée
+|M-02 |1, 10 et 100 interpolations typées, valeurs courtes et longues |Égalité avec texte attendu ; chaque interpolation réellement consommée
+|M-03 |Navigation d'objet, condition et remplacement explicite |Résultats pour chaque branche, valeur absente autorisée, nulle et vide
+|M-04 |Boucles : 0, 1, 100 et 10 000 éléments |Ordre, indices et sortie intégrale vérifiés hors chronométrage
+|M-05 |Inclusions, parents et fragments à plusieurs profondeurs |Document identique au témoin développé explicitement
+|M-06 |Profils HTML, texte et JSON, faible puis forte densité de caractères spéciaux |Transformations identiques ; validation indépendante des documents structurés
+|M-07 |Données différées déjà disponibles puis attente contrôlée |Ordre exact ; séparer coût moteur et délai externe imposé
+|M-08 |Flux d'au moins 16 Mio vers une sortie sans rétention |Nombre de caractères et empreinte calculés ; mémoire non proportionnelle au document
+|M-09 |Catalogue de 1, 100 et 1 000 gabarits |Chargement, premier rendu et coût conservé par gabarit
+|M-10 |Reconstruction propre puis changement d'une feuille, d'un parent et d'un modèle |Artefacts attendus identiques à une construction propre ; étendue d'invalidation enregistrée
+|===
+
+Le corpus conserve paramètres, modèles et résultats attendus.
+Les tailles ne sont pas présentées comme représentatives de toutes les applications ; compléter par un cas réel anonymisé quand disponible.
+Les sorties d'erreur et dépassements de limites se mesurent dans un groupe distinct des rendus valides.
+
+== Micro-mesures
+
+Un module dédié utilisera JMH comme dépendance de mesure uniquement.
+Le témoin et Verne partagent modèles, données et destination de sortie.
+La préparation du gabarit est exclue des mesures de rendu préparé et incluse explicitement dans celles de compilation ou de première utilisation.
+Le résultat est consommé pour empêcher sa suppression par le compilateur ; les données varient selon un jeu déterministe pour éviter le repli sur une constante.
+
+Point de départ du protocole : 3 processus indépendants, 5 itérations d'échauffement d'une seconde et 10 itérations de mesure d'une seconde par processus.
+Ces valeurs sont ajustées si les distributions montrent une stabilisation insuffisante ; le changement est enregistré avant de comparer les candidats.
+Une mesure de démarrage emploie un processus neuf par échantillon et ne bénéficie pas de cet échauffement.
+
+Enregistrer temps par opération, opérations par seconde, octets alloués par opération et activité du ramasse-miettes.
+Le profilage détaillé s'exécute séparément du résultat principal pour rendre son surcoût visible.
+Une mesure à un fil ne permet pas de déduire le comportement concurrent ; un essai distinct fixe explicitement le nombre de rendus simultanés.
+
+== Mesures d'intégration
+
+Le banc HTTP comprend une période de stabilisation puis des charges par paliers, à concurrence et débit d'arrivée déclarés.
+Le client de charge est séparé si ses ressources risquent de limiter le serveur.
+Les modèles, tailles de réponse, encodages et transports sont identiques entre révisions.
+La mise en cache complète de la réponse est désactivée, ou mesurée comme scénario distinct explicitement nommé.
+
+Rapporter débit utile, taux d'erreur, latences p50, p95 et p99, mémoire résidente et consommation processeur.
+Les réponses incorrectes et abandonnées ne comptent pas comme rendus réussis.
+Le générateur mesure la latence depuis l'arrivée prévue de la requête, et pas uniquement depuis sa prise en charge tardive, pour ne pas masquer les files d'attente.
+Le rapport précise si le transport, le client ou le moteur sature en premier.
+
+== Environnement et reproductibilité
+
+Chaque campagne archive :
+
+* Révisions Git, versions du JDK, de Maven et du banc de mesure.
+* Système, processeur, mémoire disponible, paramètres JVM, ramasse-miettes et taille du tas.
+* Gestion énergétique, charge de fond, limites de conteneur et conditions thermiques pertinentes.
+* Commandes exactes, jeu de données, graines, ordre des passages et configuration des sorties.
+* Résultats bruts, traces utiles, sorties de vérification et raisons d'exclusion.
+
+Les campagnes de référence se font sur une machine dédiée ou rendue stable ; les contrôles sur poste partagé restent informatifs.
+Les révisions stable et candidate alternent leur ordre de passage pour limiter les effets de dérive.
+La campagne conserve les échantillons défavorables ; aucune sélection opportuniste du meilleur passage.
+Les résultats Windows et Linux sont distincts, pas agrégés comme s'ils provenaient du même environnement.
+
+== Lecture et qualification des écarts
+
+Le rapport indique la distribution et l'incertitude, pas uniquement un ratio de moyennes.
+Pour le temps et les allocations, un rapport candidate / référence inférieur à un signifie une baisse ; pour le débit, il signifie une baisse de performance.
+Ne pas additionner des pourcentages entre scénarios hétérogènes.
+Un gain sur un cas ne compense pas silencieusement une régression sur un autre.
+
+Les seuils de blocage ne sont pas inventés avant le premier étalonnage.
+Ils seront fixés par métrique après plusieurs campagnes stables, avec trois états : conforme, régression reproductible, non concluant.
+Une mesure bruitée est répétée dans de meilleures conditions ; elle n'est ni une réussite automatique ni une preuve de régression.
+Les budgets absolus, en temps, mémoire et taille d'artefact, sont consignés avant la qualification de la première version.
+
+== Conditions de publication d'un résultat
+
+. Les oracles du corpus passent avant chronométrage.
+. Les mesures n'embarquent ni journalisation volumineuse, ni recompilation involontaire, ni cache différent entre candidats.
+. Le rapport distingue compilation, chargement, premier rendu, rendu préparé et transport.
+. Les données brutes et la procédure permettent une reproduction.
+. Les limites statistiques et matérielles sont visibles.
+. Une optimisation ne modifie aucun contrat fonctionnel ou de sécurité pour gagner du temps.
+
+Une réduction mesurée ne justifie jamais la suppression de tests ou d'une documentation exigée.

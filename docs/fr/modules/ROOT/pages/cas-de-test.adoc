@@ -1,0 +1,204 @@
+= Verne — Cas de test avant implémentation
+:lang: fr
+:toc:
+
+État : plan de tests. Une première tranche exécutable est décrite dans link:premiers-tests.adoc[son rapport] ; les premiers contrats métier sont validés par la suite décrite dans link:compilateur-minimal.adoc[le rapport actuel], sans valider toutes les familles du plan.
+Chaque ligne devient un ou plusieurs tests écrits avant le code correspondant.
+Une famille n'est validée qu'après l'exécution de tous ses jeux de données et la revue de ses limites.
+
+== Méthode et oracles
+
+. Définir le contrat et l'oracle attendu sans appeler le moteur pour fabriquer le résultat de référence.
+. Écrire le test ; observer son échec pour la bonne raison, puis conserver la trace dans la revue de réalisation.
+. Implémenter le comportement minimal ; exécuter les tests concernés et leurs dépendants.
+. Améliorer la structure, puis relancer les vérifications pertinentes.
+. Relier le test à son identifiant fonctionnel et mettre à jour la documentation.
+
+Les sorties textuelles sont comparées exactement, y compris espaces, fins de ligne et points de code.
+Les erreurs sont vérifiées par code, phase et position ; le message français est contrôlé sans figer toute sa ponctuation.
+Un test de compilation négative vérifie l'échec du processus, le diagnostic visé et l'absence de livrable exploitable.
+Un oracle JSON ou XML utilise un lecteur indépendant uniquement dans les tests ; il ne devient pas une dépendance du moteur.
+La couverture de lignes ne démontre pas l'exhaustivité ; combiner tests de branches, jeux générés, tests de mutation ciblés et essais d'intégration.
+
+Les exemples de syntaxe reprennent la notation proposée dans link:architecture.adoc[architecture].
+Avant les tests d'expressions avancées, la grammaire et les règles numériques doivent devenir des contrats explicites.
+Un cas encore dépendant d'un arbitrage doit être marqué bloqué par ce contrat, jamais interprété librement par l'implémentation.
+
+== Texte, Unicode et analyse
+
+[cols="1,3,4",options="header"]
+|===
+|Identifiant |Entrée ou action |Résultat attendu
+|T-SYN-01 |Source vide, puis `bonjour`, puis texte sans expression de plusieurs mégaoctets |Chaîne vide ou texte identique ; aucun délimiteur inventé ; dépassement de taille documenté si limite atteinte
+|T-SYN-02 |Espaces initiaux et finaux, tabulations, lignes vides, fins LF et CRLF |Conservation exacte ; positions des erreurs cohérentes pour chaque convention
+|T-SYN-03 |`avant{! invisible !}après` ; commentaire seul sur une ligne |`avantaprès` ; la ligne conserve sa fin de ligne ; commentaire non fermé refusé
+|T-SYN-04 |`{@java.lang.String nom}Bonjour {nom}` avec `nom = Léa` |`Bonjour Léa` ; déclaration absente de la sortie
+|T-SYN-05 |Délimiteur ouvert, fermeture isolée de section, sections croisées, guillemet non fermé, échappement final incomplet |Échec de compilation à l'emplacement fautif, sans boucle ni débordement de pile
+|T-SYN-06 |Accents, emoji hors du plan de base, caractères combinés, identifiants précomposés et décomposés |Texte conservé ; colonnes selon la convention documentée ; identifiants ambigus refusés
+|T-SYN-07 |Bloc littéral contenant directives, accolades, scripts et séquence de fermeture voisine |Contenu exact sans interprétation ; fermeture définie par la grammaire ; absence de fermeture diagnostiquée
+|T-SYN-08 |UTF-8 invalide, marque d'ordre initiale ou interne, octet nul dans un identifiant de ressource |Décodage invalide refusé ; marque initiale traitée selon contrat, marque interne conservée comme donnée ; identifiant nul refusé
+|T-SYN-10 |Délimiteur ouvrant échappé devant un nom non déclaré |Le texte `{nom}` est conservé sans recherche de paramètre ; aucune erreur de variable absente
+|T-SYN-09 |Sources tronquées à chaque position d'un petit corpus valide ; milliers de délimiteurs incomplets |Succès seulement si le préfixe est valide ; sinon diagnostic borné, sans blocage ni exception interne exposée
+|===
+
+== Types et expressions
+
+[cols="1,3,4",options="header"]
+|===
+|Identifiant |Entrée ou action |Résultat attendu
+|T-TYP-01 |Paramètre record public exposé avec accesseur `nom` |Accès direct généré et valeur exacte ; aucune résolution réflexive
+|T-TYP-02 |Paramètre obligatoire absent ; paramètre présent à `null` ; chaîne vide |Absence refusée par l'appel typé ou son adaptation ; nullité traitée selon déclaration ; chaîne vide conservée
+|T-TYP-03 |Remplacement `nom ?: 'anonyme'` pour absence autorisée, `null`, chaîne vide et chaîne non vide |`anonyme`, `anonyme`, chaîne vide et valeur d'origine respectivement ; remplacement évalué seulement si nécessaire
+|T-TYP-04 |Propriété inconnue, privée ou située dans un paquet non exporté ; objet sans membre exposé |Échec au build ; aucun `setAccessible`, ouverture automatique de module ou repli réflexif
+|T-TYP-05 |Mauvais type de paramètre, générique incompatible, tableau de mauvais composant, type brut non vérifiable |Diagnostic de typage ; aucune conversion silencieuse ou acceptation non typée implicite
+|T-TYP-06 |Méthodes surchargées, héritage, interface par défaut et résultat d'un autre processeur d'annotations |Sélection déterministe conforme au contrat ; ambiguïté ou symbole restant absent refusé au dernier tour
+|T-TYP-08 |Deux déclarations du même paramètre dans un gabarit |Compilation refusée avec `VERNE-TYP-002` ; aucune déclaration prioritaire arbitraire
+|T-TYP-07 |Table associative typée avec clé connue, absente ou associée à `null` |Type de valeur vérifié au build ; absence et nullité distinguées à l'exécution ; remplacement uniquement explicite
+|T-EXP-01 |Précédence, parenthèses imbriquées, comparaisons, négation et courts-circuits |Résultats selon la grammaire figée ; branche non nécessaire jamais appelée, vérifiée par compteur indépendant
+|T-EXP-02 |Navigation ordinaire puis optionnelle sur objet nul, résultat nul et propriété inexistante |Erreur de nullité ou absence explicitement propagée selon opérateur ; nom inexistant rejeté statiquement même après navigation optionnelle
+|T-EXP-03 |Nombres nuls, négatifs, bornes entières, dépassement, décimaux, division par zéro et comparaison entre catégories |Politique numérique définie avant test ; dépassement et mélange interdits signalés, aucun résultat silencieusement tronqué
+|T-EXP-04 |Index premier, dernier, négatif, égal à la taille ; collection vide ou nulle |Valeurs aux indices valides ; erreurs explicites aux bornes invalides ; absence autorisée seulement via opérateur prévu
+|T-EXP-05 |Fonction exposée avec bons arguments, mauvais nombre, mauvais type ou nom inconnu |Résultat exact ou rejet au build ; paramètres évalués dans l'ordre défini et une seule fois
+|T-EXP-06 |Collision d'espace de noms, ordre de découverte inversé, accès à `getClass` ou au système |Même résolution ou même erreur d'ambiguïté ; accès non exposé refusé ; aucun comportement dépendant de l'ordre des fichiers
+|===
+
+== Contrôle de flux et composition
+
+[cols="1,3,4",options="header"]
+|===
+|Identifiant |Entrée ou action |Résultat attendu
+|T-CTL-01 |Condition vraie puis fausse avec branche alternative |Seule la branche choisie produit du texte et exécute ses fonctions
+|T-CTL-02 |Condition chaîne, nombre, absence ou valeur nulle |Échec de typage ou diagnostic de nullité ; aucune conversion implicite en booléen
+|T-CTL-03 |Boucle sur zéro, un et trois éléments, tableaux primitifs et d'objets |Zéro, une et trois répétitions ; ordre préservé ; fin de portée après boucle
+|T-CTL-04 |Boucles imbriquées avec même nom de variable et métadonnées |Portées isolées ; indices 0 à n−1, numéros 1 à n ; indicateurs exacts et variables externes restaurées
+|T-CTL-05 |Choix multiple, cas sans correspondance, cas dupliqué et type de cas incompatible |Une seule branche choisie ; repli explicite ; doublons ou incompatibilités rejetés au build
+|T-CTL-06 |Itérateur à usage unique, table ordonnée puis non ordonnée, erreur pendant l'itération |Pas de consommation anticipée complète ; ordre de l'itérateur respecté ; erreur et propriété de ressource documentées
+|T-CTL-07 |Variable locale, masquage, référence avant déclaration et après bloc |Visibilité délimitée ; références hors portée rejetées au build
+|T-CMP-01 |Inclusion existante avec paramètres corrects, manquants et superflus |Sortie exacte ; erreurs de contrat au build, sans héritage implicite des paramètres de l'appelant
+|T-CMP-02 |Fichier manquant, auto-inclusion et cycle A → B → C → A |Compilation refusée ; identifiants et chaîne du cycle indiqués ; aucune récursion de l'analyseur jusqu'à épuisement
+|T-CMP-03 |Parent avec emplacement obligatoire, emplacement facultatif, substitution répétée ou inconnue |Composition déterministe ; valeur par défaut appliquée ; obligations manquantes et noms inconnus diagnostiqués
+|T-CMP-04 |Fragment existant, absent, dupliqué, paramètre externe non déclaré |Rendu autonome correct ; autres cas refusés au build
+|T-CMP-05 |Composant avec arguments et contenu imbriqué utilisant des noms identiques |Contrats de portée respectés ; aucune fuite de variable entre appels
+|T-CMP-06 |Inclusion dynamique autorisée, cible hors ensemble, cycle déterminé seulement par données et profondeur excessive |Cibles et signatures vérifiées au build ; refus à l'exécution hors ensemble ; limites appliquées aux parcours dynamiques
+|T-CMP-07 |Parent HTML et enfant texte, fragment JSON et appel HTML |Composition incompatible rejetée ; aucune conversion de sécurité implicite
+|===
+
+== Sorties et sécurité
+
+[cols="1,3,4",options="header"]
+|===
+|Identifiant |Entrée ou action |Résultat attendu
+|T-SOR-01 |Même valeur contenant `&<>` rendue en texte brut et HTML |Texte brut exact ; HTML échappé selon son profil ; type de média choisi conservé
+|T-SOR-02 |Rendu vers chaîne, `Appendable`, `Writer`, sortie qui échoue après n caractères |Résultats identiques sans erreur ; sortie jamais fermée par le moteur ; erreur propagée et préfixe partiel documenté
+|T-SOR-03 |UTF-8, jeu restreint non représentable, caractère substitut isolé et gros caractère fractionné entre écritures |Conversion exacte ou erreur explicite ; aucun remplacement silencieux ; pas de point de code corrompu à une frontière
+|T-SOR-04 |Profil métier avec encodeur déclaré, absent ou invalide |Encodeur choisi appliqué une fois ; absence détectée au build ; exception d'encodage contextualisée sans divulguer de donnée
+|T-SOR-05 |Rendu volumineux vers sortie lente, puis sortie temporaire bornée |Mémoire de fonctionnement bornée ; arrêt sur limite ; publication de sortie temporaire uniquement après succès
+|T-SEC-01 |`../`, chemin absolu Windows ou Unix, UNC, lien symbolique sortant, variantes de séparateurs, identifiant nul |Résolution refusée hors racine réelle ; aucune lecture externe, même sous Windows
+|T-SEC-02 |Schéma HTTP, cible distante, texte contenant une directive dans une donnée utilisateur |Aucun accès réseau ; donnée rendue comme donnée ; aucun nouvel analyseur déclenché au rendu
+|T-SEC-03 |Valeur `&<>"'` dans texte HTML et attribut entre guillemets |`&amp;&lt;&gt;&quot;&#39;` selon le contrat initial ; original non modifié ; pas de double échappement d'un type fiable autorisé
+|T-SEC-04 |Insertion dans nom de balise, attribut sans guillemets, événement, script, style, URL `javascript:` ou URL obfusquée |Contexte interdit rejeté au build ; schéma ou normalisation dangereux refusés par le validateur URL ; aucun simple échappement présenté comme protection suffisante
+|T-SEC-05 |HTML déclaré fiable dans texte HTML, URL, script et JSON |Autorisé uniquement au point prévu de son contexte ; autres usages rejetés statiquement
+|T-SEC-06 |Document JSON avec guillemets, antislashs, contrôles, nombres non finis et objet métier |Sortie lue par un lecteur indépendant ; valeurs non admises rejetées ; pas de `toString` comme sérialisation ; données fiables d'un autre profil refusées
+|T-SEC-07 |XML avec caractère interdit, tentative de déclaration d'entité et sortie structurellement invalide |Caractère interdit refusé ; aucune résolution externe ; validité structurelle distinguée de l'échappement et contrôlée par lecteur de test
+|T-SEC-08 |Exception métier contenant un secret, chemin de construction absolu et nom d'objet sensible |Diagnostic public expurgé ; cause conservée selon politique de journalisation documentée, sans valeur métier par défaut
+|===
+
+== Limites, concurrence et asynchronisme
+
+[cols="1,3,4",options="header"]
+|===
+|Identifiant |Entrée ou action |Résultat attendu
+|T-LIM-01 |Pour chaque limite de taille source et sortie : valeur L−1, L et L+1 |Succès dans la borne et refus au premier dépassement ; unité caractères ou octets conforme au contrat ; aucun débordement arithmétique
+|T-LIM-02 |Imbrication et dépendances profondes, chaque borne autour de L ; source massivement répétée |Compilation ou rendu borné ; diagnostic dédié avant épuisement de pile ou de mémoire
+|T-LIM-03 |Itérateur infini et fonction ne terminant pas |Boucle arrêtée au plafond d'itérations ; fonction métier arbitraire non présentée comme interruptible de force ; test isolé avec arrêt du processus de test si nécessaire
+|T-LIM-04 |Annulation avant début, entre deux écritures et pendant attente asynchrone |Pas de nouvelle écriture après observation de l'annulation ; ressources possédées libérées ; état terminal unique
+|T-LIM-05 |Configuration négative, zéro, dépassement de type et unité inconnue |Rejet à la configuration ; zéro ne signifie illimité que si ce sens est explicitement défini
+|T-CON-01 |Même gabarit partagé par 1, 2 puis 1 000 rendus à modèles distincts et fils virtuels |Chaque sortie égale son oracle ; aucune donnée d'un autre rendu, aucun état global mutable du moteur
+|T-CON-02 |Exception dans un rendu puis réutilisation du même gabarit |Rendu suivant correct ; absence de contexte, compteur ou sortie résiduel
+|T-CON-03 |Deux rendus avec locales et fuseaux opposés exécutés en parallèle |Aucun mélange de langue, fuseau ou contexte de requête
+|T-CON-04 |Sortie, exécuteur et modèle fournis par l'application ; arrêt du moteur |Sortie et exécuteur externes restent sous responsabilité de l'appelant ; contrat des modèles mutables documenté et testé sans promettre de photographie atomique
+|T-ASY-01 |Deux valeurs différées complétées dans l'ordre inverse |Ordre du document conservé sans résultat dupliqué
+|T-ASY-02 |Échec, annulation et expiration d'une valeur différée |Erreur contextualisée, attente terminée, pas de tâche orpheline appartenant au moteur
+|T-ASY-03 |Complétion immédiate, complétion concurrente et double notification d'un adaptateur défectueux |Un seul résultat terminal ; absence de récursion non bornée et de double écriture
+|T-ASY-04 |Consommateur lent puis déconnexion avec nombreuses valeurs différées |Nombre de résultats en attente borné ; arrêt des écritures ; tâches possédées annulées selon contrat
+|T-ASY-05 |Rendu synchrone appelé sur un contexte interdisant le blocage ; rendu sur fil virtuel |Erreur explicite dans le premier cas si l'attente est nécessaire ; réussite dans le contexte prévu, sans verrou global pendant l'attente
+|===
+
+== Compilation, modules et diagnostics
+
+[cols="1,3,4",options="header"]
+|===
+|Identifiant |Entrée ou action |Résultat attendu
+|T-COM-01 |Projet minimal propre, modèles sources et gabarit typé dans la même compilation |Construction réussie sans classes préexistantes ; classes de gabarits exécutables
+|T-COM-02 |Erreur dans un gabarit non référencé par le programme principal |Échec de la construction entière avec position source correcte
+|T-COM-03 |Deux racines donnant le même identifiant, casse différente, normalisation Unicode différente ou fournisseur dupliqué |Collision signalée avant génération ; comportement identique sous Windows et Linux
+|T-COM-04 |Modifier une propriété métier, un gabarit inclus puis un catalogue |Tous les dépendants concernés sont revérifiés ; erreur nouvelle jamais masquée par le cache
+|T-COM-05 |Supprimer puis renommer un gabarit, son fragment et un modèle |Absence de classe ou registre périmé ; références restantes refusées
+|T-COM-06 |Recompiler deux fois dans des répertoires absolus différents |Sources générées et registre identiques ; aucun chemin machine ou horodatage ; comparaison des JAR seulement après maîtrise des métadonnées d'archive
+|T-COM-07 |Modèle généré par processeur voisin ; ordre des processeurs inversé |Résolution après disponibilité des symboles ; indexeur hérité conservé ; diagnostic final si type non produit
+|T-COM-08 |Projet sans annotation applicative, changement uniquement d'une ressource ; construction propre puis incrémentale |Validation déclenchée dans tous les cas ; même résultat observable que la construction propre
+|T-MOD-01 |Exécuter le moteur sur le chemin des modules avec uniquement son cœur et le JDK |Rendu réussi ; aucun ajout de dépendance ou ouverture de module ; analyse des dépendances sans outil de compilation dans le déploiement
+|T-MOD-02 |Archives de production, image liée et distribution de l'application |Aucun compilateur Verne, observateur, module de développement, fixture ou outil de mesure ; service généré résolu correctement
+|T-DIA-01 |Erreur après emoji, caractères combinés, commentaire multiligne et CRLF |Même intervalle logique source selon la convention documentée ; diagnostic français et code stable
+|T-DIA-02 |Erreur produite par compilation d'une source Java générée |Retour au gabarit et à l'expression d'origine ; détail interne réservé au diagnostic de développement
+|T-DIA-03 |Plusieurs erreurs indépendantes dans plusieurs fichiers |Ordre déterministe, nombre de diagnostics borné ; aucune cascade infinie pour une seule faute
+|T-DIA-04 |Même erreur répétée après modification d'un fichier voisin |Code et source restent cohérents ; aucune erreur périmée issue du cache
+|===
+
+== Extensions, langues et intégration
+
+[cols="1,3,4",options="header"]
+|===
+|Identifiant |Entrée ou action |Résultat attendu
+|T-EXT-01 |Fonction ou section personnalisée avec déclaration de compilation et implémentation correcte |Paramètres contrôlés au build ; résultat exact et déterministe sur le corpus
+|T-EXT-02 |Déclaration manquante, doublon, signature d'exécution incompatible et priorité égale |Échec explicite ; pas de désactivation globale de la validation
+|T-EXT-03 |Extension qui lève une exception, écrit trop de données ou retourne une valeur incompatible |Erreur contextualisée, limites maintenues aux frontières contrôlées ; aucune corruption des rendus suivants
+|T-LOC-01 |Message présent, absent, paramètre manquant ou surnuméraire |Résolution ou repli explicitement déclaré ; contrat de paramètres vérifié au build
+|T-LOC-02 |Pluriels zéro, un, plusieurs ; message lui-même invalide |Branche selon règle linguistique déclarée ; message invalide refusé au build
+|T-LOC-03 |Date à changement d'heure, instant limite, nombre décimal et fuseau absent |Valeurs selon locale et fuseau explicites ; absence de dépendance aux valeurs par défaut de la machine
+|T-LOC-04 |Deux variantes applicables, aucune variante, variante de langue avec repli |Sélection déterministe ou erreur d'ambiguïté ; aucun choix selon ordre de découverte
+|T-LOC-05 |Construction avec locale système différente, puis rendus en français et dans une autre langue |Mêmes artefacts ; langue de sortie choisie par l'application ; diagnostics intégrés en français
+|T-INT-01 |Injection d'un gabarit existant, inconnu et dupliqué |Résolution vérifiée au build ; erreurs sans démarrage partiellement utilisable
+|T-INT-02 |Accès CDI de requête dans deux requêtes concurrentes puis hors requête |Isolation ; erreur explicite hors contexte ; aucune donnée conservée après fin de requête
+|T-INT-03 |Réponse HTML, JSON, texte et format métier ; négociation valide, absente ou incompatible |Type et encodage corrects ; politique explicite de repli ; réponse de non-acceptation quand aucune représentation ne convient
+|T-INT-04 |Échec avant puis après engagement d'une réponse HTTP |Erreur complète possible avant engagement ; après engagement, fin contrôlée et journalisation sans réponse de succès inventée
+|T-INT-05 |Déconnexion du client pendant un rendu volumineux et asynchrone |Écritures arrêtées, ressources possédées libérées, annulation transmise selon contrat
+|T-INT-06 |Échec à chaque étape d'initialisation, puis un et deux appels d'arrêt |Aucune ressource possédée restante ; arrêt sûr même sans démarrage terminé
+|T-INT-07 |Clé de configuration déclarée, faute de clé, clé inconnue et profils de lancement |Audit Vidocq respecté ; diagnostics utiles ; aucune activation du développement par simple présence d'une bibliothèque
+|T-DEV-01 |Modifier un gabarit valide pendant des rendus en cours |Anciens rendus cohérents ; nouveaux rendus sur nouvelle génération entière, sans mélange
+|T-DEV-02 |Introduire une erreur, corriger puis supprimer un gabarit inclus |Erreur visible ; génération servie indiquée ; reprise après correction ; suppression invalidant les dépendants
+|T-DEV-03 |Cent cycles de rechargement, puis arrêt |Observateurs et chargeurs libérés ; test de rétention par références faibles avec protocole borné ; pas d'exigence de collecte immédiate non déterministe
+|T-DEV-04 |Modification simultanée d'un modèle Java, d'un gabarit et d'un catalogue |Publication d'une génération seulement quand l'ensemble compatible est compilé
+|===
+
+== Documentation et qualification des performances
+
+[cols="1,3,4",options="header"]
+|===
+|Identifiant |Entrée ou action |Résultat attendu
+|T-DOC-01 |Construire et exécuter tous les exemples documentés |Résultats conformes ; exemples invalides explicitement identifiés et diagnostiqués
+|T-DOC-02 |Comparer inventaire des contrats publics, diagnostics et configuration avec leur référence |Aucune entrée livrée sans contrat français, limites et cas de test ; liens documentaires résolus
+|T-DOC-03 |Confronter la matrice au rapport de tests et à la documentation de version |Aucune capacité déclarée livrée sans preuve ; exclusions et fonctionnalités différées visibles
+|T-PER-01 |Corpus de mesure avant chronométrage |Chaque sortie égale l'oracle indépendant ; incohérence invalidant la comparaison entière concernée
+|T-PER-02 |Rendu volumineux en flux et vers chaîne |Allocations et mémoire résidente distinguées ; coût de matérialisation explicite, aucune conclusion basée seulement sur le temps moyen
+|T-PER-03 |Répéter les mesures dans des processus séparés avec ordre alterné |Résultats bruts, dispersion et environnement enregistrés ; différence inférieure au bruit déclarée non concluante
+|T-PER-04 |Introduire une régression connue dans une branche de qualification |Protocole capable de la distinguer selon son seuil calibré ; aucun seuil arbitraire appliqué à une machine partagée
+|===
+
+== Jeux générés et limites de l'exhaustivité
+
+Pour l'analyseur, produire des gabarits à profondeur bornée, puis supprimer ou déplacer chaque token et tronquer les sources.
+Pour les chaînes, croiser caractères spéciaux, points de code supplémentaires, longues séquences répétées et frontières de tampon.
+Pour la composition, produire des graphes acycliques et des graphes avec cycle injecté ; vérifier ordre des dépendances et diagnostic.
+Pour la concurrence, utiliser barrières et complétions pilotées plutôt que des temporisations arbitraires ; répéter avec graines enregistrées.
+Les essais d'épuisement mémoire et de blocage s'exécutent dans un processus jetable avec plafond et délai externes.
+
+Ces techniques cherchent des cas non anticipés ; elles ne permettent pas d'affirmer que tous les programmes possibles ont été testés.
+Tout défaut découvert enrichit le corpus par un test de non-régression minimal avant sa correction.
+
+== Rapport exigé pour chaque réalisation
+
+Le rapport associe révision, JDK, commande exacte, nombre de tests exécutés, échecs et exclusions motivées.
+Il sépare test unitaire, compilation de projet, intégration, sécurité, concurrence et mesure de performances.
+La validation avant livraison comporte les systèmes Windows et Linux, une construction propre et une construction incrémentale.
+Aucune commande ou résultat fictif ne remplace une exécution : les commandes seront fixées avec les modules réellement créés.

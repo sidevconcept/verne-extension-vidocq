@@ -1,0 +1,187 @@
+= Verne — Première tranche de tests exécutables
+:lang: fr
+:toc:
+
+Rapport historique de la phase rouge du 17 octobre 2026. L'état actuel figure dans link:compilateur-minimal.adoc[le contrat du compilateur minimal].
+Les premiers tests sont écrits et exécutés ; aucun compilateur ni moteur de production n'est implémenté.
+Cette tranche ne valide pas les 105 scénarios du plan complet.
+
+== Dépôt et construction
+
+Le dépôt Git autonome réside dans `E:\Dev\Projects\verne`, sur `fonctionnalite/premiers-tests`.
+Il n'a encore aucun commit ni dépôt distant configuré.
+Le dépôt distant pressenti n'était pas accessible lors de la préparation ; aucune publication distante n'a été réalisée.
+L'identité locale est `sidevconcept`, avec l'adresse utilisateur déjà configurée.
+Le journal des prompts est local et exclu par `.git/info/exclude` ; il ne doit jamais être ajouté aux contributions.
+
+Le réacteur contient uniquement `verne-verification`, avec son descripteur de module Java explicite.
+Créer des modules de moteur vides pour faire croire à une implémentation serait inutile à cette étape.
+Les tests JUnit s'exécutent sur le chemin des classes pour isoler les dépendances du banc ; les applications compilées par les tests sont exécutées sur le chemin des modules, sans ouverture supplémentaire.
+Le futur moteur reste soumis aux exigences de modularité de l'architecture.
+
+Le lanceur Maven fixe la version 3.9.16. Les versions initiales de JUnit Jupiter, du compilateur Maven et de Surefire sont respectivement 5.13.4, 3.14.1 et 3.5.4.
+Toutes les dépendances JUnit sont limitées aux tests. Le banc emploie le compilateur standard du JDK 25.
+Les scripts du lanceur Maven et les textes juridiques sont conservés dans leur forme d'origine ; les ajouts propres à Verne sont en français.
+
+== Exécution reproductible
+
+Sous Windows, depuis la racine du dépôt :
+
+[source,powershell]
+----
+.\mvnw.cmd --version
+.\mvnw.cmd test
+----
+
+Sous Unix :
+
+[source,shell]
+----
+./mvnw --version
+./mvnw test
+----
+
+Pour exécuter seulement les témoins d'outillage :
+
+[source,powershell]
+----
+.\mvnw.cmd '-Dtest=OutillageCompilationTest' '-Dsurefire.failIfNoSpecifiedTests=false' test
+----
+
+Depuis l'ajout du compilateur, cette sélection se lance sur le réacteur complet : la dépendance de test impose sa construction préalable. L'option `surefire.failIfNoSpecifiedTests=false` autorise uniquement les modules sans la classe sélectionnée à ne rien exécuter ; le rapport doit bien contenir les quatre témoins dans `verne-verification`.
+
+Le rapport de référence est constitué par les XML et textes sous `verne-verification/target/surefire-reports`.
+Les répertoires `target` sont exclus de Git. Le journal local de la première campagne est `target/verification-initiale.log`.
+Les versions et résultats utiles sont transcrits ci-dessous pour rendre l'état visible sans versionner les rapports volumineux.
+
+== Contrat de compilation fixé par les tests
+
+Le processeur attendu se nomme `io.vidocq.verne.compilation.ProcesseurVerne`.
+Il est appelé explicitement avec `-proc:full` ; la découverte automatique et le raccordement Maven de l'application finale feront l'objet de tests ultérieurs.
+Les tests définissent deux options de compilation :
+
+* `verne.racine.gabarits` : racine locale des sources de gabarits.
+* `verne.profil.sortie` : `texte` pour cette première tranche ; aucune garantie HTML n'est testée ici.
+
+Le chemin du processeur est `verne-compilation/target/classes` par défaut.
+La propriété de test `verne.chemin.processeur` permet de désigner un autre chemin de processeur explicitement ; elle ne sélectionne pas un moteur de remplacement.
+
+La ressource `bonjour.verne` produit la source `io/vidocq/verne/genere/Bonjour.java` et sa classe compilée dans le même module que l'application.
+Cette tranche fixe uniquement ce nom simple ; les sous-répertoires, collisions et règles générales de transformation des noms restent à spécifier avant les tests correspondants.
+Le point d'entrée généré est une méthode statique `rendre`, renvoyant `String`.
+Pour un gabarit sans paramètre, elle n'a pas d'argument ; pour le paramètre déclaré `nom`, elle prend un `String` ; pour le record déclaré, elle prend ce record.
+La génération d'un adaptateur vers d'autres sorties viendra avec ses propres tests.
+
+Les applications fixtures sont compilées proprement, avec leurs modèles Java sources et les gabarits dans la même invocation.
+Elles n'utilisent pas d'annotation applicative pour déclencher le traitement.
+Le compilateur doit inventorier toutes les ressources déclarées, y compris un gabarit que le programme n'appelle pas.
+
+=== Diagnostics initiaux attendus
+
+[cols="1,2,3",options="header"]
+|===
+|Code |Signification |Contrat observable
+|`VERNE-SYN-001` |Interpolation non fermée |La compilation échoue ; le diagnostic contient l'identifiant logique, la ligne et la colonne du délimiteur ouvrant
+|`VERNE-TYP-001` |Propriété inconnue ou inaccessible |La compilation échoue sans accès réflexif ; le diagnostic désigne l'expression fautive
+|`VERNE-TYP-002` |Paramètre déclaré plusieurs fois |La compilation échoue ; aucun choix arbitraire de déclaration
+|===
+
+Pour les positions de cette tranche, lignes et colonnes commencent à un et la colonne compte les points de code Unicode ; une tabulation compte pour un point de code.
+Les positions après caractères combinés et points de code supplémentaires restent à ajouter aux premiers tests.
+Les assertions initiales exigent la forme logique `identifiant.verne:ligne:colonne` dans le message, avec le code stable.
+Elles ne figent pas la ponctuation du reste du texte français.
+
+== Inventaire des tests
+
+Les noms ci-dessous correspondent exactement aux méthodes exécutées.
+Le repère du plan indique une couverture partielle ciblée, jamais la validation de toute la famille.
+
+=== Témoins d'outillage
+
+[cols="3,4",options="header"]
+|===
+|Méthode de `OutillageCompilationTest` |Preuve recherchée
+|`compileEtExecuteUnModuleJavaSansProcesseur` |Le JDK compile un vrai module, lance une JVM et restitue accents, emoji et CRLF exactement
+|`distingueUneErreurJavaDuSuccesDeCompilation` |Le banc refuse une source Java invalide et récupère le code de diagnostic réel
+|`supporteUnCheminAvecEspacesEtAccents` |La préparation et le lancement fonctionnent avec des noms de répertoire non ASCII et des espaces
+|`conserveLeCodeDeSortieEtLesErreursDuProcessus` |Le code de sortie 7 et le message français sur la sortie d'erreur restent observables
+|===
+
+Ces témoins doivent être verts. Ils ne mesurent aucune capacité métier de Verne.
+Leur premier passage a révélé que `file.encoding=UTF-8` ne suffisait pas à choisir l'encodage des sorties standard sur ce Windows.
+Le banc fixe aussi `stdout.encoding=UTF-8` et `stderr.encoding=UTF-8`, puis décode strictement les fichiers produits.
+Leurs tests Unicode ont été réexécutés après cette correction.
+
+=== Compilation des gabarits
+
+[cols="3,2,3",options="header"]
+|===
+|Méthode de `CompilationGabaritsTest` |Repère du plan |Résultat futur attendu
+|`genereEtCompileUnGabaritSansAnnotationApplicative` |T-COM-01, T-COM-08 |Source et classe du gabarit produites, même sans annotation dans l'application
+|`resoutUnRecordSourcePendantLaMemeCompilation` |T-COM-01, T-TYP-01 |Record résolu sans compilation préalable, puis sortie `Bonjour Léa`
+|`refuseUneInterpolationNonFermeeDansUnGabaritInutilise` |T-COM-02, T-SYN-05 |Rejet avec `VERNE-SYN-001` et `inutilise.verne:2:1`
+|`refuseUneProprieteInconnueAvecPositionSource` |T-TYP-04, T-DIA-01 |Rejet avec `VERNE-TYP-001` et `bonjour.verne:2:1`
+|`refuseUnParametreDeclareDeuxFois` |T-TYP-08 |Rejet avec `VERNE-TYP-002` ; l'absence et la nullité restent des tests distincts à écrire
+|`refuseUnAccesAUneProprietePrivee` |T-TYP-04 |Rejet avec `VERNE-TYP-001`, sans ouverture d'accès
+|`produitLaMemeSourceDansDeuxRepertoiresDifferents` |T-COM-06 |Sources identiques et absence de chemin absolu ; le registre et les archives ne sont pas encore couverts
+|===
+
+Le cas du paramètre déclaré deux fois est un ajout précis au plan initial, et non une réalisation de son scénario de remplacement de valeur.
+Il est désormais repéré `T-TYP-08` dans le plan.
+
+=== Rendu des gabarits
+
+[cols="3,2,3",options="header"]
+|===
+|Méthode de `RenduGabaritsTest` |Repère du plan |Sortie attendue
+|`rendUnDocumentVide` |T-SYN-01 |Chaîne vide
+|`preserveLeTexteUnicode` |T-SYN-06 |Accents, caractère combiné et emoji strictement conservés
+|`preserveEspacesTabulationsEtFinsDeLigne` |T-SYN-02 |Espaces, tabulations, CRLF et LF inchangés
+|`interpoleUnParametreDeclareSansProduireLaDeclaration` |T-SYN-04 |`Bonjour Léa`, sans déclaration de paramètre dans le document
+|`conserveUneChaineVideCommeValeurPresente` |T-TYP-02 |`avantaprès`, sans valeur de remplacement inventée
+|`neReinterpretePasUneDonneeCommeUnGabarit` |T-SEC-02 |Une donnée contenant un commentaire apparent reste une donnée littérale
+|`conserveLesCaracteresSpeciauxDansLeProfilTexte` |T-SOR-01 |Esperluette, chevrons et guillemets inchangés ; aucun profil HTML n'est impliqué
+|`retireUnCommentaireSansRetirerSaFinDeLigne` |T-SYN-03 |Commentaires retirés, fins de ligne conservées
+|`rendUnDelimiteurEchappeCommeTexte` |T-SYN-10 |`{nom}` littéral ; aucun paramètre exigé pour ce texte
+|`rendUnTexteDepassantLaTailleDuneConstanteDeClasse` |T-SYN-01 |72 000 unités UTF-16 restituées exactement ; le compilateur doit fractionner le texte si une constante de classe ne suffit pas
+|===
+
+Le cas du délimiteur échappé est désormais repéré `T-SYN-10` dans le plan.
+Chaque test de rendu compare une chaîne attendue indépendante, après compilation réelle et exécution sur le chemin des modules.
+Un échec à compiler ne peut pas devenir un succès de rendu.
+
+== Résultat de la première phase rouge
+
+Environnement observé : Windows 11 amd64, OpenJDK 25.0.1, Maven 3.9.16, JUnit Jupiter 5.13.4.
+Commande exécutée : `.\mvnw.cmd test` depuis la racine autonome.
+
+[cols="2,1,1,1,1",options="header"]
+|===
+|Classe |Exécutés |Échecs d'assertion |Erreurs d'outillage |Ignorés
+|`OutillageCompilationTest` |4 |0 |0 |0
+|`CompilationGabaritsTest` |7 |7 |0 |0
+|`RenduGabaritsTest` |10 |10 |0 |0
+|Total |21 |17 |0 |0
+|===
+
+Le code de sortie Maven est 1, conformément à la phase rouge.
+Tous les échecs métier rencontrent l'absence de `ProcesseurVerne`, avec le diagnostic du compilateur Java `compiler.err.proc.processor.not.found`.
+Les tests négatifs exigent un diagnostic Verne précis et sa position, et ne se satisfont donc pas de ce simple échec du compilateur Java.
+Les conditions de compilation invalides sont spécifiées, mais leur diagnostic métier ne sera réellement exercé qu'après création du processeur.
+
+Cette preuve établit que les tests existent, s'exécutent et échouent sans implémentation de la capacité attendue.
+Elle ne prouve pas que l'analyseur, le typage, les diagnostics ou le rendu sont corrects : aucun de ces composants n'existe encore.
+Les tests ne sont ni désactivés, ni remplacés par un moteur simulé, ni inversés pour rendre la construction artificiellement verte.
+
+== Prochaine progression TDD
+
+. Implémenter la découverte des ressources et la génération minimale pour faire passer le gabarit statique sans annotation.
+. Faire passer texte vide, Unicode, espaces et découpage des grandes constantes.
+. Ajouter analyse des commentaires et échappement des délimiteurs.
+. Introduire paramètres et accès de record typés, puis les diagnostics des cas invalides.
+. Réexécuter les témoins et la suite complète après chaque changement pertinent.
+
+Avant toute nouvelle fonctionnalité, ajouter ses cas limites et constater les échecs attendus.
+Ne pas ajouter de code d'intégration Vidocq, de formats sécurisés ou d'optimisation avant leurs tests dédiés.
+Le contrôle Maven des dépendances en portée d'exécution ne contient que l'artefact `verne-verification` lui-même ; aucune bibliothèque de test n'est propagée à cette portée.
+La phase verte, les mesures de performances, les constructions incrémentales et les essais Linux restent à réaliser.

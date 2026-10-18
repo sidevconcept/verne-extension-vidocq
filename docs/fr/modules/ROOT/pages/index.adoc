@@ -1,0 +1,60 @@
+= Verne — Dossier de conception
+:lang: fr
+:toc:
+
+État au 17 octobre 2026 : conception et première implémentation du compilateur minimal.
+Les objectifs de conception restent distincts des capacités effectivement livrées, décrites dans link:compilateur-minimal.adoc[le contrat du compilateur minimal].
+
+== Origine du nom
+
+Verne rend hommage à Jules Verne, écrivain français dont les récits articulent imagination, précision et exploration.
+Le composant transforme des gabarits et des données en documents textuels, avec une préparation à la compilation et une exécution légère.
+
+== Documents à lire
+
+[cols="1,3",options="header"]
+|===
+|Document |Objet
+|link:architecture.adoc[Architecture] |Périmètre, modules, compilation, contrats, sécurité et intégration Vidocq.
+|link:matrice-fonctionnelle.adoc[Matrice fonctionnelle] |Capacités attendues, choix de comportement, étapes et preuves d'acceptation.
+|link:cas-de-test.adoc[Cas de test] |Scénarios nominaux, erreurs, limites et stratégie de développement piloté par les tests.
+|link:compilateur-minimal.adoc[Compilateur minimal] |Sous-ensemble livré, limites, diagnostics et progression rouge-vert.
+|link:premiers-tests.adoc[Premiers tests exécutables] |Contrats initiaux, correspondance avec le plan et résultats de la phase rouge.
+|link:mesures-performance.adoc[Mesures de performances] |Protocole reproductible, équivalence des sorties, mesures et critères de qualification.
+|===
+
+== Règles de travail
+
+* Tout nouveau texte maîtrisé par le projet est en français : code, noms métier, documentation, diagnostics et messages de contribution.
+* Les mots réservés Java, signatures imposées par une interface existante et noms des outils tiers conservent leur orthographe obligatoire.
+* Tout changement se fait sur une branche. L'auteur des contributions est `sidevconcept`, sans attribution à un assistant.
+* Le développement suit le cycle test en échec, implémentation minimale, test réussi, amélioration et nouvelle vérification.
+* Chaque capacité comporte une description, ses limites, ses erreurs, des exemples et des preuves de test.
+* Les décisions architecturales, coûts mémoire et mesures de performances sont documentés avec leurs conditions de validité.
+* Le journal local des prompts est exclu de Git et des distributions ; il ne fait pas partie de cette documentation.
+
+== Implantation du dossier
+
+Le moteur dispose désormais de son dépôt Git autonome local `E:\Dev\Projects\verne`, sur la branche `fonctionnalite/premiers-tests`.
+Ce dossier constitue la documentation de référence du moteur ; la copie de conception préparée dans Vidocq est antérieure à sa création.
+L'extension sera développée séparément dans le dépôt Vidocq.
+La documentation Antora réside dans `docs/fr`, avec l'attribut `lang: fr`, sans personnalisation de l'interface commune.
+Le dépôt reste local, sans dépôt distant configuré. Les contributions locales suivent la règle DCO et l'exception temporaire de signature décrites dans `AGENTS.md`.
+
+== Ordre de réalisation proposé
+
+. Fixer la grammaire, les contrats de données, les profils de sortie et les diagnostics.
+. Écrire les premiers tests exécutables, y compris les projets dont la compilation doit échouer.
+. Construire la chaîne de compilation et le rendu autonome minimal.
+. Étendre les expressions, compositions et points d'extension avec leurs tests.
+. Intégrer CDI, REST et le développement dans Vidocq.
+. Qualifier performances, concurrence, packaging et reproductibilité avant livraison.
+
+Les étapes de la matrice expriment un ordre de réalisation, sans supprimer les exigences des étapes suivantes.
+Une version ne revendique que les capacités effectivement testées.
+
+== État de vérification
+
+La suite comporte désormais 42 tests réussis : 4 témoins, 7 tests de compilation initiaux, 10 tests de rendu initiaux et 21 tests limites. Voir link:compilateur-minimal.adoc[les étapes et limites de validation].
+Aucun chiffre de performance n'est disponible.
+Le sous-ensemble texte est implémenté ; le reste de la matrice demeure à réaliser avec les tests correspondants.

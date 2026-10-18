@@ -1,0 +1,235 @@
+= Verne — Architecture proposée
+:lang: fr
+:toc:
+
+État : architecture cible. Le sous-ensemble effectivement implémenté est défini dans link:compilateur-minimal.adoc[son contrat livré] ; les autres éléments restent des objectifs soumis aux tests correspondants.
+
+== Objectifs et frontières
+
+Verne est un moteur de gabarits textuels autonome, utilisable dans une application Java 25 ou via une extension Vidocq.
+L'application choisit le contenu, le type de média, le jeu de caractères et la destination du rendu.
+HTML, XML, texte brut, JSON ou un format métier sont des usages possibles, sans imposer un serveur HTTP.
+La génération d'un fichier binaire spécialisé exige un encodeur ou une bibliothèque distincte : Verne ne promet pas de produire directement un PDF ou une image à partir de texte.
+
+Le moteur ne dépend ni de Vidocq, ni de CDI, ni de REST, ni d'une implémentation Jakarta EL.
+Son langage reste indépendant de Peano et d'Ibarra ; aucun accès réflexif n'est ajouté pour rapprocher artificiellement leurs contrats.
+Une réutilisation ultérieure nécessite un bénéfice mesuré et une décision documentée sur les dépendances.
+
+Les priorités sont la détection précoce des erreurs, la précision des diagnostics, l'absence de dépendance tierce à l'exécution dans le moteur et le coût minimal du rendu.
+Un raccourci d'implémentation ne peut supprimer une validation, un test demandé ou une protection des données.
+
+== Découpage et dépendances
+
+[cols="2,3,3",options="header"]
+|===
+|Unité proposée |Responsabilité |Dépendances autorisées
+|`verne-coeur` |Contrats de rendu, gabarits compilés, sorties, diagnostics d'exécution |Bibliothèque standard Java uniquement
+|`verne-compilation` |Analyse, représentation intermédiaire typée, validation, génération Java et correspondances source |Cœur et API standard du compilateur Java ; absente du déploiement
+|Adaptation de construction Verne |Déclaration des entrées, traitement des ressources, compilation propre et incrémentale |Compilateur ; API Maven uniquement pendant la construction
+|`verne-verification` |Projets de test, données générées et mesures |Dépendances de test isolées ; aucune propagation vers le moteur
+|Extension Verne dans Vidocq |CDI, configuration, enregistrement et adaptation REST |Cœur, interface d'extension Vidocq, API nécessaires à l'intégration
+|Compagnon de développement |Surveillance, recompilation et diagnostics de développement |Outils de compilation ; exclu des distributions de production
+|===
+
+Ces unités sont des responsabilités ; une responsabilité ne justifie pas à elle seule un nouvel artefact.
+Le premier découpage physique doit rester minimal, avec séparation certaine entre cœur et compilation.
+Les identifiants d'artefacts de l'extension devront suivre la convention technique du réacteur Vidocq existant ; les classes et méthodes ajoutées restent en français.
+Chaque module Java livre un `module-info.java` explicite.
+La livraison ne recourt ni aux modules automatiques ni à des ouvertures globales de modules.
+
+Le sens des dépendances est : application vers extension vers cœur, et outils de construction vers compilateur vers cœur.
+Le cœur ne dépend jamais des outils, de l'extension ou de leurs implémentations.
+Les fournisseurs sont enregistrés explicitement ou par `ServiceLoader`, sans balayage du chemin des classes.
+
+== Chaîne de compilation
+
+=== Entrées déclarées
+
+Une application déclare les racines de gabarits, leurs identifiants logiques, les modèles de données accessibles, les profils de sortie et les extensions autorisées.
+Les sources sont lues en UTF-8 par défaut, avec politique explicite pour les séquences invalides et la marque d'ordre des octets.
+Un identifiant logique utilise `/`, indépendamment du système d'exploitation.
+Les doublons, collisions de casse et normalisations Unicode ambiguës sont refusés.
+
+=== Ordre de traitement
+
+. Inventorier les ressources et calculer leurs identifiants sans parcourir de chemins hors des racines autorisées.
+. Analyser lexicalement puis syntaxiquement chaque gabarit ; conserver fichier, ligne, colonne et intervalle source.
+. Résoudre les déclarations de paramètres, les symboles Java accessibles et les signatures de fonctions autorisées.
+. Construire le graphe des inclusions, héritages, fragments et catalogues de messages.
+. Vérifier types, arguments, profils de sortie, cycles et limites de taille.
+. Produire des sources Java françaises et une table de correspondance vers les gabarits.
+. Compiler ces sources avec celles de l'application, puis vérifier le registre des gabarits et les exports des modules Java.
+. Emballer uniquement classes, registre et ressources nécessaires au rendu ; retirer compilateur, analyseur et outils de développement.
+
+Un seul gabarit invalide fait échouer la construction, même s'il n'est pas appelé par l'exemple principal.
+Le registre final est déterministe : mêmes entrées et même version d'outillage donnent les mêmes sources générées, sans horodatage ni chemin absolu de la machine.
+
+=== Raccordement à Maven
+
+Les ressources sources doivent être accessibles avant la compilation des classes ; il ne faut pas dépendre implicitement de leur copie ultérieure dans le répertoire de sortie.
+La préparation des ressources et du manifeste relève de `generate-sources`.
+Un processeur d'annotations, pendant `compile`, dispose des symboles des modèles sources et génère les unités Java que le compilateur traite dans les tours suivants.
+Le manifeste désigne toutes les ressources, et pas uniquement les classes annotées rencontrées.
+Le projet de test sans classe annotée doit aussi déclencher la validation ; le mécanisme exact de déclenchement est un point de preuve de la première tranche.
+
+Le processeur ne charge pas les classes métier pour les examiner : il utilise le modèle de symboles du compilateur.
+Les sources issues d'autres processeurs sont résolues après leurs tours de génération ; les symboles encore absents au dernier tour provoquent un diagnostic.
+Le chemin retenu doit fonctionner sur une construction propre, sans compiler préalablement les modèles dans une invocation séparée.
+
+Une modification, suppression ou création de gabarit invalide le manifeste et les dépendants transitifs.
+Les classes obsolètes et les entrées supprimées disparaissent du résultat ; la modification des modèles Java, des catalogues, des profils ou de la version du compilateur invalide aussi le résultat concerné.
+Une reconstruction propre et une reconstruction incrémentale doivent produire le même registre observable.
+
+== Contrats de données
+
+=== Paramètres typés
+
+Le mode de production exige des paramètres déclarés et une résolution statique des accès.
+Les objets Java exposent seulement leurs membres publics, accessibles depuis le module généré et déclarés utilisables par le contrat du gabarit.
+Les accesseurs de records sont pris en charge ; un membre privé ou un paquet non exporté ne provoque jamais un contournement réflexif.
+Les méthodes métier invocables sont inscrites explicitement dans le modèle d'exposition ; pas d'accès automatique à toutes les méthodes d'un objet.
+Les opérations d'introspection, de chargement de classes et d'accès au système ne sont pas exposées.
+
+Un paramètre obligatoire absent, une propriété inconnue, une fonction ambiguë ou un argument incompatible est une erreur.
+La valeur `null`, une valeur absente et une chaîne vide restent trois états distincts.
+Une navigation optionnelle et une valeur de remplacement sont explicites ; aucun état absent ne se transforme silencieusement en texte.
+
+=== Données dynamiques et limites de la garantie
+
+Une collection vide ou une table associative dont les clés varient reste possible avec un type déclaré.
+Le compilateur vérifie les types connus ; l'existence d'une clé reçue à l'exécution ne peut être prouvée au build.
+Les accès dynamiques doivent donc être explicites et appliquer la politique d'absence documentée.
+Une cible d'inclusion dynamique ne peut désigner qu'un ensemble fermé de gabarits compilés et compatibles.
+L'évaluation de texte comme un nouveau gabarit et le chargement distant de gabarits sont hors du contrat de production.
+
+=== Syntaxe de travail pour les premiers tests
+
+Les éléments ci-dessous proposent une notation française minimale à figer avant le premier analyseur.
+Ils ne constituent pas encore la grammaire exhaustive du langage.
+
+[cols="2,4",options="header"]
+|===
+|Élément |Notation proposée
+|Paramètre |`{@java.lang.String nom}` ; déclaration obligatoire par défaut, sans texte produit
+|Interpolation |`{nom}` ; accès à une propriété : `{personne.nom}`
+|Commentaire |`{! commentaire !}` ; aucun texte produit
+|Condition |`{#si actif}oui{#sinon}non{/si}` ; condition booléenne stricte
+|Boucle |`{#pour nom dans noms}{nom}{/pour}` ; ordre de la source conservé
+|Remplacement explicite |`{nom ?: 'anonyme'}` ; remplace absence ou valeur nulle, pas chaîne vide
+|Délimiteur littéral |`\{` produit `{` ; `\\` produit `\`
+|===
+
+Les déclarations de paramètres d'une boucle et de ses éléments sont fournies par le contrat typé.
+Les espaces, fins de ligne et caractères hors directives sont conservés ; les déclarations et commentaires sont retirés sans retirer automatiquement leur ligne.
+Les identifiants français accentués sont admis ; les graphies Unicode ambiguës sont diagnostiquées, pas fusionnées silencieusement.
+La grammaire complète devra préciser précédence, parenthèses, nombres, chaînes, échappements, portée et mots réservés avant l'extension de ces exemples.
+
+== Contrat de rendu
+
+Un gabarit compilé est immuable et partageable entre fils d'exécution.
+Chaque rendu possède son contexte, ses limites et sa sortie ; les données métier ne sont pas recopiées intégralement.
+L'application garde la responsabilité de ne pas modifier simultanément un modèle mutable pendant son rendu.
+Le moteur garantit l'isolation de ses propres états, sans promettre une photographie atomique d'objets externes modifiés concurremment.
+
+Les opérations métier proposées sont `rendre`, `rendreVers` et `rendreAsynchrone` ; leur signature définitive sera couverte par des tests de contrat.
+Le rendu vers une chaîne est une commodité ; le rendu vers un `Appendable` ou un `Writer` évite de matérialiser le document entier.
+Le moteur ne ferme jamais une sortie fournie par l'appelant.
+Un adaptateur de flux d'octets choisit un encodage explicite et signale toute erreur de conversion.
+
+L'échec d'un rendu en flux peut laisser un préfixe déjà écrit.
+L'appelant choisit soit une sortie temporaire bornée puis une validation avant publication, soit un flux dont les erreurs partielles sont gérées explicitement.
+Après engagement d'une réponse HTTP, aucune promesse de remplacement par une page d'erreur complète n'est faite.
+
+Les limites couvrent taille des sources, profondeur syntaxique, nombre de dépendances, itérations, caractères produits et durée d'attente asynchrone.
+Leurs unités, valeurs par défaut et possibilités de configuration doivent être fixées et testées avant publication.
+Le contrôle d'annulation intervient aux points d'itération et d'écriture ; il ne peut interrompre de force un appel métier bloquant arbitraire.
+Un temps maximal de rendu ne constitue donc pas une enceinte d'exécution pour du code métier non fiable.
+
+== Formats et sécurité
+
+L'application associe un profil à chaque gabarit. Aucune extension de fichier ne désactive implicitement une protection.
+Un profil texte brut conserve les caractères ; il n'est jamais réinterprété automatiquement comme HTML par l'adaptateur REST.
+
+[cols="1,4",options="header"]
+|===
+|Profil |Contrat proposé
+|HTML |Échappement par défaut des caractères `&`, `<`, `>`, guillemet et apostrophe dans le texte et les attributs entre guillemets. Les insertions dans un nom de balise, un attribut sans guillemets, un gestionnaire d'événement, un script ou une feuille de style sont refusées dans le profil initial. Les URL dynamiques requièrent une validation de schéma et un traitement dédié.
+|XML |Échappement propre au contexte, refus des caractères interdits ; aucune résolution d'entité externe. La validité structurelle du document final n'est pas garantie par le seul échappement.
+|JSON |Valeurs typées sérialisées à leur emplacement ; chaînes et caractères de contrôle échappés. Pas d'insertion arbitraire d'objet par `toString`. Une validation du document complet reste nécessaire si le texte statique n'est pas structurellement vérifié au build.
+|Texte brut |Aucune transformation de contenu ; type de média et destination explicites.
+|Format métier |Encodeur et règles documentés, vérifiables au build quand possible ; impossibilité de vérifier une règle signalée explicitement.
+|===
+
+Une valeur prévalidée pour un contexte est représentée par un type dédié à ce contexte.
+Un contenu HTML déclaré fiable n'est ni un script fiable ni une URL fiable et ne passe pas automatiquement dans un autre profil.
+L'activation d'un contenu fiable est volontaire et documente la responsabilité du producteur ; Verne ne transforme pas du texte non fiable en contenu assaini par simple marquage.
+Les inclusions imposent des profils compatibles.
+
+Les racines de ressources sont contrôlées après résolution des chemins et liens symboliques.
+Les chemins absolus, remontées, octets nuls et schémas distants sont refusés.
+Les diagnostics de production ne dévoilent ni valeur métier, ni secret, ni chemin absolu de construction.
+Un gabarit est une source de l'application revue au build ; l'exécution de gabarits soumis par un utilisateur non fiable n'est pas prise en charge.
+
+== Composition et extensibilité
+
+Les inclusions, gabarits parents, emplacements nommés, fragments et composants réutilisables forment un graphe vérifié à la compilation.
+Chaque appel vérifie ses paramètres, son profil et sa portée ; les cycles statiques sont refusés avec la chaîne des dépendances.
+Un fragment possède son propre contrat explicite et ne capture pas silencieusement les variables de la requête.
+Les variables de boucle restent locales ; l'indice commence à zéro, le numéro commence à un, et les indicateurs de début et de fin sont documentés selon le type de collection.
+L'ordre d'une table associative non ordonnée n'est pas rendu artificiellement déterministe.
+
+Les fonctions, espaces de noms, sections personnalisées et encodeurs possèdent une déclaration consultable au build et une implémentation compatible à l'exécution.
+L'absence de signature vérifiable fait échouer la compilation de l'usage, au lieu de désactiver la validation du gabarit entier.
+Les priorités et conflits sont déterministes ; une ambiguïté non résolue est une erreur.
+Une extension personnalisée ne peut être réputée sûre ou pure sans son propre contrat et ses tests.
+
+Les catalogues de messages déclarent leurs paramètres et variantes linguistiques.
+La locale et le fuseau sont fournis au rendu ; aucun état global mutable ne transmet le choix d'une requête à une autre.
+Les fichiers source et messages intégrés de Verne restent en français ; les documents produits peuvent utiliser toute langue choisie par l'application.
+
+== Asynchronisme et exécution concurrente
+
+Le rendu synchrone fonctionne naturellement sur les fils virtuels Java 25.
+Le contexte de requête s'appuie sur les mécanismes Vidocq existants, sans ajout de `ThreadLocal` par Verne.
+L'API asynchrone repose sur les abstractions standard, notamment `CompletionStage`, sans moteur réactif tiers imposé.
+Les résultats différés conservent l'ordre textuel du gabarit, même si les données sont disponibles dans un ordre différent.
+L'adaptation à une sortie asynchrone doit borner les données en attente ; elle ne peut accumuler un document entier sous prétexte de diffusion.
+L'annulation, l'échec d'une dépendance, l'expiration et la restitution des ressources ont chacun une règle observable.
+La propriété des tâches et exécuteurs est explicite ; l'arrêt de Verne ne ferme pas un exécuteur fourni par l'application.
+
+== Intégration Vidocq
+
+L'extension respecte le cycle réel `configure`, `beforeStart`, `onStart`, `onStop` de `VidocqExtension` ; ces signatures existantes ne sont pas renommées.
+Elle déclare les clés consommées par `configKeys`, charge un registre généré, prépare l'injection avant démarrage et libère les ressources qu'elle possède à l'arrêt.
+Un arrêt après démarrage partiel reste sûr et répétable.
+L'ordre de priorité est choisi d'après les dépendances vérifiées, sans constante arbitraire dans cette conception.
+
+La construction des applications conserve l'indexeur hérité et ajoute les processeurs nécessaires selon la convention `annotationProcessorPaths` avec `combine.children="append"`.
+L'adaptateur REST conserve le type de contenu choisi, respecte le jeu de caractères et traite les déconnexions.
+Les accès CDI sont déclarés au build ; une utilisation du contexte de requête hors requête produit une erreur française et ne récupère jamais un contexte résiduel.
+
+Le développement utilise un compagnon séparé pour surveiller et recompiler gabarits et modèles concernés.
+La nouvelle génération ne remplace la précédente qu'après compilation réussie ; les erreurs sont visibles et identifient la génération réellement servie.
+Les rendus en cours terminent avec leur génération ; la suivante sert les nouvelles requêtes.
+Les chargeurs et observateurs obsolètes sont libérés. Aucun compilateur, observateur ou compagnon de développement n'entre dans le binaire de production.
+
+== Diagnostics et documentation
+
+Une erreur possède un code stable, une phase, un identifiant de gabarit, une position et une explication française.
+Le catalogue initial réserve `VERNE-SYN-*` pour la syntaxe, `VERNE-TYP-*` pour le typage, `VERNE-LIA-*` pour les dépendances, `VERNE-SEC-*` pour la sécurité et `VERNE-REN-*` pour le rendu.
+Le texte peut évoluer sans casser le code de diagnostic ; les erreurs du compilateur Java généré sont remappées vers la source du gabarit.
+
+Chaque contrat public documente paramètres, nullité, absence, erreurs, concurrence, effets sur la sortie et propriété des ressources.
+Chaque capacité de la matrice renvoie à ses tests ; chaque optimisation conserve une preuve fonctionnelle et une mesure avant/après.
+Le dossier de publication comprend démarrage, utilisation, concepts, fonctionnement interne, vérification, performances, référence et migration, en français.
+Verne ne revendique aucune certification liée à une spécification qu'il n'implémente pas.
+
+== Points à figer avant les premiers tests exécutables
+
+. Grammaire complète, types numériques, règles d'égalité et de surcharge.
+. Contrat des profils HTML, XML et JSON, particulièrement des contextes refusés.
+. Valeurs des limites et budget mémoire, avec une première mesure reproductible.
+. Déclenchement de la compilation sans annotation et traitement des processeurs voisins.
+. Noms définitifs des modules, annotations, interfaces et paramètres de configuration.
+
+Ces décisions seront prises dans les contrats et tests avant leur implémentation ; aucune ne doit être remplacée par une hypothèse silencieuse dans le code.

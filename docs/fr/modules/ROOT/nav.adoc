@@ -1,0 +1,7 @@
+* xref:index.adoc[Verne]
+** xref:architecture.adoc[Architecture]
+** xref:matrice-fonctionnelle.adoc[Matrice fonctionnelle]
+** xref:cas-de-test.adoc[Cas de test]
+** xref:compilateur-minimal.adoc[Compilateur minimal]
+** xref:premiers-tests.adoc[Premiers tests exécutables]
+** xref:mesures-performance.adoc[Mesures de performances]
