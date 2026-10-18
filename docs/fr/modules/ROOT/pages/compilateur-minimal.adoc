@@ -135,12 +135,18 @@ Chaque gabarit accepte de zéro à 255 paramètres obligatoires, borne incluse, 
 La 256e déclaration syntaxiquement valide d'un nom distinct produit `VERNE-LIM-004` à son accolade ouvrante, avant résolution de son type et avant création de la source Java du fichier. Une déclaration dupliquée conserve `VERNE-TYP-002` ; commentaires et délimiteurs échappés ne déclarent aucun paramètre. Les autres fichiers restent vérifiés.
 Le diagnostic n'expose ni contenu source ni chemin machine. Le compteur est la table de paramètres propre au fichier ; aucun état partagé, accès d'exécution ou ressource supplémentaire n'est introduit. Les contrôles de nullité et l'ordre des paramètres acceptés sont conservés. Cette borne ne garantit ni la taille du corps de méthode ni les autres budgets du compilateur.
 
+=== Profondeur des navigations de records
+
+Une interpolation accepte au plus 32 accès de composant de record, borne incluse : le paramètre seul a une profondeur nulle, `personne.nom` une profondeur de un. La limite s'applique séparément à chaque occurrence ; les points des types déclarés, les commentaires et les délimiteurs échappés n'y participent pas.
+Après les contrôles de syntaxe et du nombre d'interpolations, une expression de profondeur 33 produit `VERNE-LIM-005` à son accolade ouvrante, avant toute résolution de son paramètre et de ses propriétés. L'analyse du fichier s'arrête sans créer sa source Java ; les autres gabarits restent vérifiés. Le diagnostic ne contient ni expression, ni donnée source, ni chemin machine.
+Cette borne fixe limite l'imbrication de l'expression Java générée et le travail de résolution par occurrence ; elle ne garantit ni un budget global de compilation, ni la taille de méthode générée. Dans la borne, le typage statique, l'ordre des accès et les refus de valeurs nulles `VERNE-REN-001` restent identiques. Aucun compteur partagé, nouvelle ressource ou contrôle de profondeur à l'exécution n'est ajouté ; les rendus restent indépendants et sans réflexion.
+
 === Nombre d'interpolations
 
 Chaque gabarit accepte au plus 1 024 occurrences d'interpolation, borne incluse. Répéter la même expression compte à chaque occurrence ; les déclarations, commentaires et délimiteurs échappés ne comptent pas.
 Le compteur appartient à l'analyse du fichier courant et repart de zéro pour chaque gabarit, sans état partagé entre compilations ni modification du rendu dans la borne.
 La 1 025e interpolation syntaxiquement admissible provoque `VERNE-LIM-003`, positionné sur son accolade ouvrante selon les règles de ligne et colonne existantes. L'analyse du fichier s'arrête avant résolution des expressions et avant ouverture de sa source générée ; les autres fichiers restent vérifiés.
-Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux supplémentaire n'est ouvert. Cette première borne limite le nombre d'interpolations conservées, sans garantir la taille de la méthode Java générée ni borner la profondeur des navigations ou le volume total de texte. La borne des déclarations est définie séparément ci-dessus.
+Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux supplémentaire n'est ouvert. Cette première borne limite le nombre d'interpolations conservées, sans garantir la taille de la méthode Java générée ni borner le volume total de texte. Les bornes des déclarations et de profondeur des navigations sont définies séparément ci-dessus.
 
 == Diagnostics livrés
 
@@ -154,6 +160,7 @@ Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux 
 |`VERNE-LIM-002` |Plus de 1 024 ressources de gabarits dans une compilation
 |`VERNE-LIM-003` |Plus de 1 024 interpolations dans un gabarit
 |`VERNE-LIM-004` |Plus de 255 paramètres déclarés dans un gabarit
+|`VERNE-LIM-005` |Plus de 32 accès de record dans une interpolation
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
 |`VERNE-SYN-001` |Interpolation, déclaration ou commentaire non fermé
 |`VERNE-SYN-002` |Syntaxe, directive, identifiant ou échappement non pris en charge
@@ -228,10 +235,16 @@ Les six tests de `NombreParametresTest` couvrent 254 et 255 paramètres avec ren
 Avant correction, deux tests échouaient : le dépassement pouvait produire `VERNE-TYP-003` ou une source ensuite refusée par javac avec `compiler.err.limit.parameters`, sans `VERNE-LIM-004`. Les quatre autres tests réussissaient déjà.
 Après contrôle de la taille de la table avant résolution du type, les six tests réussissent. La vérification propre du réacteur totalise 76 tests sur Mac, sans échec, erreur ni test ignoré. La borne ne modifie aucun rendu admissible et ne constitue pas une nouvelle mesure de performance.
 
+== Première borne de profondeur des navigations
+
+Les huit tests de `ProfondeurNavigationsTest` couvrent 31 et 32 accès avec rendu Unicode exact, le dépassement à 33 sans génération et la poursuite des autres gabarits, le refus avant résolution avec position après CRLF et emoji, les occurrences indépendantes et textes littéraux, les objets intermédiaires nuls, les valeurs terminales nulles et les propriétés inconnues dans la borne.
+Avant correction, deux tests échouaient pour la cause attendue : une chaîne valide de profondeur 33 était acceptée et générée ; un paramètre inconnu donnait `VERNE-TYP-001`, sans le diagnostic de limite prévu. Les six autres tests réussissaient déjà.
+Après le contrôle dans l'analyseur, les huit tests réussissent. La vérification complète propre totalise 84 tests sur Mac sans échec, erreur ni test ignoré. Le contrôle ne modifie pas la génération des expressions admissibles et n’ajoute aucun travail au rendu ; aucune nouvelle mesure de performance n’est revendiquée.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 34 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents et nombre de paramètres ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 42 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres et profondeur des navigations ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -241,7 +254,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 76 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 84 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -257,5 +270,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`NombreInterpolationsTest` |5 |0 |0 |0
 |`GrandsDocumentsTest` |6 |0 |0 |0
 |`NombreParametresTest` |6 |0 |0 |0
-|Total |76 |0 |0 |0
+|`ProfondeurNavigationsTest` |8 |0 |0 |0
+|Total |84 |0 |0 |0
 |===
