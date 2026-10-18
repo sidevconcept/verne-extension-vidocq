@@ -10,7 +10,7 @@ La construction et les tests initiaux réussissent ; les fonctionnalités plus l
 Le réacteur construit d'abord `verne-compilation`, puis exécute `verne-verification`. Une dépendance explicite en portée test impose cet ordre, même si Maven parallélise les modules ; elle n'ajoute rien à la portée d'exécution.
 Le compilateur est un module Java explicite `io.vidocq.verne.compilation`, dépendant seulement de `java.compiler` et du module de base du JDK.
 Il fournit `javax.annotation.processing.Processor` par `module-info.java`.
-Le banc l'appelle explicitement sur le chemin des processeurs ; la découverte automatique de l'application Maven finale reste à qualifier.
+Le banc vérifie l'appel explicite et la découverte automatique sur les chemins des processeurs classique et modulaire de javac ; le raccordement de l'application Maven finale reste à qualifier.
 
 Exécuter depuis la racine, sous Windows :
 
@@ -29,6 +29,13 @@ Sous Unix, dont macOS :
 Les applications du banc compilent les gabarits et leurs modèles Java sources dans la même invocation de javac, puis s'exécutent sur le chemin des modules.
 Les classes générées dépendent uniquement du JDK ; elles n'exigent aucun JAR Verne à l'exécution.
 Un module de cœur distinct n'est donc pas créé sans besoin dans cette tranche.
+
+=== Contrat de découverte du processeur
+
+Le compilateur permet le chargement automatique par javac 25, sans option `-processor` ni annotation applicative. L'application fournit toujours les deux options Verne obligatoires. Le processeur est placé soit sur `-processorpath`, avec son descripteur standard `META-INF/services/javax.annotation.processing.Processor`, soit sur `--processor-module-path`, avec le fournisseur déclaré dans `module-info.java`. En ligne de commande, ces chemins explicites suffisent à activer le traitement avec javac 25 ; `-proc:full` rend aussi ce choix explicite. Les appels à l'API `JavaCompiler.getTask` du banc spécifient `-proc:full` : leur activation implicite n'est pas assimilée à celle de la ligne de commande. Un répertoire de classes complet et une archive JAR contenant ces mêmes classes et ressources offrent le même comportement avec cette activation explicite.
+La découverte reste limitée au chemin explicitement fourni au compilateur ; elle n'ajoute aucun balayage métier ni dépendance au rendu. Les entrées de configuration restent des chaînes non nulles fournies par l'outil de construction ; leur absence conserve les diagnostics de configuration existants. Les modèles Java sources sont résolus dans la même invocation et tous les gabarits sont vérifiés, même inutilisés. Un gabarit invalide doit donc faire échouer la construction avec son code et sa position Verne ; un processeur non chargé ne constitue jamais une validation.
+Avec `-proc:none`, aucun de ces chemins ne déclenche de génération ni de validation. La seule présence du processeur sur `--class-path`, sans activation du traitement ni chemin de processeurs explicite, ne déclenche pas non plus le traitement sous javac 25. Ces compilations témoins n'utilisent pas les classes de rendu et ne prouvent aucune validité des gabarits.
+Le fournisseur public sans argument est instancié par le compilateur ; son état et ses budgets restent propres à chaque compilation. Aucun état statique mutable ni ressource persistante supplémentaire n'est introduit. Les flux de lecture et de génération conservent leur fermeture existante. Les applications générées s'exécutent sur le chemin des modules avec le seul JDK, sans le processeur. Le traitement conjoint avec d'autres processeurs, les types produits aux tours suivants et le raccordement Maven de l'application finale restent à qualifier.
 
 == Sources et génération
 
@@ -283,10 +290,17 @@ Avant correction, trois tests échouaient : les cas au-delà du budget étaient 
 Après vérification du budget avant résolution et génération, les sept tests réussissent. Les quatre rendus acceptés sont comparés à des sorties indépendantes et leur bytecode est inspecté avec l'API standard du JDK 25 : les tailles observées vont de 39 251 à 40 430 octets, identiques avant et après correction. Ces observations ne transforment pas les unités de coût en mesure exacte de bytecode et ne qualifient pas toutes les limites de la JVM.
 La vérification complète propre totalise 106 tests sur Mac sans échec, erreur ni test ignoré. Le code de rendu des gabarits admissibles est conservé ; aucune nouvelle mesure de durée ni campagne de performances n'est ajoutée.
 
+== Découverte automatique du processeur
+
+Les neuf tests de `DecouverteProcesseurTest` couvrent le chargement sans nom de processeur depuis un répertoire et un JAR sur les chemins classique et modulaire, le refus d'un gabarit inutilisé invalide sur chaque chemin, l'activation par les chemins explicites de la commande javac sans `-proc:full`, la désactivation par `-proc:none` et l'absence d'activation par le seul chemin des classes.
+Les quatre cas de rendu compilent un record source pendant la même invocation, puis exécutent une application modulaire sans le JAR du processeur : accents, emoji et CRLF sont comparés exactement. Les archives du banc sont construites à partir des vraies classes et ressources du compilateur, sans fournisseur simulé. Les processus de commande sont bornés par un délai de garde et détruits si nécessaire ; leurs flux sont redirigés vers les fichiers temporaires du test.
+Avant correction, quatre tests échouaient : le chemin classique ne découvrait pas le processeur, les classes de rendu manquaient et un gabarit invalide inutilisé pouvait ne pas être vérifié. Les cinq autres tests réussissaient déjà. Après ajout du seul descripteur standard de service, les neuf tests réussissent. Les classes Java de production et le code de rendu restent inchangés.
+La vérification complète propre totalise 115 tests sur Mac, sans échec, erreur ni test ignoré. Deux contrôles complémentaires du JAR réellement produit par Maven confirment ses deux descripteurs, la compilation et le rendu exact sur les chemins classique et modulaire, sans JAR Verne à l'exécution. Ces contrôles ne qualifient pas encore la configuration Maven d'une application consommatrice ni les interactions entre processeurs.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 64 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics et budget de génération ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 73 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération et découverte du processeur ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -296,7 +310,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 106 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 115 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -316,5 +330,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`VolumeSourcesTest` |9 |0 |0 |0
 |`NombreDiagnosticsTest` |6 |0 |0 |0
 |`BudgetGenerationTest` |7 |0 |0 |0
-|Total |106 |0 |0 |0
+|`DecouverteProcesseurTest` |9 |0 |0 |0
+|Total |115 |0 |0 |0
 |===

@@ -24,6 +24,7 @@ ____
 * Paramètres obligatoires typés, interpolation de chaînes et de scalaires, navigation par composants de records publics.
 * Commentaires et échappement des délimiteurs.
 * Classes de rendu sans état partagé et sources générées déterministes, sans chemin machine ni horodatage.
+* Découverte automatique du processeur par javac, sur le chemin des processeurs ou des modules processeurs, depuis un répertoire ou un JAR.
 * Diagnostics français avec codes stables et positions source ; refus des collisions de casse et de normalisation Unicode.
 * Contrôle des racines et liens symboliques ; refus des cibles externes et des liens de fichiers cassés.
 * Bornes initiales : *1 mébioctet par source*, *1 024 gabarits par compilation* et *1 024 interpolations par gabarit*, bornes incluses.
@@ -98,8 +99,8 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 == État du projet
 
 *Version de développement : `0.1.0-SNAPSHOT`.* Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *106 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 22 tests supplémentaires restent à qualifier sur Windows et Linux.
+La dernière vérification complète sur Mac réussit avec *115 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 73 tests supplémentaires restent à qualifier sur Windows et Linux.
 
 Les conditions, boucles, inclusions, profils de sortie sécurisés, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.
