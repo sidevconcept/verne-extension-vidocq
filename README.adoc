@@ -98,7 +98,7 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 == État du projet
 
 *Version de développement : `0.1.0-SNAPSHOT`.* Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *64 tests, zéro échec, zéro erreur et zéro test ignoré*.
+La dernière vérification complète sur Mac réussit avec *70 tests, zéro échec, zéro erreur et zéro test ignoré*.
 Les 42 tests initiaux ont également été exécutés sur Windows ; les 22 tests supplémentaires restent à qualifier sur Windows et Linux.
 
 Les conditions, boucles, inclusions, profils de sortie sécurisés, rendu en flux et asynchronisme ne sont pas encore livrés.

@@ -15,7 +15,7 @@ Les identifiants `F-*` sont stables et reliés aux scénarios de link:cas-de-tes
 
 L'étape indique un ordre de travail, pas une capacité abandonnée ni une date promise.
 Un scénario de sécurité s'écrit avant la fonctionnalité qu'il protège, même si sa ligne se trouve dans une étape ultérieure.
-La première phase rouge est conservée dans link:premiers-tests.adoc[son rapport historique]. La suite actuelle de 64 tests est verte sur Mac ; seuls les contrats effectivement exercés sont livrés. La détection de collisions de casse et de normalisation couvre une partie de T-COM-03 ; les racines multiples et fournisseurs dupliqués restent à réaliser. Les familles F-02, F-03, F-04, F-05, F-13, F-14 et F-23 restent plus larges que ce sous-ensemble, notamment pour l'incrémental et les formats.
+La première phase rouge est conservée dans link:premiers-tests.adoc[son rapport historique]. La suite actuelle de 70 tests est verte sur Mac ; seuls les contrats effectivement exercés sont livrés. La détection de collisions de casse et de normalisation couvre une partie de T-COM-03 ; les racines multiples et fournisseurs dupliqués restent à réaliser. Les familles F-02, F-03, F-04, F-05, F-13, F-14 et F-23 restent plus larges que ce sous-ensemble, notamment pour l'incrémental et les formats.
 
 == Construction et langage
 
