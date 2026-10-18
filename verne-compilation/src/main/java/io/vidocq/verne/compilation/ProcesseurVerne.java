@@ -6,8 +6,10 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Normalizer;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -62,8 +64,11 @@ public final class ProcesseurVerne extends AbstractProcessor {
                     continue;
                 }
                 String classe = Character.toUpperCase(base.charAt(0)) + base.substring(1);
-                if (!noms.add(classe)) {
-                    erreur("VERNE-LIA-001", identifiant + ":1:1 : plusieurs ressources produisent la même classe.");
+                String nomPortable = Normalizer.normalize(
+                        Normalizer.normalize(classe, Normalizer.Form.NFC).toLowerCase(Locale.ROOT),
+                        Normalizer.Form.NFC);
+                if (!noms.add(nomPortable)) {
+                    erreur("VERNE-LIA-001", identifiant + ":1:1 : plusieurs ressources produisent des noms de classe équivalents.");
                     continue;
                 }
                 byte[] octets;

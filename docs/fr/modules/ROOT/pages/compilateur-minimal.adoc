@@ -45,7 +45,12 @@ Cette limite concerne les octets sources, et non le nombre de caractères ou la 
 
 Le nom simple du fichier détermine la classe, en mettant sa première lettre en majuscule : `bonjour.verne` produit `io.vidocq.verne.genere.Bonjour`.
 Les répertoires ne participent pas encore au nom de classe : deux ressources de même nom simple sont donc refusées, même dans des sous-répertoires différents.
-Le nom doit être un identifiant Java admissible ; la stratégie complète de normalisation Unicode, de casse et de nommage portable reste à préciser avant généralisation.
+Le nom doit être un identifiant Java admissible.
+Pour détecter les collisions, le nom de classe est normalisé en NFC, converti en minuscules avec `Locale.ROOT`, puis normalisé à nouveau en NFC. Deux noms donnant la même clé sont refusés avec `VERNE-LIA-001`, indépendamment de la langue du poste.
+Cette clé ne renomme ni la classe générée ni les données du document. Les équivalences de compatibilité Unicode ne sont pas fusionnées ; cette règle ne prétend pas reproduire tous les systèmes de fichiers.
+Le diagnostic porte l'identifiant relatif et la position `1:1` de la seconde ressource dans l'ordre de parcours ; le fichier en collision n'est ni lu ni généré. La compilation entière échoue, même si le programme ne référence aucun de ces gabarits.
+La table des noms reste locale à l'invocation du processeur ; aucun état partagé, accès réflexif ou ressource supplémentaire à fermer n'est introduit.
+Les autres règles de nommage portable restent à préciser avant généralisation.
 Les sources générées ne contiennent ni horodatage, ni chemin absolu.
 
 == Grammaire effectivement acceptée
@@ -143,10 +148,18 @@ Les cas limites couvrent l'injection de source Java, les échappements invalides
 Une fixture de collision utilise `bonjour.verne` et `sous/bonjour.verne`, afin d'être valide même sur un système de fichiers insensible à la casse.
 Le test de texte volumineux vérifie l'égalité exacte de 72 000 unités UTF-16, sans déduire une performance de sa durée.
 
+== Première tranche de portabilité des noms
+
+Les quatre tests de `PortabiliteGabaritsTest` complètent les 42 tests initiaux et couvrent partiellement T-COM-03 : collision de casse, équivalence canonique Unicode, combinaison des deux, puis compilation et rendu Unicode de noms distincts.
+Les ressources sont placées dans deux sous-répertoires distincts afin que les sources du test ne se remplacent pas sur un volume insensible à la casse ou à la normalisation.
+Avant la correction, les trois tests négatifs ont échoué : javac signalait des erreurs de fichiers et de classes, sans diagnostic `VERNE-LIA-001` ni position relative Verne. Le test de noms distincts réussissait déjà.
+Après ajout de la clé de collision normalisée, la vérification complète réussit avec 46 tests ; les 42 tests initiaux sont conservés sans modification d'assertion.
+Aucune dépendance tierce ni modification du rendu n'est ajoutée. Les racines multiples, les fournisseurs dupliqués et la normalisation des identifiants de paramètres restent hors de cette tranche.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-La réussite Mac concerne les 42 tests existants ; elle ne qualifie pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 4 nouveaux tests de portabilité ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les mesures JMH, les charges concurrentes, les versions de dépendances alternatives et le raccordement à Vidocq restent à réaliser.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -154,8 +167,8 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 == Vérification finale observée
 
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
-Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS` ; les rapports Surefire XML ont été contrôlés.
-Résultat : 42 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites.
+Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de portabilité ; les rapports Surefire XML ont été contrôlés.
+Résultat sur Mac : 46 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -165,5 +178,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`CompilationGabaritsTest` |7 |0 |0 |0
 |`RenduGabaritsTest` |10 |0 |0 |0
 |`CasLimitesCompilationTest` |21 |0 |0 |0
-|Total |42 |0 |0 |0
+|`PortabiliteGabaritsTest` |4 |0 |0 |0
+|Total |46 |0 |0 |0
 |===

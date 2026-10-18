@@ -55,13 +55,13 @@ Une version ne revendique que les capacités effectivement testées.
 
 == État de vérification
 
-La suite comporte désormais 42 tests réussis : 4 témoins, 7 tests de compilation initiaux, 10 tests de rendu initiaux et 21 tests limites. Voir link:compilateur-minimal.adoc[les étapes et limites de validation].
+La suite comporte désormais 46 tests réussis sur Mac : 4 témoins, 7 tests de compilation initiaux, 10 tests de rendu initiaux, 21 tests limites et 4 tests de portabilité. Les 42 tests initiaux ont aussi été vérifiés sur Windows. Voir link:compilateur-minimal.adoc[les étapes et limites de validation].
 Aucun chiffre de performance n'est disponible.
 Le sous-ensemble texte est implémenté ; le reste de la matrice demeure à réaliser avec les tests correspondants.
 
 == Prochaines priorités
 
-. Maintenir les 42 tests réussis sur Windows et Mac, sans affaiblir leurs assertions.
+. Maintenir les 46 tests réussis sur Mac et vérifier les nouveaux cas sur Windows, sans affaiblir leurs assertions.
 . Compléter les tests de portabilité : normalisation Unicode, casse des noms, racines, liens symboliques et encodages.
 . Stabiliser le contrat de chaque nouvelle capacité et observer ses tests nominaux et invalides en échec avant son implémentation ; les conditions et boucles restent à réaliser.
 . Encadrer les limites globales : nombre de ressources, nombre d'expressions, taille des méthodes générées et volume de diagnostics.
