@@ -48,6 +48,14 @@ Les liens vers des répertoires ne sont pas parcourus, même si leur nom se term
 Les diagnostics n'exposent ni chemin absolu de la racine ou de la cible, ni contenu du fichier externe.
 Les parcours et flux sont fermés à la fin de leur utilisation ; aucun état ni ressource n'est partagé entre compilations. Les entrées doivent rester stables pendant la compilation ; aucune garantie contre leur remplacement concurrent n'est revendiquée.
 
+=== Nombre de ressources
+
+Une compilation accepte de zéro à 1 024 ressources `.verne`, borne incluse. Cette première borne fixe limite l'inventaire conservé en mémoire ; elle ne constitue ni une mesure de performance ni un budget mémoire global.
+Les fichiers ordinaires sélectionnés, liens de fichiers et liens cassés sont comptés ; les répertoires et les liens vers des répertoires ne le sont pas.
+À la 1 025e ressource sélectionnée, l'inventaire s'arrête et la compilation produit `VERNE-LIM-002`, sans chemin machine ni contenu source. Aucun gabarit n'est lu, analysé ou généré dans cette invocation.
+Dans la borne, le tri et les diagnostics existants sont conservés. Le compteur et la liste appartiennent à l'invocation du processeur ; aucun état partagé ni ressource persistante n'est ajouté et le parcours est fermé, y compris au refus.
+Cette borne ne limite pas le nombre de répertoires ou de fichiers non sélectionnés parcourus, le volume total de sources dans la borne, ni les compilations concurrentes. Les autres budgets restent à définir séparément.
+
 === Encodage et noms
 
 Les sources sont décodées strictement en UTF-8, sans remplacement des octets invalides.
@@ -122,6 +130,7 @@ Le contrat n'inclut pas encore une sortie en flux, un plafond de caractères ren
 |`VERNE-IO-001` |Lecture ou génération impossible
 |`VERNE-LIA-001` |Nom de gabarit inadmissible ou collision de classe générée
 |`VERNE-LIM-001` |Source supérieure à un mébioctet
+|`VERNE-LIM-002` |Plus de 1 024 ressources de gabarits dans une compilation
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
 |`VERNE-SYN-001` |Interpolation, déclaration ou commentaire non fermé
 |`VERNE-SYN-002` |Syntaxe, directive, identifiant ou échappement non pris en charge
@@ -176,10 +185,17 @@ Après validation du type de racine et prise en compte des liens cassés, la sui
 Les tests exigent un système et un compte autorisant la création de liens symboliques ; ce prérequis reste à qualifier sur Windows et Linux. Ils ne sont pas ignorés silencieusement si leur création échoue.
 Aucune mesure de performance ni garantie face à des changements concurrents du système de fichiers n'est déduite de cette tranche.
 
+== Première borne du nombre de gabarits
+
+Les quatre tests de `NombreGabaritsTest` exercent zéro, 1 023, 1 024 et 1 025 ressources. Les cas acceptés vérifient le nombre exact de sources générées.
+Avant correction, le dépassement n'était pas détecté : les gabarits invalides étaient analysés et une première source valide pouvait déjà être produite, sans `VERNE-LIM-002`.
+Après limitation de l'inventaire à 1 025 entrées et contrôle avant génération, la vérification complète réussit avec 59 tests sur Mac. Le dépassement produit le diagnostic attendu, sans analyse des expressions ni source générée.
+Cette preuve ne valide pas les budgets de volume total, de diagnostics, de taille de méthode ou de rendu, et n'établit aucune performance.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 13 nouveaux tests de noms, racines et liens symboliques ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 17 nouveaux tests de noms, racines, liens symboliques et nombre de gabarits ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les mesures JMH, les charges concurrentes, les versions de dépendances alternatives et le raccordement à Vidocq restent à réaliser.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -187,8 +203,8 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 == Vérification finale observée
 
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
-Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines et liens symboliques ; les rapports Surefire XML ont été contrôlés.
-Résultat sur Mac : 55 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques et nombre de gabarits ; les rapports Surefire XML ont été contrôlés.
+Résultat sur Mac : 59 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -200,5 +216,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`CasLimitesCompilationTest` |21 |0 |0 |0
 |`PortabiliteGabaritsTest` |4 |0 |0 |0
 |`RacinesEtLiensGabaritsTest` |9 |0 |0 |0
-|Total |55 |0 |0 |0
+|`NombreGabaritsTest` |4 |0 |0 |0
+|Total |59 |0 |0 |0
 |===

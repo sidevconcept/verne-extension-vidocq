@@ -1,38 +1,66 @@
-= Verne
+= Verne — Gabarits textuels compilés
 :lang: fr
 
-Moteur de gabarits textuels compilés pour Java 25, autonome et destiné à l'écosystème Vidocq.
-Le nom rend hommage à Jules Verne.
+*Moteur de gabarits textuels pour Java 25*, autonome et destiné à l'écosystème https://codefloe.com/Vidocq[Vidocq].
+Les gabarits sont vérifiés et transformés en classes Java pendant la construction de l'application.
+Le rendu utilise ensuite ces classes, sans analyse des gabarits à l'exécution.
 
-== État du projet
+[quote]
+____
+Verne rend hommage à *Jules Verne* (1828–1905), dont les récits associent imagination et précision. Le projet prépare les documents avant leur mise en mouvement : vérifier et compiler une fois, puis rendre à la demande.
+____
 
-Première tranche du compilateur : gabarits textuels UTF-8, paramètres typés, accès directs aux composants de records, commentaires et échappements.
-Les 55 tests de la suite passent sur Mac, dont les 17 tests métier initiaux. Les classes générées n'exigent que le JDK à l'exécution.
-Lire link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat livré et ses limites]. Aucune performance n'est encore revendiquée.
+== Principes
 
-== Installation
+* *Aucune dépendance tierce à l'exécution* : les classes générées n'exigent que le JDK. Les bibliothèques de vérification restent en portée test.
+* *Java 25 et Java Modules explicites* : chaque module possède son `module-info.java` ; les applications du banc sont exécutées sur le chemin des modules.
+* *Validation pendant la construction* : tous les gabarits déclarés sont vérifiés, y compris ceux que l'application n'appelle pas.
+* *Accès typés et directs* : les modèles sont résolus par le compilateur Java, sans réflexion métier ni balayage du chemin des classes.
+* *Développement piloté par les tests* : contrat documenté, test observé en échec, implémentation minimale, puis vérification des régressions.
 
-Installer un JDK 25 ; la référence du projet est Temurin 25.
-Le fichier `.sdkmanrc` déclare Java `25-tem` et Maven `3.9.16` pour les postes utilisant SDKMAN.
+== Fonctionnalités disponibles
+
+* Gabarits `.verne` en UTF-8 strict ; texte Unicode, espaces et fins de ligne conservés.
+* Paramètres obligatoires typés, interpolation de chaînes et de scalaires, navigation par composants de records publics.
+* Commentaires et échappement des délimiteurs.
+* Classes de rendu sans état partagé et sources générées déterministes, sans chemin machine ni horodatage.
+* Diagnostics français avec codes stables et positions source ; refus des collisions de casse et de normalisation Unicode.
+* Contrôle des racines et liens symboliques ; refus des cibles externes et des liens de fichiers cassés.
+* Bornes initiales : *1 mébioctet par source* et *1 024 gabarits par compilation*, bornes incluses.
+
+Le profil livré est *texte*. Il conserve les caractères spéciaux et ne fournit pas de protection HTML.
+Les règles précises, erreurs et limites sont décrites dans link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat du compilateur].
+
+== Modules
+
+[cols="1,3",options="header"]
+|===
+|Module |Rôle
+|`verne-compilation` |Processeur de compilation, analyse des gabarits, vérification des types et génération Java ; dépend uniquement des API standard du JDK.
+|`verne-verification` |Banc de compilation de vraies applications modulaires, exécution du rendu et tests de diagnostics, limites et portabilité.
+|===
+
+Les classes générées appartiennent à l'application ; aucun JAR Verne n'est nécessaire pour les exécuter.
+L'adaptation CDI/REST et l'extension Vidocq restent à réaliser.
+
+== Prérequis
+
+* *JDK 25*, avec Temurin comme référence du projet.
+* *Maven 3.9.16*, fourni par le lanceur `mvnw` ; aucune installation Maven globale n'est requise.
+
+Le fichier `.sdkmanrc` déclare les versions pour les postes utilisant SDKMAN (`sdk env`).
+Le premier lancement du lanceur peut télécharger Maven et les dépendances de construction et de test.
+
+== Construction et tests
+
+Depuis la racine du dépôt, sous Linux ou macOS :
 
 [source,shell]
 ----
-git clone --branch fonctionnalite/premiers-tests https://github.com/sidevconcept/verne-extension-vidocq.git verne
-cd verne
+java -version
+./mvnw --version
+./mvnw -ntp clean verify
 ----
-
-Sur Mac, si plusieurs JDK sont installés, sélectionner Java 25 avant la construction :
-
-[source,shell]
-----
-export JAVA_HOME=$(/usr/libexec/java_home -v 25)
-export PATH="$JAVA_HOME/bin:$PATH"
-----
-
-== Vérification
-
-Le lanceur Maven fourni fixe Maven 3.9.16 ; utiliser un JDK 25.
-Le premier lancement peut télécharger cette distribution et les dépendances de test.
 
 Sous Windows :
 
@@ -40,35 +68,55 @@ Sous Windows :
 ----
 java -version
 .\mvnw.cmd --version
-.\mvnw.cmd clean verify
+.\mvnw.cmd -ntp clean verify
 ----
 
-Sous Unix :
+La vérification complète reconstruit les modules, exécute les tests et produit les archives.
+Pour relancer les tests sans nettoyage, utiliser `./mvnw test` ou `.\mvnw.cmd test`.
+Les rapports Surefire sont disponibles dans `verne-verification/target/surefire-reports` ; les répertoires `target` restent exclus de Git.
 
-[source,shell]
+== Premier exemple
+
+Le gabarit `bonjour.verne` déclare le paramètre `nom` et compose le document :
+
+[source,text]
 ----
-java -version
-./mvnw --version
-./mvnw clean verify
+{@java.lang.String nom}Bonjour {nom}
 ----
 
-Résultat attendu : 55 tests, zéro échec, zéro erreur et zéro test ignoré, puis construction des archives.
-La suite initiale de 42 tests a été confirmée sur Windows et sur Mac ; les 13 nouveaux tests de noms, racines et liens symboliques ont été vérifiés sur Mac. Les environnements et limites sont consignés dans link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat du compilateur minimal].
-Pour relancer uniquement la compilation et les tests, utiliser `./mvnw test` ou `.\mvnw.cmd test`.
-Le lanceur Unix est versionné exécutable avec des fins de ligne LF ; en cas de problème, vérifier `git ls-files --stage mvnw` et le montage du répertoire.
+Après compilation du gabarit avec l'application, la classe générée s'utilise directement :
 
-Lire link:docs/fr/modules/ROOT/pages/premiers-tests.adoc[la phase rouge historique] et link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[la phase verte actuelle]. Un test en échec ne doit plus être considéré normal pour les capacités livrées.
-Les rapports se trouvent dans `verne-verification/target/surefire-reports`.
-Le compilateur est attendu dans `verne-compilation/target/classes` ; un autre emplacement peut être fourni par `-Dverne.chemin.processeur=...`.
-Les journaux sous `target` sont supprimables par `clean` ; ne pas rediriger un journal ouvert vers ce répertoire pendant le nettoyage sous Windows.
+[source,java]
+----
+String document = io.vidocq.verne.genere.Bonjour.rendre("Léa");
+----
+
+La valeur de `document` est `Bonjour Léa`.
+Un paramètre obligatoire nul provoque une erreur explicite ; les données interpolées ne sont jamais réinterprétées comme un gabarit.
+Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] décrit les options du processeur et la grammaire acceptée ; le raccordement Maven automatique d'une application reste à qualifier.
+
+== État du projet
+
+*Version de développement : `0.1.0-SNAPSHOT`.* Le sous-ensemble texte est implémenté.
+La dernière vérification complète sur Mac réussit avec *59 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 17 tests supplémentaires restent à qualifier sur Windows et Linux.
+
+Les conditions, boucles, inclusions, profils de sortie sécurisés, rendu en flux et asynchronisme ne sont pas encore livrés.
+L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.
+Aucune performance n'est revendiquée sans mesures reproductibles.
+Les prochaines priorités figurent dans link:docs/fr/modules/ROOT/pages/index.adoc[le dossier de conception].
 
 == Documentation
 
-Le link:docs/fr/modules/ROOT/pages/index.adoc[dossier de conception] contient architecture, matrice fonctionnelle, cas de test et protocole de performances.
-Il décrit aussi les priorités de développement restantes.
-La documentation Antora est en français dans `docs/fr` et utilise l'interface commune de l'écosystème ; aucune interface spécifique n'est embarquée.
+La documentation de référence est en français dans `docs/fr`, au format Antora.
+
+* link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[Contrat du compilateur] — usage livré, grammaire, diagnostics, bornes et preuves de vérification.
+* link:docs/fr/modules/ROOT/pages/architecture.adoc[Architecture] — frontières du moteur et intégration cible.
+* link:docs/fr/modules/ROOT/pages/matrice-fonctionnelle.adoc[Matrice fonctionnelle] — capacités prévues et état du périmètre.
+* link:docs/fr/modules/ROOT/pages/cas-de-test.adoc[Plan de tests] — scénarios nominaux, erreurs, sécurité et limites.
+* link:docs/fr/modules/ROOT/pages/mesures-performance.adoc[Mesures de performances] — protocole de qualification.
 
 == Licence
 
-EPL-2.0 OU EUPL-1.2 OU GPL-2.0-or-later, au choix du destinataire.
-Voir `LICENSE` et `licenses/`.
+Triple licence disjonctive, au choix du destinataire : *EPL-2.0 OU EUPL-1.2 OU GPL-2.0-or-later*.
+Voir link:LICENSE[LICENSE] et link:licenses/[les textes de licence].

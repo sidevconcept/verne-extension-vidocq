@@ -24,6 +24,7 @@ import javax.tools.Diagnostic;
 public final class ProcesseurVerne extends AbstractProcessor {
     private boolean traite;
     private static final int TAILLE_MAXIMALE = 1_048_576;
+    private static final int NOMBRE_MAXIMAL_GABARITS = 1_024;
 
     /** Constructeur public exigé par le chargement des processeurs du compilateur Java. */
     public ProcesseurVerne() {}
@@ -54,7 +55,11 @@ public final class ProcesseurVerne extends AbstractProcessor {
                 fichiers = parcours.filter(chemin -> chemin.toString().endsWith(".verne"))
                         .filter(chemin -> Files.isRegularFile(chemin)
                                 || (Files.isSymbolicLink(chemin) && !Files.exists(chemin)))
-                        .sorted().toList();
+                        .limit(NOMBRE_MAXIMAL_GABARITS + 1L).sorted().toList();
+            }
+            if (fichiers.size() > NOMBRE_MAXIMAL_GABARITS) {
+                erreur("VERNE-LIM-002", "plus de 1 024 ressources de gabarits dans une compilation.");
+                return false;
             }
             var noms = new HashSet<String>();
             for (Path fichier : fichiers) {
