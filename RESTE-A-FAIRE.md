@@ -9,20 +9,22 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Le sous-ensemble texte est implémenté : paramètres typés, interpolations, navigation dans les records publics, commentaires et échappement des délimiteurs.
 - Les contrôles de ressources, les budgets du compilateur et l'optimisation des grands documents sont intégrés.
 - Les PR nº 10 et nº 11 sont fusionnées dans `main` ; sa dernière vérification sur Mac compte **106 tests réussis**, sans échec, erreur ni test ignoré.
-- La découverte automatique du processeur est prête localement sur `codex/decouverte-processeur`. Avec cette tranche, **115 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 73 tests supplémentaires restent à qualifier sur Windows et Linux.
+- La découverte automatique du processeur est publiée dans la PR nº 12, encore à fusionner. Avec cette tranche, **115 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Une application Maven autonome est prête localement sur `codex/application-maven`, avec quatre nouveaux tests. La vérification complète atteint **119 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 77 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
 
-- [ ] Créer le commit signé GPG avec DCO pour la tranche locale.
-- [ ] Pousser la branche et créer la pull request vers `main`.
+- [x] Créer le commit signé GPG avec DCO pour la tranche locale : `b26f4c8`.
+- [x] Pousser la branche et créer la [pull request nº 12](https://github.com/sidevconcept/verne-extension-vidocq/pull/12) vers `main`.
 - [ ] Fusionner la pull request après vérification et autorisation correspondante.
 
 ## 2. Finaliser l'intégration à la construction Java
 
-- [ ] Vérifier une véritable application Maven consommatrice, distincte du banc interne.
-- [ ] Qualifier la configuration et le chargement du processeur depuis son artefact publié ou installé.
+- [x] Vérifier une véritable application Maven consommatrice, distincte du banc interne : `exemples/application-maven`.
+- [x] Qualifier la configuration et le chargement du processeur depuis son artefact installé localement.
+- [ ] Publier et intégrer la tranche d'application Maven.
 - [ ] Tester la coexistence avec d'autres processeurs et les types générés pendant les tours suivants.
 
 ## 3. Fiabiliser les reconstructions et les diagnostics
@@ -87,4 +89,4 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 ## Prochaine priorité
 
-Publier la tranche de découverte automatique, puis qualifier une application Maven consommatrice. Cette étape doit vérifier l'utilisation de Verne hors de son propre banc avant le raccordement à Vidocq.
+Fusionner la tranche de découverte automatique et intégrer l'application Maven consommatrice, puis qualifier la coexistence avec d'autres processeurs et les types générés pendant les tours suivants, avant le raccordement à Vidocq.

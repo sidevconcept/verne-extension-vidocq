@@ -43,6 +43,7 @@
                         <argLine>-Dfile.encoding=UTF-8</argLine>
                         <systemPropertyVariables>
                             <verne.racine.projet>${maven.multiModuleProjectDirectory}</verne.racine.projet>
+                            <verne.depot.maven>${settings.localRepository}</verne.depot.maven>
                         </systemPropertyVariables>
                     </configuration>
                 </plugin>
