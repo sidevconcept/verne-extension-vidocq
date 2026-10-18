@@ -13,9 +13,9 @@ Il permet de reprendre le dépôt sans accéder à l'historique de conversation 
 * Commit de référence de l'implémentation : `3e129e9cbe6ad6a9e6e343b567de021157b85513`, « Créer Verne et son compilateur minimal de gabarits textuels ».
 * Identité des contributions : `sidevconcept <sidev.concept06@gmail.com>`, auteur et créateur des commits ; DCO obligatoire.
 * Exception utilisateur du 18 octobre 2026 : commits locaux temporairement sans signature GPG. Cette exception concerne uniquement Verne et ne change aucune politique d'un autre dépôt.
-* Aucun dépôt distant configuré et aucun envoi effectué au moment de la passation. L'utilisateur créera le dépôt distant et communiquera son adresse.
+* Dépôt distant fourni par l'utilisateur le 18 octobre 2026 : https://github.com/sidevconcept/verne-extension-vidocq.git ; distant local `origin`, branche à transférer `fonctionnalite/premiers-tests`.
 
-Le commit de passation suit celui de l'implémentation ; `git log -2` permet de consulter les deux sans figer dans ce fichier sa propre empreinte.
+Les commits de passation suivent celui de l'implémentation ; `git log --oneline` permet de consulter leur ordre sans figer dans ce fichier sa propre empreinte.
 
 == Règles à conserver
 
@@ -31,23 +31,24 @@ L'installation locale de ce plugin sur Windows n'est pas transférée par Git.
 
 Les Java Modules sont explicites. Le rendu ne charge pas de classes métier par réflexion et n'analyse pas les gabarits à l'exécution.
 Ne pas ajouter de dépendance tierce au rendu ; les outils de vérification restent isolés.
-La forge de l'écosystème est CodeFloe ; ne pas gérer ses contributions avec des outils propres à une autre forge.
+L'écosystème Vidocq utilise CodeFloe ; l'utilisateur a choisi GitHub pour ce dépôt autonome uniquement. Cette exception ne modifie pas la forge des autres composants.
 
-== Transfert vers le dépôt créé par l'utilisateur
+== Dépôt distant et transfert
 
-Créer de préférence un dépôt distant vide, sans initialisation de README, licence ou fichier d'exclusion : l'historique local contient déjà ces fichiers.
-Attendre l'adresse réelle ; ne pas inventer de dépôt ni créer une branche principale artificielle.
-Une fois l'adresse reçue et la publication demandée, les commandes prévues depuis le dépôt Windows sont :
+Le dépôt fourni est https://github.com/sidevconcept/verne-extension-vidocq.git.
+Il a été vérifié vide avant configuration du distant `origin`.
+La branche à publier puis à cloner est `fonctionnalite/premiers-tests` ; aucun remplacement forcé d'historique n'est nécessaire.
+
+Les commandes de publication prévues depuis le dépôt Windows sont :
 
 [source,powershell]
 ----
-git remote add origin "URL_DU_DEPOT"
 git push --set-upstream origin fonctionnalite/premiers-tests
+git ls-remote origin refs/heads/fonctionnalite/premiers-tests
 ----
 
-`URL_DU_DEPOT` est une valeur à remplacer. Ne pas réexécuter `remote add` si le dépôt possède déjà un `origin` ; vérifier d'abord `git remote -v`.
-Si le dépôt distant contient déjà un historique, l'inspecter et décider de son rapprochement ; ne pas forcer son remplacement.
-Le choix de la branche par défaut distante reste à l'utilisateur.
+Comparer l'empreinte distante à `git rev-parse HEAD` avant de considérer le transfert terminé.
+Le choix de la branche par défaut distante reste à l'utilisateur ; la commande Mac ci-dessous sélectionne explicitement la branche de travail.
 
 Le transfert via Git contient sources, tests, documentation, licences et lanceurs Maven.
 Il ne contient ni résultats `target`, ni journal privé, ni paramètres Git locaux, ni cache Maven, ni clé GPG, ni configuration du plugin.
@@ -63,7 +64,7 @@ Après publication de la branche :
 
 [source,shell]
 ----
-git clone --branch fonctionnalite/premiers-tests "URL_DU_DEPOT" verne
+git clone --branch fonctionnalite/premiers-tests "https://github.com/sidevconcept/verne-extension-vidocq.git" verne
 cd verne
 
 git config --local user.name "sidevconcept"

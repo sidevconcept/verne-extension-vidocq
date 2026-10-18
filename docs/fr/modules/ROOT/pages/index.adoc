@@ -39,7 +39,7 @@ Le moteur dispose désormais de son dépôt Git autonome local `E:\Dev\Projects\
 Ce dossier constitue la documentation de référence du moteur ; la copie de conception préparée dans Vidocq est antérieure à sa création.
 L'extension sera développée séparément dans le dépôt Vidocq.
 La documentation Antora réside dans `docs/fr`, avec l'attribut `lang: fr`, sans personnalisation de l'interface commune.
-Le dépôt reste local, sans dépôt distant configuré. Les contributions locales suivent la règle DCO et l'exception temporaire de signature décrites dans `AGENTS.md`.
+Le dépôt autonome utilise désormais le distant fourni par l'utilisateur : https://github.com/sidevconcept/verne-extension-vidocq.git. Les contributions locales suivent la règle DCO et l'exception temporaire de signature décrites dans `AGENTS.md`.
 
 == Ordre de réalisation proposé
 

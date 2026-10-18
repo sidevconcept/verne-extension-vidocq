@@ -12,7 +12,7 @@
 - Documenter chaque contrat avant son implémentation : données, nullité, erreurs, effets de bord, ressources et concurrence. Les documents de référence résident dans `docs/fr`.
 - Utiliser Ponytail par défaut : comprendre le flux, réutiliser le code existant et préférer la solution complète la plus simple. Cela ne réduit ni les tests ni la documentation demandés.
 - Aucun balayage du chemin des classes ni réflexion métier à l'exécution. Les gabarits sont vérifiés et compilés avant déploiement.
-- La forge du projet est CodeFloe. Ne pas utiliser de commandes ou connecteurs GitHub pour gérer ses contributions.
+- Le dépôt autonome Verne est hébergé à l'adresse explicitement choisie par l'utilisateur : https://github.com/sidevconcept/verne-extension-vidocq.git. Cette destination est autorisée pour Verne. Les autres dépôts de l'écosystème Vidocq restent sur CodeFloe ; ne pas leur appliquer cette exception.
 
 ## Vérifications
 
