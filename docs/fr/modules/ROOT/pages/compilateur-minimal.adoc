@@ -54,7 +54,14 @@ Une compilation accepte de zéro à 1 024 ressources `.verne`, borne incluse. Ce
 Les fichiers ordinaires sélectionnés, liens de fichiers et liens cassés sont comptés ; les répertoires et les liens vers des répertoires ne le sont pas.
 À la 1 025e ressource sélectionnée, l'inventaire s'arrête et la compilation produit `VERNE-LIM-002`, sans chemin machine ni contenu source. Aucun gabarit n'est lu, analysé ou généré dans cette invocation.
 Dans la borne, le tri et les diagnostics existants sont conservés. Le compteur et la liste appartiennent à l'invocation du processeur ; aucun état partagé ni ressource persistante n'est ajouté et le parcours est fermé, y compris au refus.
-Cette borne ne limite pas le nombre de répertoires ou de fichiers non sélectionnés parcourus, le volume total de sources dans la borne, ni les compilations concurrentes. Les autres budgets restent à définir séparément.
+Cette borne ne limite pas le nombre de répertoires ou de fichiers non sélectionnés parcourus, le volume total de sources dans la borne, ni les compilations concurrentes. Le budget cumulé de lecture est défini ci-dessous ; les autres budgets restent distincts.
+
+=== Budget cumulé de lecture des sources
+
+Une invocation du processeur accepte au plus 8 mébioctets, soit 8 388 608 octets lus pour les sources `.verne`, borne incluse. Le budget porte sur les octets UTF-8, avant décodage et retrait des commentaires ; il ne borne ni la taille des documents rendus ni toute la mémoire du compilateur Java.
+Les ressources sont lues dans l'ordre déterministe de l'inventaire, après les contrôles de cible autorisée et de nom. Chaque lecture consomme le budget, y compris celle d'un fichier ensuite refusé pour encodage, syntaxe ou taille individuelle ; l'octet de sondage de dépassement individuel est compté. Plusieurs noms logiques visant le même fichier sont comptés séparément. Les ressources rejetées avant lecture ne consomment pas ce budget.
+La lecture de chaque fichier s'arrête au premier octet au-delà de la plus petite des deux bornes restantes : un mébioctet pour le fichier et le budget cumulé disponible. Au premier dépassement cumulé, `VERNE-LIM-006` désigne la ressource à `1:1`, sans chemin machine ni contenu source. Le traitement s'arrête avant décodage, analyse et génération de ce fichier et des suivants ; les sources déjà générées ne sont pas retirées et la compilation entière échoue. Si les deux bornes sont franchies par le même octet, la limite cumulée est prioritaire ; sinon `VERNE-LIM-001` conserve son rôle pour un dépassement individuel.
+Un fichier vide reste accepté lorsque le budget est exactement atteint. Le compteur appartient à l'invocation, sans état partagé entre compilations, y compris concurrentes. Les flux sont fermés avant tout refus ; les entrées doivent rester stables pendant la compilation. Aucun nouveau contrôle n'est ajouté au rendu.
 
 === Encodage et noms
 
@@ -161,6 +168,7 @@ Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux 
 |`VERNE-LIM-003` |Plus de 1 024 interpolations dans un gabarit
 |`VERNE-LIM-004` |Plus de 255 paramètres déclarés dans un gabarit
 |`VERNE-LIM-005` |Plus de 32 accès de record dans une interpolation
+|`VERNE-LIM-006` |Plus de huit mébioctets lus pour les sources dans une compilation
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
 |`VERNE-SYN-001` |Interpolation, déclaration ou commentaire non fermé
 |`VERNE-SYN-002` |Syntaxe, directive, identifiant ou échappement non pris en charge
@@ -241,10 +249,16 @@ Les huit tests de `ProfondeurNavigationsTest` couvrent 31 et 32 accès avec rend
 Avant correction, deux tests échouaient pour la cause attendue : une chaîne valide de profondeur 33 était acceptée et générée ; un paramètre inconnu donnait `VERNE-TYP-001`, sans le diagnostic de limite prévu. Les six autres tests réussissaient déjà.
 Après le contrôle dans l'analyseur, les huit tests réussissent. La vérification complète propre totalise 84 tests sur Mac sans échec, erreur ni test ignoré. Le contrôle ne modifie pas la génération des expressions admissibles et n’ajoute aucun travail au rendu ; aucune nouvelle mesure de performance n’est revendiquée.
 
+== Première borne du volume cumulé de lecture
+
+Les neuf tests de `VolumeSourcesTest` couvrent 8 Mio moins un octet, la borne exacte suivie d'un fichier vide, le premier octet supplémentaire avant analyse et l'arrêt des fichiers suivants, un point de code UTF-8 tronqué par le sondage, les alias de fichiers, les octets UTF-8 invalides, le sondage de dépassement individuel, la priorité en cas de dépassements simultanés et l'isolation de deux compilations concurrentes.
+Avant correction, six tests échouaient pour l'absence de contrôle cumulé : des ressources supplémentaires étaient lues et pouvaient être générées ou produire des diagnostics d'analyse au lieu de `VERNE-LIM-006`. Les trois cas d'acceptation et d'isolation réussissaient déjà.
+Après ajout du compteur local et réduction de chaque lecture au budget disponible plus un octet, les neuf tests réussissent. La vérification propre complète totalise 93 tests sur Mac sans échec, erreur ni test ignoré. Les fixtures vérifient les tailles UTF-8 avec des commentaires contenant des accents ; le budget porte donc bien sur les octets lus, même sans texte rendu. Cette preuve ne constitue ni une borne globale de mémoire, ni une nouvelle mesure de performance.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 42 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres et profondeur des navigations ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 51 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations et volume des sources ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -254,7 +268,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 84 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 93 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -271,5 +285,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`GrandsDocumentsTest` |6 |0 |0 |0
 |`NombreParametresTest` |6 |0 |0 |0
 |`ProfondeurNavigationsTest` |8 |0 |0 |0
-|Total |84 |0 |0 |0
+|`VolumeSourcesTest` |9 |0 |0 |0
+|Total |93 |0 |0 |0
 |===
