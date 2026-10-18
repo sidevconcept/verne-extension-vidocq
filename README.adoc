@@ -7,7 +7,7 @@ Le nom rend hommage à Jules Verne.
 == État du projet
 
 Première tranche du compilateur : gabarits textuels UTF-8, paramètres typés, accès directs aux composants de records, commentaires et échappements.
-Les 42 tests de la suite passent, dont les 17 tests métier initiaux. Les classes générées n'exigent que le JDK à l'exécution.
+Les 46 tests de la suite passent sur Mac, dont les 17 tests métier initiaux. Les classes générées n'exigent que le JDK à l'exécution.
 Lire link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat livré et ses limites]. Aucune performance n'est encore revendiquée.
 
 == Installation
@@ -52,8 +52,8 @@ java -version
 ./mvnw clean verify
 ----
 
-Résultat attendu : 42 tests, zéro échec, zéro erreur et zéro test ignoré, puis construction des archives.
-Ce résultat a été confirmé sur Windows et sur Mac ; les environnements et limites sont consignés dans link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat du compilateur minimal].
+Résultat attendu : 46 tests, zéro échec, zéro erreur et zéro test ignoré, puis construction des archives.
+La suite initiale de 42 tests a été confirmée sur Windows et sur Mac ; les 4 nouveaux tests de portabilité ont été vérifiés sur Mac. Les environnements et limites sont consignés dans link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat du compilateur minimal].
 Pour relancer uniquement la compilation et les tests, utiliser `./mvnw test` ou `.\mvnw.cmd test`.
 Le lanceur Unix est versionné exécutable avec des fins de ligne LF ; en cas de problème, vérifier `git ls-files --stage mvnw` et le montage du répertoire.
 
