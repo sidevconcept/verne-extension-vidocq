@@ -14,7 +14,7 @@ Un gabarit inutilisé invalide ou une propriété inconnue doit faire échouer M
 
 Les tests lancent de vrais processus Maven via le lanceur du dépôt, qui fixe Maven 3.9.16, avec le JDK de la suite. Ils construisent et installent une copie des sources du compilateur dans un dépôt Maven temporaire, puis construisent des copies indépendantes de l'application. Le dépôt Maven habituel peut servir de source de cache ; les artefacts de la tranche sont installés seulement dans le dépôt temporaire. Les premiers téléchargements d'outillage peuvent être nécessaires. Les processus ont un délai de garde, leurs sorties sont redirigées et ils sont arrêtés si nécessaire. Les flux de copie et d'archive sont fermés ; aucun serveur ni ressource persistante n'est créé. Les constructions de cette tranche sont séquentielles et ne revendiquent pas la sûreté de constructions simultanées dans le même répertoire de sortie.
 
-La configuration n'ajoute aucun état partagé au rendu. Les reconstructions sans nettoyage, les interactions avec d'autres processeurs, les types produits aux tours suivants, les nouvelles plateformes et l'extension Vidocq restent à qualifier séparément.
+La configuration n'ajoute aucun état partagé au rendu. Les reconstructions sans nettoyage, le chargement conjoint de plusieurs processeurs dans cette application Maven, les nouvelles plateformes et l'extension Vidocq restent à qualifier séparément. La reprise des types produits aux tours suivants est vérifiée avec javac et décrite dans link:coexistence-processeurs.adoc[son contrat dédié].
 
 == Construire et lancer l'exemple
 

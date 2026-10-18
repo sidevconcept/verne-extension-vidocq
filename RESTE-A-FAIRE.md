@@ -1,6 +1,6 @@
 # Verne — Reste à faire
 
-État au 18 octobre 2026. L'ordre ci-dessous est conseillé ; chaque capacité suit le cycle contrat documenté, test observé en échec, implémentation minimale et vérification des régressions.
+État après publication de la tranche Maven dans la PR nº 13. L'ordre ci-dessous est conseillé ; chaque capacité suit le cycle contrat documenté, test observé en échec, implémentation minimale et vérification des régressions.
 
 Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](docs/fr/modules/ROOT/pages/index.adoc), notamment la [matrice fonctionnelle](docs/fr/modules/ROOT/pages/matrice-fonctionnelle.adoc) et le [contrat du compilateur](docs/fr/modules/ROOT/pages/compilateur-minimal.adoc).
 
@@ -10,8 +10,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Les contrôles de ressources, les budgets du compilateur et l'optimisation des grands documents sont intégrés.
 - Les PR nº 10 et nº 11 sont fusionnées dans `main` ; sa dernière vérification sur Mac compte **106 tests réussis**, sans échec, erreur ni test ignoré.
 - La découverte automatique du processeur est publiée dans la PR nº 12, encore à fusionner. Avec cette tranche, **115 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Une application Maven autonome est prête localement sur `codex/application-maven`, avec quatre nouveaux tests. La vérification complète atteint **119 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 77 tests supplémentaires restent à qualifier sur Windows et Linux.
+- L'application Maven autonome est publiée dans la PR nº 13, dépendante de la PR nº 12 et encore à fusionner. Avec cette tranche, **119 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- La coexistence avec un processeur générant des modèles Java est prête localement sur `codex/coexistence-processeurs`, avec dix nouveaux tests. La vérification complète atteint **129 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 87 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -24,8 +25,11 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 - [x] Vérifier une véritable application Maven consommatrice, distincte du banc interne : `exemples/application-maven`.
 - [x] Qualifier la configuration et le chargement du processeur depuis son artefact installé localement.
-- [ ] Publier et intégrer la tranche d'application Maven.
-- [ ] Tester la coexistence avec d'autres processeurs et les types générés pendant les tours suivants.
+- [x] Publier la tranche d'application Maven : commit signé avec DCO `e116f91` et [PR nº 13](https://github.com/sidevconcept/verne-extension-vidocq/pull/13).
+- [ ] Intégrer la tranche d'application Maven après fusion de sa dépendance.
+- [x] Tester avec javac la coexistence avec un processeur Java contrôlé et les types générés pendant les tours suivants.
+- [ ] Publier et intégrer la tranche de coexistence.
+- [ ] Qualifier le chargement conjoint dans Maven, sur le chemin des modules et avec des bibliothèques de processeurs tierces.
 
 ## 3. Fiabiliser les reconstructions et les diagnostics
 
@@ -89,4 +93,4 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 ## Prochaine priorité
 
-Fusionner la tranche de découverte automatique et intégrer l'application Maven consommatrice, puis qualifier la coexistence avec d'autres processeurs et les types générés pendant les tours suivants, avant le raccordement à Vidocq.
+Intégrer les PR nº 12 et nº 13 dans l'ordre, puis la tranche de coexistence. Qualifier ensuite le chargement conjoint dans Maven et sur le chemin des modules, avant le raccordement à Vidocq. Les reconstructions incrémentales et le remappage des erreurs du Java généré restent à réaliser.

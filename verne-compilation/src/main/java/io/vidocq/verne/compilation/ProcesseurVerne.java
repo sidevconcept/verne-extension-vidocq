@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -25,10 +26,13 @@ public final class ProcesseurVerne extends AbstractProcessor {
     private boolean traite;
     private int nombreDiagnostics;
     private boolean diagnosticsSatures;
+    private final List<GabaritEnAttente> enAttente = new ArrayList<>();
     private static final int TAILLE_MAXIMALE = 1_048_576;
     private static final int VOLUME_MAXIMAL_SOURCES = 8 * 1_048_576;
     private static final int NOMBRE_MAXIMAL_GABARITS = 1_024;
     private static final int NOMBRE_MAXIMAL_DIAGNOSTICS = 64;
+
+    private record GabaritEnAttente(String classe, String texte, String identifiant, String diagnostic) {}
 
     /** Constructeur public exigé par le chargement des processeurs du compilateur Java. */
     public ProcesseurVerne() {}
@@ -39,16 +43,32 @@ public final class ProcesseurVerne extends AbstractProcessor {
         return Set.of("verne.racine.gabarits", "verne.profil.sortie");
     }
 
-    /** Inventorie toutes les ressources, sans exiger d'annotation sur l'application. */
+    /** Inventorie une fois les ressources, puis reprend les gabarits dont les types étaient absents. */
     @Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment tour) {
-        if (traite || tour.processingOver()) return false;
-        traite = true;
-        String racineDeclaree = processingEnv.getOptions().get("verne.racine.gabarits");
-        if (racineDeclaree == null || !"texte".equals(processingEnv.getOptions().get("verne.profil.sortie"))) {
-            erreur("VERNE-CFG-001", "déclarer une racine de gabarits et le profil texte.");
+        if (tour.processingOver()) {
+            for (GabaritEnAttente gabarit : enAttente) {
+                if (diagnosticsSatures) break;
+                signalerErreur(gabarit.diagnostic());
+            }
+            enAttente.clear();
             return false;
         }
         try {
+            if (traite) {
+                var aReprendre = List.copyOf(enAttente);
+                enAttente.clear();
+                for (GabaritEnAttente gabarit : aReprendre) {
+                    if (diagnosticsSatures) break;
+                    compilerTexte(gabarit.classe(), gabarit.texte(), gabarit.identifiant());
+                }
+                return false;
+            }
+            traite = true;
+            String racineDeclaree = processingEnv.getOptions().get("verne.racine.gabarits");
+            if (racineDeclaree == null || !"texte".equals(processingEnv.getOptions().get("verne.profil.sortie"))) {
+                erreur("VERNE-CFG-001", "déclarer une racine de gabarits et le profil texte.");
+                return false;
+            }
             Path racine = Path.of(racineDeclaree).toRealPath();
             if (!Files.isDirectory(racine)) {
                 erreur("VERNE-CFG-001", "la racine des gabarits doit être un répertoire.");
@@ -123,7 +143,9 @@ public final class ProcesseurVerne extends AbstractProcessor {
 
     /** Chaque ressource dispose de son analyseur et de sa table de paramètres isolés. */
     private void compilerTexte(String classe, String texte, String identifiant) throws IOException {
-        new CompilateurGabarit(processingEnv, this::signalerErreur).compiler(classe, texte, identifiant);
+        String diagnostic = new CompilateurGabarit(processingEnv, this::signalerErreur)
+                .compiler(classe, texte, identifiant);
+        if (diagnostic != null) enAttente.add(new GabaritEnAttente(classe, texte, identifiant, diagnostic));
     }
 
     /** Protège les littéraux Java, y compris les caractères de contrôle et les antislashs. */
