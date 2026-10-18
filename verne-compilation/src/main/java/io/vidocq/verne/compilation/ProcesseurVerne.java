@@ -23,9 +23,12 @@ import javax.tools.Diagnostic;
  */
 public final class ProcesseurVerne extends AbstractProcessor {
     private boolean traite;
+    private int nombreDiagnostics;
+    private boolean diagnosticsSatures;
     private static final int TAILLE_MAXIMALE = 1_048_576;
     private static final int VOLUME_MAXIMAL_SOURCES = 8 * 1_048_576;
     private static final int NOMBRE_MAXIMAL_GABARITS = 1_024;
+    private static final int NOMBRE_MAXIMAL_DIAGNOSTICS = 64;
 
     /** Constructeur public exigé par le chargement des processeurs du compilateur Java. */
     public ProcesseurVerne() {}
@@ -65,6 +68,7 @@ public final class ProcesseurVerne extends AbstractProcessor {
             var noms = new HashSet<String>();
             int volumeLu = 0;
             for (Path fichier : fichiers) {
+                if (diagnosticsSatures) break;
                 String identifiant = racine.relativize(fichier).toString().replace('\\', '/');
                 Path cible;
                 try {
@@ -119,7 +123,7 @@ public final class ProcesseurVerne extends AbstractProcessor {
 
     /** Chaque ressource dispose de son analyseur et de sa table de paramètres isolés. */
     private void compilerTexte(String classe, String texte, String identifiant) throws IOException {
-        new CompilateurGabarit(processingEnv).compiler(classe, texte, identifiant);
+        new CompilateurGabarit(processingEnv, this::signalerErreur).compiler(classe, texte, identifiant);
     }
 
     /** Protège les littéraux Java, y compris les caractères de contrôle et les antislashs. */
@@ -145,6 +149,18 @@ public final class ProcesseurVerne extends AbstractProcessor {
 
     /** Émet un code stable et un message français sans valeur métier ni chemin absolu. */
     private void erreur(String code, String message) {
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, code + " : " + message);
+        signalerErreur(code + " : " + message);
+    }
+
+    /** Les refus de ressources et d'analyse consomment le même budget, sans troncature silencieuse. */
+    private void signalerErreur(String message) {
+        if (diagnosticsSatures) return;
+        if (nombreDiagnostics == NOMBRE_MAXIMAL_DIAGNOSTICS) {
+            diagnosticsSatures = true;
+            message = "VERNE-LIM-007 : plus de 64 erreurs Verne ; arrêt de la vérification des ressources suivantes.";
+        } else {
+            nombreDiagnostics++;
+        }
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, message);
     }
 }
