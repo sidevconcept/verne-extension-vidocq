@@ -26,6 +26,7 @@ ____
 * Classes de rendu sans état partagé et sources générées déterministes, sans chemin machine ni horodatage.
 * Découverte automatique du processeur par javac, sur le chemin des processeurs ou des modules processeurs, depuis un répertoire ou un JAR.
 * Exemple Maven autonome : compilateur déclaré uniquement sur le chemin des processeurs et application modulaire sans dépendance Verne à l'exécution.
+* Coexistence avec un processeur générant des modèles Java : reprise des gabarits lorsque leurs types deviennent disponibles aux tours suivants.
 * Diagnostics français avec codes stables et positions source ; refus des collisions de casse et de normalisation Unicode.
 * Contrôle des racines et liens symboliques ; refus des cibles externes et des liens de fichiers cassés.
 * Bornes initiales : *1 mébioctet par source*, *1 024 gabarits par compilation* et *1 024 interpolations par gabarit*, bornes incluses.
@@ -100,8 +101,8 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 == État du projet
 
 *Version de développement : `0.1.0-SNAPSHOT`.* Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *119 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 77 tests supplémentaires restent à qualifier sur Windows et Linux.
+La dernière vérification complète sur Mac réussit avec *129 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 87 tests supplémentaires restent à qualifier sur Windows et Linux.
 
 Les conditions, boucles, inclusions, profils de sortie sécurisés, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.
@@ -114,6 +115,7 @@ La documentation de référence est en français dans `docs/fr`, au format Antor
 
 * link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[Contrat du compilateur] — usage livré, grammaire, diagnostics, bornes et preuves de vérification.
 * link:docs/fr/modules/ROOT/pages/application-maven.adoc[Application Maven consommatrice] — construction indépendante, configuration du processeur et lancement modulaire.
+* link:docs/fr/modules/ROOT/pages/coexistence-processeurs.adoc[Coexistence des processeurs] — annotations, types générés aux tours suivants et diagnostics différés.
 * link:docs/fr/modules/ROOT/pages/architecture.adoc[Architecture] — frontières du moteur et intégration cible.
 * link:docs/fr/modules/ROOT/pages/matrice-fonctionnelle.adoc[Matrice fonctionnelle] — capacités prévues et état du périmètre.
 * link:docs/fr/modules/ROOT/pages/cas-de-test.adoc[Plan de tests] — scénarios nominaux, erreurs, sécurité et limites.

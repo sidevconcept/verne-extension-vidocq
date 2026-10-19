@@ -35,7 +35,7 @@ Un module de cœur distinct n'est donc pas créé sans besoin dans cette tranche
 Le compilateur permet le chargement automatique par javac 25, sans option `-processor` ni annotation applicative. L'application fournit toujours les deux options Verne obligatoires. Le processeur est placé soit sur `-processorpath`, avec son descripteur standard `META-INF/services/javax.annotation.processing.Processor`, soit sur `--processor-module-path`, avec le fournisseur déclaré dans `module-info.java`. En ligne de commande, ces chemins explicites suffisent à activer le traitement avec javac 25 ; `-proc:full` rend aussi ce choix explicite. Les appels à l'API `JavaCompiler.getTask` du banc spécifient `-proc:full` : leur activation implicite n'est pas assimilée à celle de la ligne de commande. Un répertoire de classes complet et une archive JAR contenant ces mêmes classes et ressources offrent le même comportement avec cette activation explicite.
 La découverte reste limitée au chemin explicitement fourni au compilateur ; elle n'ajoute aucun balayage métier ni dépendance au rendu. Les entrées de configuration restent des chaînes non nulles fournies par l'outil de construction ; leur absence conserve les diagnostics de configuration existants. Les modèles Java sources sont résolus dans la même invocation et tous les gabarits sont vérifiés, même inutilisés. Un gabarit invalide doit donc faire échouer la construction avec son code et sa position Verne ; un processeur non chargé ne constitue jamais une validation.
 Avec `-proc:none`, aucun de ces chemins ne déclenche de génération ni de validation. La seule présence du processeur sur `--class-path`, sans activation du traitement ni chemin de processeurs explicite, ne déclenche pas non plus le traitement sous javac 25. Ces compilations témoins n'utilisent pas les classes de rendu et ne prouvent aucune validité des gabarits.
-Le fournisseur public sans argument est instancié par le compilateur ; son état et ses budgets restent propres à chaque compilation. Aucun état statique mutable ni ressource persistante supplémentaire n'est introduit. Les flux de lecture et de génération conservent leur fermeture existante. Les applications générées s'exécutent sur le chemin des modules avec le seul JDK, sans le processeur. Le traitement conjoint avec d'autres processeurs et les types produits aux tours suivants restent à qualifier ; le raccordement Maven est décrit dans link:application-maven.adoc[son contrat dédié].
+Le fournisseur public sans argument est instancié par le compilateur ; son état et ses budgets restent propres à chaque compilation. Aucun état statique mutable ni ressource persistante supplémentaire n'est introduit. Les flux de lecture et de génération conservent leur fermeture existante. Les applications générées s'exécutent sur le chemin des modules avec le seul JDK, sans le processeur. Le traitement conjoint et les types produits aux tours suivants sont décrits dans link:coexistence-processeurs.adoc[le contrat de coexistence] ; le raccordement Maven est décrit dans link:application-maven.adoc[son contrat dédié].
 
 == Sources et génération
 
@@ -171,7 +171,7 @@ Le coût est propre au fichier et calculé sans état partagé ni ressource supp
 
 === Nombre de diagnostics de compilation
 
-Une invocation du processeur émet au plus 64 erreurs Verne détaillées. Toutes les erreurs issues de la découverte, de la lecture et de l'analyse des gabarits partagent ce budget ; les avertissements et erreurs propres à javac ou à d'autres processeurs n'en font pas partie.
+Une instance du processeur, pour une compilation, émet au plus 64 erreurs Verne détaillées. Toutes les erreurs issues de la découverte, de la lecture et de l'analyse des gabarits partagent ce budget, y compris les erreurs différées entre tours ; les avertissements et erreurs propres à javac ou à d'autres processeurs n'en font pas partie.
 Les 64 premières erreurs conservent leurs codes et positions. Si une 65e erreur Verne est rencontrée, elle est remplacée par un unique diagnostic global `VERNE-LIM-007` signalant la saturation ; aucun identifiant, expression, donnée source ni chemin machine n'est ajouté à ce message. Le nombre maximal de diagnostics Verne est donc 65, marqueur compris. Les ressources suivantes ne sont ni résolues, lues, analysées ni générées. Un fichier valide rencontré après la 64e erreur reste vérifié tant qu'aucune 65e erreur n'est rencontrée.
 La compilation échoue dès la première erreur ; les sources déjà générées ne sont pas retirées. Les ressources et flux ouverts sont fermés par les contrôles existants. Le compteur et l'état de saturation appartiennent à l'invocation et ne sont pas partagés entre compilations, y compris concurrentes. Les erreurs d'exécution `VERNE-REN-001` et le code de rendu ne changent pas. Cette borne ne garantit ni un budget mémoire global ni la taille des messages et des méthodes Java générées. Une configuration de javac limitant les erreurs à moins de 65 peut masquer des diagnostics, y compris le marqueur.
 
@@ -206,7 +206,7 @@ Les diagnostics d'analyse portent `identifiant.verne:ligne:colonne`, avec indice
 CRLF désigne une seule fin de ligne. Le diagnostic pointe le délimiteur ouvrant de la directive fautive.
 La première erreur d'analyse arrête le fichier courant ; le processeur poursuit les autres fichiers tant que les budgets le permettent.
 Une erreur empêche la compilation réussie de l'application, même si le gabarit n'est jamais appelé.
-Le remappage des erreurs javac issues du code généré et les types fournis par un processeur voisin restent à implémenter. Le budget ci-dessus limite les seuls diagnostics Verne.
+Les types encore absents ou symboliquement non résolus peuvent différer le gabarit selon link:coexistence-processeurs.adoc[le contrat de coexistence]. Ils ne produisent aucune erreur provisoire ; les attentes persistantes sont signalées une seule fois au tour terminal. Le remappage des erreurs javac issues du code généré reste à implémenter. Le budget ci-dessus limite les seuls diagnostics Verne.
 
 == Traçabilité du développement piloté par les tests
 
@@ -302,10 +302,14 @@ La vérification complète propre totalise 115 tests sur Mac, sans échec, erreu
 Les quatre tests de `ApplicationMavenTest` construisent une application autonome avec Maven, vérifient son rendu depuis le seul JAR applicatif et les diagnostics de syntaxe, de typage et de profil. Avant configuration du greffon, les quatre tests échouaient par absence de classes générées ou des diagnostics Verne attendus ; après configuration, ils réussissent.
 Le compilateur et son parent sont construits et installés dans un dépôt temporaire, hors des sorties du réacteur actif. L'application ne possède ni parent Verne ni dépendance applicative au processeur. Les détails, délais de garde et limites figurent dans link:application-maven.adoc[le contrat de cette tranche].
 
+== Première coexistence des processeurs
+
+Les dix tests de `CoexistenceProcesseursTest` vérifient les annotations du voisin, les types générés aux tours suivants, les erreurs persistantes, le budget des diagnostics et l'isolation entre deux compilations concurrentes. Sept tests ont été observés en échec avant correction ; les dix réussissent après reprise des seuls gabarits en attente. Le code de rendu et les budgets de lecture existants sont conservés. Les détails de la qualification et ses limites figurent dans link:coexistence-processeurs.adoc[le contrat dédié].
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 77 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur et application Maven ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 87 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven et coexistence des processeurs ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -315,7 +319,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 119 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 129 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -337,5 +341,6 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`BudgetGenerationTest` |7 |0 |0 |0
 |`DecouverteProcesseurTest` |9 |0 |0 |0
 |`ApplicationMavenTest` |4 |0 |0 |0
-|Total |119 |0 |0 |0
+|`CoexistenceProcesseursTest` |10 |0 |0 |0
+|Total |129 |0 |0 |0
 |===

@@ -14,6 +14,7 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 
 /**
@@ -36,9 +37,13 @@ final class CompilateurGabarit {
     private record Parametre(String nom, TypeMirror type) {}
     private record Partie(String contenu, boolean interpolation, int position) {}
 
-    /** Une erreur de source arrête seulement l'analyse du fichier courant. */
+    /** Une tentative s'arrête sur un refus définitif ou un type encore absent. */
     private static final class Refus extends RuntimeException {
-        Refus(String message) { super(message, null, false, false); }
+        private final boolean differe;
+        Refus(String message, boolean differe) {
+            super(message, null, false, false);
+            this.differe = differe;
+        }
     }
 
     /** Les deux arguments non nuls sont propres à l'invocation et partagent son budget d'erreurs. */
@@ -47,8 +52,8 @@ final class CompilateurGabarit {
         this.rapporterErreur = rapporterErreur;
     }
 
-    /** Vérifie entièrement le fichier avant d'en ouvrir la source Java générée. */
-    void compiler(String classe, String texte, String identifiant) throws IOException {
+    /** Vérifie avant création ; diagnostic différé, ou null après génération ou refus définitif. */
+    String compiler(String classe, String texte, String identifiant) throws IOException {
         this.texte = texte;
         this.identifiant = identifiant;
         try {
@@ -114,8 +119,10 @@ final class CompilateurGabarit {
                 sortie.write("return " + resultat + ".toString();\n}\n}\n");
             }
         } catch (Refus refus) {
+            if (refus.differe) return refus.getMessage();
             rapporterErreur.accept(refus.getMessage());
         }
+        return null;
     }
 
     /** Budget conventionnel du générateur actuel ; les pondérations sont fixées dans le contrat. */
@@ -218,7 +225,8 @@ final class CompilateurGabarit {
             refuser("VERNE-LIM-004", position, "plus de 255 paramètres déclarés dans un gabarit.");
         }
         TypeElement type = environnement.getElementUtils().getTypeElement(morceaux[0]);
-        if (type == null || !type.getTypeParameters().isEmpty()
+        if (type == null || type.asType().getKind() == TypeKind.ERROR) attendreType(position);
+        if (!type.getTypeParameters().isEmpty()
                 || !publicAvecParents(type)) {
             refuser("VERNE-TYP-003", position, "type inconnu, inaccessible ou non pris en charge.");
         }
@@ -233,6 +241,7 @@ final class CompilateurGabarit {
         TypeMirror type = parametre.type();
         String expression = parametre.nom();
         for (int index = 1; index < chemin.length; index++) {
+            if (type.getKind() == TypeKind.ERROR) attendreType(partie.position());
             if (!(type instanceof DeclaredType declare)
                     || !(declare.asElement() instanceof TypeElement element)
                     || element.getKind() != ElementKind.RECORD || !publicAvecParents(element)) {
@@ -251,6 +260,7 @@ final class CompilateurGabarit {
             expression = "requireNonNull(" + expression
                     + ", \"VERNE-REN-001 : objet de navigation nul.\")." + nom + "()";
         }
+        if (type.getKind() == TypeKind.ERROR) attendreType(partie.position());
         if (!type.toString().equals("java.lang.String") && !type.getKind().isPrimitive()) {
             refuser("VERNE-TYP-004", partie.position(), "la valeur interpolée doit être une chaîne ou un scalaire primitif.");
         }
@@ -280,6 +290,14 @@ final class CompilateurGabarit {
 
     /** Les colonnes comptent les points de code ; CRLF désigne une seule fin de ligne. */
     private void refuser(String code, int position, String message) {
+        refuser(code, position, message, false);
+    }
+
+    private void attendreType(int position) {
+        refuser("VERNE-TYP-003", position, "type inconnu, inaccessible ou non pris en charge.", true);
+    }
+
+    private void refuser(String code, int position, String message, boolean differe) {
         int ligne = 1;
         int debutLigne = 0;
         for (int index = 0; index < position; index++) {
@@ -294,6 +312,6 @@ final class CompilateurGabarit {
             }
         }
         int colonne = texte.codePointCount(debutLigne, position) + 1;
-        throw new Refus(code + " : " + identifiant + ":" + ligne + ":" + colonne + " : " + message);
+        throw new Refus(code + " : " + identifiant + ":" + ligne + ":" + colonne + " : " + message, differe);
     }
 }
