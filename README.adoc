@@ -25,6 +25,7 @@ ____
 * Commentaires et échappement des délimiteurs.
 * Classes de rendu sans état partagé et sources générées déterministes, sans chemin machine ni horodatage.
 * Découverte automatique du processeur par javac, sur le chemin des processeurs ou des modules processeurs, depuis un répertoire ou un JAR.
+* Exemple Maven autonome : compilateur déclaré uniquement sur le chemin des processeurs et application modulaire sans dépendance Verne à l'exécution.
 * Diagnostics français avec codes stables et positions source ; refus des collisions de casse et de normalisation Unicode.
 * Contrôle des racines et liens symboliques ; refus des cibles externes et des liens de fichiers cassés.
 * Bornes initiales : *1 mébioctet par source*, *1 024 gabarits par compilation* et *1 024 interpolations par gabarit*, bornes incluses.
@@ -94,13 +95,13 @@ String document = io.vidocq.verne.genere.Bonjour.rendre("Léa");
 
 La valeur de `document` est `Bonjour Léa`.
 Un paramètre obligatoire nul provoque une erreur explicite ; les données interpolées ne sont jamais réinterprétées comme un gabarit.
-Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] décrit les options du processeur et la grammaire acceptée ; le raccordement Maven automatique d'une application reste à qualifier.
+Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] décrit les options du processeur et la grammaire acceptée. L'link:docs/fr/modules/ROOT/pages/application-maven.adoc[application Maven consommatrice] fournit un exemple autonome et les commandes de construction et de lancement.
 
 == État du projet
 
 *Version de développement : `0.1.0-SNAPSHOT`.* Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *115 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 73 tests supplémentaires restent à qualifier sur Windows et Linux.
+La dernière vérification complète sur Mac réussit avec *119 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 77 tests supplémentaires restent à qualifier sur Windows et Linux.
 
 Les conditions, boucles, inclusions, profils de sortie sécurisés, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.
@@ -112,6 +113,7 @@ Les prochaines priorités figurent dans link:docs/fr/modules/ROOT/pages/index.ad
 La documentation de référence est en français dans `docs/fr`, au format Antora.
 
 * link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[Contrat du compilateur] — usage livré, grammaire, diagnostics, bornes et preuves de vérification.
+* link:docs/fr/modules/ROOT/pages/application-maven.adoc[Application Maven consommatrice] — construction indépendante, configuration du processeur et lancement modulaire.
 * link:docs/fr/modules/ROOT/pages/architecture.adoc[Architecture] — frontières du moteur et intégration cible.
 * link:docs/fr/modules/ROOT/pages/matrice-fonctionnelle.adoc[Matrice fonctionnelle] — capacités prévues et état du périmètre.
 * link:docs/fr/modules/ROOT/pages/cas-de-test.adoc[Plan de tests] — scénarios nominaux, erreurs, sécurité et limites.

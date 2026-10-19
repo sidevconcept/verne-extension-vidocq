@@ -19,6 +19,7 @@ Le composant transforme des gabarits et des données en documents textuels, avec
 |link:matrice-fonctionnelle.adoc[Matrice fonctionnelle] |Capacités attendues, choix de comportement, étapes et preuves d'acceptation.
 |link:cas-de-test.adoc[Cas de test] |Scénarios nominaux, erreurs, limites et stratégie de développement piloté par les tests.
 |link:compilateur-minimal.adoc[Compilateur minimal] |Sous-ensemble livré, limites, diagnostics et progression rouge-vert.
+|link:application-maven.adoc[Application Maven consommatrice] |Configuration du processeur, construction indépendante et lancement du JAR applicatif.
 |link:premiers-tests.adoc[Premiers tests exécutables] |Contrats initiaux, correspondance avec le plan et résultats de la phase rouge.
 |link:mesures-performance.adoc[Mesures de performances] |Protocole reproductible, équivalence des sorties, mesures et critères de qualification.
 |===
@@ -55,17 +56,17 @@ Une version ne revendique que les capacités effectivement testées.
 
 == État de vérification
 
-La suite comporte désormais 115 tests réussis sur Mac : 4 témoins, 7 tests de compilation initiaux, 10 tests de rendu initiaux, 21 tests limites, 4 tests de portabilité des noms, 9 tests de racines et liens symboliques, 4 tests du nombre de gabarits, 5 tests du nombre d'interpolations, 6 tests des grands documents, 6 tests du nombre de paramètres, 8 tests de profondeur des navigations, 9 tests de volume des sources, 6 tests du nombre de diagnostics, 7 tests du budget de génération et 9 tests de découverte du processeur. Les 42 tests initiaux ont aussi été vérifiés sur Windows. Voir link:compilateur-minimal.adoc[les étapes et limites de validation].
+La suite comporte désormais 119 tests réussis sur Mac : 4 témoins, 7 tests de compilation initiaux, 10 tests de rendu initiaux, 21 tests limites, 4 tests de portabilité des noms, 9 tests de racines et liens symboliques, 4 tests du nombre de gabarits, 5 tests du nombre d'interpolations, 6 tests des grands documents, 6 tests du nombre de paramètres, 8 tests de profondeur des navigations, 9 tests de volume des sources, 6 tests du nombre de diagnostics, 7 tests du budget de génération, 9 tests de découverte du processeur et 4 tests d'application Maven consommatrice. Les 42 tests initiaux ont aussi été vérifiés sur Windows. Voir link:compilateur-minimal.adoc[les étapes et limites de validation].
 Aucun chiffre de performance n'est disponible.
 Le sous-ensemble texte est implémenté ; le reste de la matrice demeure à réaliser avec les tests correspondants.
 
 == Prochaines priorités
 
-. Maintenir les 115 tests réussis sur Mac et vérifier les nouveaux cas sur Windows, sans affaiblir leurs assertions.
+. Maintenir les 119 tests réussis sur Mac et vérifier les nouveaux cas sur Windows, sans affaiblir leurs assertions.
 . Compléter les tests de portabilité : normalisation Unicode, casse des noms, racines, liens symboliques et encodages.
 . Stabiliser le contrat de chaque nouvelle capacité et observer ses tests nominaux et invalides en échec avant son implémentation ; les conditions et boucles restent à réaliser.
 . Qualifier le budget pondéré de génération et les limites restantes de javac ; remapper les erreurs du code généré vers les gabarits.
-. Qualifier les types générés par d'autres processeurs, le raccordement Maven et les reconstructions incrémentales ; conserver la découverte automatique vérifiée par javac sur les deux chemins de processeurs.
+. Qualifier les types générés par d'autres processeurs et les reconstructions incrémentales ; conserver la découverte automatique et l'application Maven consommatrice vérifiées.
 . Introduire les autres profils de sortie, la composition, la diffusion et l'asynchronisme avec leurs contrats de sécurité et leurs tests.
 . Préparer les mesures selon link:mesures-performance.adoc[le protocole de qualification], sans revendiquer de gain avant des résultats reproductibles.
 . Intégrer Verne à Vidocq par une extension sur sa propre branche, sans rattacher le moteur au réacteur Vidocq.

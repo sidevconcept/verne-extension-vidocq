@@ -1,0 +1,44 @@
+= Verne — Application Maven consommatrice
+:lang: fr
+:toc:
+
+== Contrat de la tranche
+
+Une application d'exemple autonome réside dans `exemples/application-maven`. Son POM n'hérite pas du parent Verne et elle ne fait pas partie du réacteur du moteur. Elle cible Java 25, possède un module explicite et déclare le compilateur Verne uniquement dans `annotationProcessorPaths` du greffon de compilation Maven 3.14.1, avec `proc=full`, sans nommer le processeur. Aucun artefact Verne ni bibliothèque tierce n'est une dépendance applicative d'exécution.
+
+Le compilateur doit être installé dans un dépôt Maven accessible à l'application ; la tranche n'implique aucune publication dans un dépôt d'artefacts distant. L'application fournit une racine locale de gabarits par `${project.basedir}/src/main/verne` et le profil `texte`. Ces chaînes de configuration sont non nulles ; une option absente conserve les erreurs existantes du compilateur. Les paramètres du rendu restent obligatoires et non nuls selon le contrat du moteur.
+
+Une construction propre `clean package` compile les modèles Java sources et les gabarits dans la même invocation. L'exemple imprime exactement `Bonjour Léa 🚀`, suivi de CRLF. La JVM exécute uniquement le module applicatif empaqueté dans son JAR, sans le compilateur ni les sources de gabarits. Ce JAR contient le descripteur de module, le modèle, l'application et la classe de rendu générée.
+
+Un gabarit inutilisé invalide ou une propriété inconnue doit faire échouer Maven avec le diagnostic Verne et la position logique attendus. Un profil différent de `texte` doit conserver `VERNE-CFG-001`. Aucun de ces refus ne peut être assimilé à une validation par un processeur absent. Après nettoyage, une construction refusée ne produit pas de JAR applicatif.
+
+Les tests lancent de vrais processus Maven via le lanceur du dépôt, qui fixe Maven 3.9.16, avec le JDK de la suite. Ils construisent et installent une copie des sources du compilateur dans un dépôt Maven temporaire, puis construisent des copies indépendantes de l'application. Le dépôt Maven habituel peut servir de source de cache ; les artefacts de la tranche sont installés seulement dans le dépôt temporaire. Les premiers téléchargements d'outillage peuvent être nécessaires. Les processus ont un délai de garde, leurs sorties sont redirigées et ils sont arrêtés si nécessaire. Les flux de copie et d'archive sont fermés ; aucun serveur ni ressource persistante n'est créé. Les constructions de cette tranche sont séquentielles et ne revendiquent pas la sûreté de constructions simultanées dans le même répertoire de sortie.
+
+La configuration n'ajoute aucun état partagé au rendu. Les reconstructions sans nettoyage, les interactions avec d'autres processeurs, les types produits aux tours suivants, les nouvelles plateformes et l'extension Vidocq restent à qualifier séparément.
+
+== Construire et lancer l'exemple
+
+Depuis la racine du dépôt, avec Java 25, sous macOS ou Linux :
+
+[source,shell]
+----
+./mvnw -ntp clean install
+./mvnw -ntp -f exemples/application-maven/pom.xml clean package
+java -Dstdout.encoding=UTF-8 --module-path exemples/application-maven/target/application-verne-1.0.0.jar --module application.verne/exemple.Application
+----
+
+Sous Windows, utiliser `.\mvnw.cmd` pour les deux commandes Maven. La qualification observée de cette tranche porte sur Mac ; les autres plateformes restent à vérifier.
+
+La première commande installe le parent et le compilateur après les tests du réacteur. La seconde construit uniquement le projet consommateur, qui n'hérite pas de ce parent. La dernière charge exclusivement le JAR applicatif sur le chemin des modules. La sortie attendue est `Bonjour Léa 🚀` avec une fin de ligne CRLF fournie par le gabarit.
+
+Le POM de l'exemple fixe les versions des greffons et place `verne-compilation` dans `annotationProcessorPaths`, sans section `dependencies`. La version du compilateur est portée par `verne.version`. Les sources générées se trouvent sous `target/generated-sources/annotations` et les gabarits sous `src/main/verne` ; ce dernier répertoire n'est pas inclus dans les ressources de l'archive. Une règle `.gitattributes` propre au gabarit témoin désactive la normalisation de ses octets pour conserver CRLF après extraction Git et dans les archives de sources.
+
+Utiliser une construction propre pour cette tranche. La détection incrémentale des modifications ou suppressions de seuls fichiers `.verne` n'est pas encore qualifiée : une commande `compile` sans nettoyage ne constitue pas la preuve de leur revérification.
+
+== Preuves de vérification
+
+Les quatre tests de `ApplicationMavenTest` couvrent une construction et un rendu réels, une erreur dans un gabarit inutilisé, une propriété inconnue du record source et un profil non pris en charge. Le chemin applicatif contient des espaces, un accent et une esperluette. Les tests inspectent l'archive et lancent une JVM avec son seul module pour comparer exactement Unicode et CRLF.
+
+Avant la configuration du greffon, les quatre tests échouaient : aucune classe de rendu n'était générée et les diagnostics Verne attendus étaient absents. La préparation du compilateur réussissait déjà ; ces échecs étaient distincts d'un défaut d'installation Maven. Après ajout de `proc=full`, du chemin des processeurs et des deux options Verne, les quatre tests réussissent.
+
+Le dépôt Maven temporaire reçoit le compilateur construit à partir des sources courantes et son parent. Le cache existant peut fournir l'outillage via un dépôt de fichiers ; les dépôts Maven habituels restent disponibles pour les éléments absents. L'option `-o` du processus Maven parent n'est pas transmise aux processus de vérification imbriqués. Les tests ne remplacent pas l'artefact installé dans le dépôt habituel et ne publient aucun artefact distant.
