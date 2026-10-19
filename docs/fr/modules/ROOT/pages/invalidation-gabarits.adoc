@@ -1,0 +1,32 @@
+= Verne — Invalidation sélective des gabarits
+:lang: fr
+
+== Contrat du calcul
+
+Le paquet de construction `io.vidocq.verne.invalidation`, exporté par le module `io.vidocq.verne.compilation`, fournit `InvalidationGabarits.comparer(precedent, courant)`. Il ne fait pas partie des applications de rendu.
+
+Un état contient une empreinte SHA-256 du contexte de construction, les gabarits indexés par identifiant logique et les empreintes des types Java connus. Chaque gabarit contient son empreinte de contenu et l’ensemble de ses dépendances Java. Les empreintes sont des chaînes hexadécimales minuscules de 64 caractères ; elles sont fournies par l’intégration, qui doit les calculer sur les contenus, jamais sur les seules dates ou tailles. Le contexte doit couvrir les options, versions du compilateur et du JDK, chemins de résolution et autres entrées susceptibles de modifier la compilation.
+
+Les identifiants de gabarits sont relatifs, séparés par `/`, terminés par `.verne`, sans segment vide, `.` ou `..`, antislash, deux-points ou caractère de contrôle. Les noms de types sont des noms Java qualifiés non vides. Ils doivent être désambiguïsés par le contexte de résolution ; une modification de ce contexte invalide tout. Aucune chaîne ne sert ici de chemin de fichier.
+
+Le plan contient trois listes triées et disjointes :
+
+* `recompiler` : gabarits ajoutés, contenus ou ensembles de dépendances modifiés, dépendance Java modifiée ou supprimée. Une dépendance absente de l’état courant impose toujours une recompilation, même si elle était déjà absente auparavant.
+* `supprimer` : identifiants présents avant mais absents maintenant, y compris lors d’un renommage.
+* `conserver` : tous les autres gabarits courants.
+
+Un changement de contexte recompile tous les gabarits courants et conserve le calcul des suppressions. Un état précédent nul représente une première construction et recompile tout. L’état courant, les champs, les clés et les valeurs ne peuvent pas être nuls (`NullPointerException`). Un identifiant, nom ou empreinte mal formé provoque `IllegalArgumentException`, avec message français. Un type inutilisé modifié n’invalide aucun gabarit.
+
+Les collections sont copiées et immuables, les décisions sont indépendantes de leur ordre initial. Le calcul ne lit ni n’écrit de fichier et ne conserve aucun état partagé ; plusieurs appels peuvent s’exécuter simultanément. Il ne vérifie pas l’exactitude des empreintes fournies et ne constitue pas une validation de sécurité de leurs contenus.
+
+== Intégration restante
+
+L’intégration doit inventorier réellement les entrées, collecter leurs empreintes et les origines Java, vérifier la présence et l’intégrité des sorties avant leur réutilisation, appliquer les suppressions et ne publier un nouvel état qu’après compilation réussie. Les sorties manquantes ou corrompues imposeront une reconstruction même si les entrées sont inchangées. Ce calcul d’invalidation des entrées ne remplace pas ces contrôles.
+
+Le nettoyage des exemples Maven demeure actif : cette tranche fournit le plan, sans exécuter de compilation partielle ni écrire de cache persistant. Aucun gain de vitesse n’est revendiqué.
+
+== Vérification du 19 octobre 2026
+
+Les neuf premiers tests ont échoué en l’absence de l’API. Après implémentation, ils réussissent ; deux cas supplémentaires couvrent le renommage Unicode, la suppression du dernier gabarit et la sélection d’un seul gabarit modifié parmi 1 024. Chaque test compile et exécute un véritable client modulaire de l’API. Les cas couvrent également les dépendances absentes, le changement de contexte, les entrées mal formées, l’immuabilité et la concurrence.
+
+La vérification complète `./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 157 tests, zéro échec, erreur ou test ignoré. Windows/Linux et le gain de temps d’une construction sélective intégrée ne sont pas qualifiés.

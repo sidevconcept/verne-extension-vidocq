@@ -15,8 +15,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Le chargement conjoint dans Maven et par modules est intégré par la PR nº 15, avec huit nouveaux tests. La vérification complète atteint **137 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
 - Les reconstructions des exemples Maven sont intégrées par la PR nº 15 et fiabilisées par nettoyage automatique des sorties, avec trois nouveaux scénarios : **140 tests réussissent sur Mac**. La recompilation sélective reste à développer.
 - Après les quatre fusions, `main` (`d63e20a`) a été vérifié depuis une archive Git indépendante : `./mvnw -ntp clean verify`, **140 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
-- Les origines Java sont transmises au Filer sur `codex/dependances-recompilation`, encore localement : **146 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Cette tranche ne désactive pas le nettoyage Maven.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 104 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Les origines Java sont publiées dans la [PR nº 16](https://github.com/sidevconcept/verne-extension-vidocq/pull/16), commit signé avec DCO `26ce9a4`, encore à fusionner : **146 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Cette tranche ne désactive pas le nettoyage Maven.
+- Le calcul d’invalidation est prêt localement sur `codex/invalidation-gabarits` : **157 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Les empreintes sont encore fournies par l’appelant ; le raccordement aux entrées et sorties Maven reste à réaliser.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 115 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -43,7 +44,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 - [x] Couvrir l’ajout, la modification et la suppression de gabarits ainsi que leurs dépendants dans les exemples Maven, par reconstruction complète automatique.
 - [x] Transmettre au Filer les types Java à l’origine de chaque gabarit généré, avec isolation des tentatives et des compilations.
-- [ ] Suivre les fichiers de gabarits, options, dépendances et versions d’outillage ; sélectionner les sorties à invalider et qualifier les IDE. Le nettoyage automatique reste actif.
+- [x] Calculer un plan déterministe des gabarits à recompiler, supprimer ou conserver, à partir des empreintes de contenu, du contexte et des dépendances Java.
+- [ ] Raccorder l’inventaire réel des fichiers et la collecte des empreintes au calcul ; vérifier les sorties, appliquer le plan et persister l’état après succès. Le nettoyage automatique reste actif.
+- [ ] Qualifier l’intégration aux IDE.
 - [ ] Rattacher les erreurs du Java généré aux identifiants et positions des gabarits.
 - [ ] Compléter la qualification du budget de génération et des limites restantes de javac.
 - [ ] Compléter les règles de nommage portable, les racines multiples et les collisions entre fournisseurs.

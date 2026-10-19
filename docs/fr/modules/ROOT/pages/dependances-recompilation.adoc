@@ -20,3 +20,5 @@ Le nettoyage automatique des exemples Maven reste donc actif. La sélection des 
 Six tests instrumentent le `Filer` du vrai processeur et exécutent javac : types traversés et englobants, paramètre déclaré non interpolé, dédoublonnage, séparation des gabarits, refus avant génération, modèle créé au tour suivant, primitifs et compilations concurrentes. La première exécution présentait cinq échecs dus aux origines absentes ; les six tests passent après leur transmission.
 
 La vérification complète `./mvnw -ntp clean verify` du 19 octobre 2026 réussit sur Mac avec Java 25 : 146 tests, zéro échec, erreur ou test ignoré. Les rendus et les trois configurations Maven restent couverts. Aucun gain de vitesse de construction n’est revendiqué pour cette tranche.
+
+Le link:invalidation-gabarits.adoc[calcul d’invalidation sélective] compare désormais les états fournis par une intégration de construction. La collecte réelle des empreintes et l’application du plan aux sorties restent à raccorder.

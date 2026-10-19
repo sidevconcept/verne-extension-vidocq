@@ -102,8 +102,8 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 == État du projet
 
 *Version de développement : `0.1.0-SNAPSHOT`.* Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *146 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 104 tests supplémentaires restent à qualifier sur Windows et Linux.
+La dernière vérification complète sur Mac réussit avec *157 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 115 tests supplémentaires restent à qualifier sur Windows et Linux.
 
 Les conditions, boucles, inclusions, profils de sortie sécurisés, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.
@@ -117,6 +117,7 @@ La documentation de référence est en français dans `docs/fr`, au format Antor
 * link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[Contrat du compilateur] — usage livré, grammaire, diagnostics, bornes et preuves de vérification.
 * link:docs/fr/modules/ROOT/pages/application-maven.adoc[Application Maven consommatrice] — construction indépendante, configuration du processeur et lancement modulaire.
 * link:docs/fr/modules/ROOT/pages/coexistence-processeurs.adoc[Coexistence des processeurs] — annotations, types générés aux tours suivants et diagnostics différés.
+* link:docs/fr/modules/ROOT/pages/invalidation-gabarits.adoc[Invalidation sélective] — plan de recompilation fondé sur les empreintes des entrées.
 * link:docs/fr/modules/ROOT/pages/dependances-recompilation.adoc[Dépendances de recompilation] — origines Java, limites et suite de l’invalidation sélective.
 * link:docs/fr/modules/ROOT/pages/chargement-conjoint.adoc[Chargement conjoint Maven et modules] — exemples avec deux fournisseurs, configurations et vérifications.
 * link:docs/fr/modules/ROOT/pages/architecture.adoc[Architecture] — frontières du moteur et intégration cible.
