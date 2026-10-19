@@ -41,6 +41,23 @@ final class BancCompilation {
     static Compilation compiler(Path racine, Map<String, String> gabarits,
                                 Map<String, String> sources, boolean avecVerne,
                                 Path racineDeclaree) throws IOException {
+        List<String> chargementProcesseur;
+        if (avecVerne) {
+            Path projet = Path.of(System.getProperty("verne.racine.projet"));
+            String cheminProcesseur = System.getProperty("verne.chemin.processeur",
+                    projet.resolve("verne-compilation/target/classes").toString());
+            chargementProcesseur = List.of("-proc:full", "-processorpath", cheminProcesseur,
+                    "-processor", "io.vidocq.verne.compilation.ProcesseurVerne");
+        } else {
+            chargementProcesseur = List.of("-proc:none");
+        }
+        return compiler(racine, gabarits, sources, avecVerne, racineDeclaree, chargementProcesseur);
+    }
+
+    /** Les options non nulles choisissent le chargement javac ; avecVerne ajoute la configuration métier. */
+    static Compilation compiler(Path racine, Map<String, String> gabarits,
+                                Map<String, String> sources, boolean avecVerne,
+                                Path racineDeclaree, List<String> chargementProcesseur) throws IOException {
         Path repertoireJava = Files.createDirectories(racine.resolve("java"));
         Path repertoireGabarits = Files.createDirectories(racine.resolve("gabarits"));
         Path classes = Files.createDirectories(racine.resolve("classes"));
@@ -64,16 +81,10 @@ final class BancCompilation {
         var journal = new StringWriter();
         var options = new ArrayList<>(List.of("--release", "25", "-encoding", "UTF-8",
                 "-d", classes.toString(), "-s", sourcesGenerees.toString()));
+        options.addAll(chargementProcesseur);
         if (avecVerne) {
-            Path projet = Path.of(System.getProperty("verne.racine.projet"));
-            String cheminProcesseur = System.getProperty("verne.chemin.processeur",
-                    projet.resolve("verne-compilation/target/classes").toString());
-            options.addAll(List.of("-proc:full", "-processorpath", cheminProcesseur,
-                    "-processor", "io.vidocq.verne.compilation.ProcesseurVerne",
-                    "-Averne.racine.gabarits=" + racineDeclaree,
+            options.addAll(List.of("-Averne.racine.gabarits=" + racineDeclaree,
                     "-Averne.profil.sortie=texte"));
-        } else {
-            options.add("-proc:none");
         }
         try (var gestionnaire = compilateur.getStandardFileManager(
                 diagnostics, Locale.FRENCH, StandardCharsets.UTF_8)) {
