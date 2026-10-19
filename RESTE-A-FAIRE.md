@@ -1,6 +1,6 @@
 # Verne — Reste à faire
 
-État après publication de la tranche Maven dans la PR nº 13. L'ordre ci-dessous est conseillé ; chaque capacité suit le cycle contrat documenté, test observé en échec, implémentation minimale et vérification des régressions.
+État au 19 octobre 2026, après publication de la coexistence dans la PR nº 14. L'ordre ci-dessous est conseillé ; chaque capacité suit le cycle contrat documenté, test observé en échec, implémentation minimale et vérification des régressions.
 
 Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](docs/fr/modules/ROOT/pages/index.adoc), notamment la [matrice fonctionnelle](docs/fr/modules/ROOT/pages/matrice-fonctionnelle.adoc) et le [contrat du compilateur](docs/fr/modules/ROOT/pages/compilateur-minimal.adoc).
 
@@ -11,8 +11,10 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Les PR nº 10 et nº 11 sont fusionnées dans `main` ; sa dernière vérification sur Mac compte **106 tests réussis**, sans échec, erreur ni test ignoré.
 - La découverte automatique du processeur est publiée dans la PR nº 12, encore à fusionner. Avec cette tranche, **115 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - L'application Maven autonome est publiée dans la PR nº 13, dépendante de la PR nº 12 et encore à fusionner. Avec cette tranche, **119 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- La coexistence avec un processeur générant des modèles Java est prête localement sur `codex/coexistence-processeurs`, avec dix nouveaux tests. La vérification complète atteint **129 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 87 tests supplémentaires restent à qualifier sur Windows et Linux.
+- La coexistence avec un processeur générant des modèles Java est publiée dans la PR nº 14, dépendante de la nº 13 et encore à fusionner. Avec cette tranche, **129 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Le chargement conjoint dans Maven et par modules est prêt localement sur `codex/chargement-conjoint`, avec huit nouveaux tests. La vérification complète atteint **137 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
+- Les reconstructions des exemples Maven sont fiabilisées localement par nettoyage automatique des sorties, avec trois nouveaux scénarios : **140 tests réussissent sur Mac**. La recompilation sélective reste à développer.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 98 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -28,12 +30,16 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - [x] Publier la tranche d'application Maven : commit signé avec DCO `e116f91` et [PR nº 13](https://github.com/sidevconcept/verne-extension-vidocq/pull/13).
 - [ ] Intégrer la tranche d'application Maven après fusion de sa dépendance.
 - [x] Tester avec javac la coexistence avec un processeur Java contrôlé et les types générés pendant les tours suivants.
-- [ ] Publier et intégrer la tranche de coexistence.
-- [ ] Qualifier le chargement conjoint dans Maven, sur le chemin des modules et avec des bibliothèques de processeurs tierces.
+- [x] Publier la coexistence : commit signé avec DCO `412acd2` et [PR nº 14](https://github.com/sidevconcept/verne-extension-vidocq/pull/14).
+- [ ] Intégrer la tranche de coexistence après ses dépendances.
+- [x] Qualifier le chargement conjoint dans Maven et sur le chemin des modules avec le voisin contrôlé.
+- [ ] Publier et intégrer la tranche de chargement conjoint.
+- [ ] Qualifier des bibliothèques de processeurs tierces.
 
 ## 3. Fiabiliser les reconstructions et les diagnostics
 
-- [ ] Couvrir l'ajout, la modification et la suppression de gabarits, ainsi que leurs dépendants, sans classes périmées.
+- [x] Couvrir l’ajout, la modification et la suppression de gabarits ainsi que leurs dépendants dans les exemples Maven, par reconstruction complète automatique.
+- [ ] Développer la recompilation sélective des dépendants et qualifier les IDE.
 - [ ] Rattacher les erreurs du Java généré aux identifiants et positions des gabarits.
 - [ ] Compléter la qualification du budget de génération et des limites restantes de javac.
 - [ ] Compléter les règles de nommage portable, les racines multiples et les collisions entre fournisseurs.
@@ -93,4 +99,4 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 ## Prochaine priorité
 
-Intégrer les PR nº 12 et nº 13 dans l'ordre, puis la tranche de coexistence. Qualifier ensuite le chargement conjoint dans Maven et sur le chemin des modules, avant le raccordement à Vidocq. Les reconstructions incrémentales et le remappage des erreurs du Java généré restent à réaliser.
+Intégrer les PR nº 12, nº 13 et nº 14 dans l'ordre, puis la tranche de chargement conjoint. Poursuivre la recompilation sélective et le remappage des erreurs du Java généré, avant le raccordement à Vidocq. Les bibliothèques de processeurs tierces restent une qualification distincte.

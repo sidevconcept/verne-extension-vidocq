@@ -60,6 +60,10 @@ final class ApplicationMavenTest {
         assertEquals(0, installation.codeSortie(), installation.journal());
         assertTrue(Files.isRegularFile(depot.resolve(
                 "io/vidocq/verne/verne-compilation/0.1.0-SNAPSHOT/verne-compilation-0.1.0-SNAPSHOT.jar")));
+        Path voisin = preparation.resolve("processeur-voisin");
+        copier(projet.resolve("exemples/processeur-voisin"), voisin);
+        var installationVoisin = construire(voisin.resolve("pom.xml"), "install");
+        assertEquals(0, installationVoisin.codeSortie(), installationVoisin.journal());
     }
 
     @Test void compileEmpaquetteEtExecuteSansProcesseurAuLancement() throws Exception {
@@ -97,6 +101,101 @@ final class ApplicationMavenTest {
         verifierRefus(preparerApplication(), "VERNE-CFG-001", "", "-Dverne.profil.sortie=html");
     }
 
+    @Test void chargeLesDeuxProcesseursParLeProfilMavenClassique() throws Exception {
+        verifierRenduConjoint();
+    }
+
+    @Test void chargeLesDeuxProcesseursParLeProfilMavenModulaire() throws Exception {
+        verifierRenduConjoint("-Pmodules");
+    }
+
+    @Test void refuseUnGabaritInutiliseAvecLeProfilMavenModulaire() throws Exception {
+        Path application = preparerApplication("application-processeurs");
+        Files.writeString(application.resolve("src/main/verne/inutilise.verne"), "Ligne\r\n{nom");
+        var construction = construire(application.resolve("pom.xml"), "clean", "package", "-Pmodules");
+        assertNotEquals(0, construction.codeSortie(), construction.journal());
+        assertTrue(construction.journal().contains("VERNE-SYN-001"), construction.journal());
+        assertTrue(construction.journal().contains("inutilise.verne:2:1"), construction.journal());
+        assertFalse(Files.exists(application.resolve("target/application-processeurs-1.0.0.jar")));
+    }
+
+    @Test void reconstruitLesGabaritsSansNettoyageExplicite() throws Exception {
+        verifierReconstructions("application-maven", "application-verne-1.0.0.jar");
+    }
+
+    @Test void reconstruitAvecLesDeuxProcesseursClassiques() throws Exception {
+        verifierReconstructions("application-processeurs", "application-processeurs-1.0.0.jar");
+    }
+
+    @Test void reconstruitAvecLesDeuxProcesseursModulaires() throws Exception {
+        verifierReconstructions("application-processeurs", "application-processeurs-1.0.0.jar", "-Pmodules");
+    }
+
+    private void verifierReconstructions(String exemple, String nomArchive, String... options) throws Exception {
+        Path application = preparerApplication(exemple);
+        Path gabarits = application.resolve("src/main/verne");
+        Path archive = application.resolve("target").resolve(nomArchive);
+        var objectifs = new ArrayList<>(List.of("package"));
+        objectifs.addAll(Arrays.asList(options));
+        String[] arguments = objectifs.toArray(String[]::new);
+        var initiale = construire(application.resolve("pom.xml"), arguments);
+        assertEquals(0, initiale.codeSortie(), initiale.journal());
+        Path bonjour = gabarits.resolve("bonjour.verne");
+        Files.writeString(bonjour, Files.readString(bonjour).replace("Bonjour", "Salut"));
+        Files.writeString(gabarits.resolve("ajout.verne"), "Nouveau");
+        var modification = construire(application.resolve("pom.xml"), arguments);
+        assertEquals(0, modification.codeSortie(), modification.journal());
+        var execution = BancCompilation.executer(new BancCompilation.Compilation(true, "", archive,
+                application.resolve("target/generated-sources/annotations")));
+        assertEquals(0, execution.codeSortie(), execution.erreurs());
+        assertEquals("Salut Léa 🚀\r\n", execution.sortie());
+        try (var jar = new JarFile(archive.toFile())) {
+            assertNotNull(jar.getJarEntry("io/vidocq/verne/genere/Ajout.class"));
+        }
+        Files.delete(gabarits.resolve("ajout.verne"));
+        var suppression = construire(application.resolve("pom.xml"), arguments);
+        assertEquals(0, suppression.codeSortie(), suppression.journal());
+        assertFalse(Files.exists(application.resolve("target/generated-sources/annotations/io/vidocq/verne/genere/Ajout.java")));
+        try (var jar = new JarFile(archive.toFile())) {
+            assertNull(jar.getJarEntry("io/vidocq/verne/genere/Ajout.class"));
+        }
+        Files.writeString(gabarits.resolve("invalide.verne"), "{nom");
+        var invalide = construire(application.resolve("pom.xml"), arguments);
+        assertNotEquals(0, invalide.codeSortie(), invalide.journal());
+        assertTrue(invalide.journal().contains("VERNE-SYN-001"), invalide.journal());
+        assertFalse(Files.exists(archive));
+        Files.delete(gabarits.resolve("invalide.verne"));
+        var reprise = construire(application.resolve("pom.xml"), arguments);
+        assertEquals(0, reprise.codeSortie(), reprise.journal());
+        Files.delete(bonjour);
+        var dependant = construire(application.resolve("pom.xml"), arguments);
+        assertNotEquals(0, dependant.codeSortie(), dependant.journal());
+        assertTrue(dependant.journal().contains("io.vidocq.verne.genere"), dependant.journal());
+        assertFalse(Files.exists(application.resolve("target/classes/io/vidocq/verne/genere/Bonjour.class")));
+        assertFalse(Files.exists(archive));
+    }
+
+    private void verifierRenduConjoint(String... options) throws Exception {
+        Path application = preparerApplication("application-processeurs");
+        var objectifs = new ArrayList<>(List.of("clean", "package"));
+        objectifs.addAll(Arrays.asList(options));
+        var construction = construire(application.resolve("pom.xml"), objectifs.toArray(String[]::new));
+        assertEquals(0, construction.codeSortie(), construction.journal());
+        Path archive = application.resolve("target/application-processeurs-1.0.0.jar");
+        try (var jar = new JarFile(archive.toFile())) {
+            assertNotNull(jar.getJarEntry("module-info.class"));
+            assertNotNull(jar.getJarEntry("exemple/PersonneGeneree.class"));
+            assertNotNull(jar.getJarEntry("io/vidocq/verne/genere/Bonjour.class"));
+            assertTrue(jar.stream().noneMatch(entree -> entree.getName().startsWith("exemple/voisin/")
+                    || entree.getName().startsWith("io/vidocq/verne/compilation/")
+                    || entree.getName().endsWith(".verne") || entree.getName().endsWith(".jar")));
+        }
+        var execution = BancCompilation.executer(new BancCompilation.Compilation(true, "", archive,
+                application.resolve("target/generated-sources/annotations")));
+        assertEquals(0, execution.codeSortie(), execution.erreurs());
+        assertEquals("Bonjour Léa 🚀\r\n", execution.sortie());
+    }
+
     private void verifierRefus(Path application, String code, String position, String... options) throws Exception {
         var arguments = new ArrayList<>(List.of("clean", "package"));
         arguments.addAll(Arrays.asList(options));
@@ -108,8 +207,12 @@ final class ApplicationMavenTest {
     }
 
     private Path preparerApplication() throws IOException {
+        return preparerApplication("application-maven");
+    }
+
+    private Path preparerApplication(String exemple) throws IOException {
         Path application = repertoire.resolve("application Maven é & espaces");
-        copier(projet.resolve("exemples/application-maven"), application);
+        copier(projet.resolve("exemples").resolve(exemple), application);
         return application;
     }
 
