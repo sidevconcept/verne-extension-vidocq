@@ -1,0 +1,22 @@
+= Verne — Dépendances pour la recompilation sélective
+:lang: fr
+
+== Première tranche : origines Java
+
+Chaque appel réussi à `Filer.createSourceFile` déclare les éléments Java dont dépend le gabarit : tous les types des paramètres déclarés, les types rencontrés dans les navigations effectivement utilisées et leurs types englobants. Les types primitifs ne constituent pas des éléments de type. Les types déclarés, y compris ceux fournis par le JDK, sont transmis une seule fois, dans l’ordre de leur première rencontre. Les autres modèles de l’application ne sont pas ajoutés.
+
+Cette collecte repose exclusivement sur les symboles de javac ; elle ne charge aucune classe métier. Elle ne modifie ni les signatures ni le texte des sources produites. Les origines ne sont publiées qu’après validation complète du gabarit. Une tentative différée utilise une collecte neuve au tour suivant, avec les symboles alors disponibles. Un gabarit statique peut n’avoir aucune origine Java.
+
+Les collections sont propres à chaque tentative de compilation. Aucun état partagé, fichier supplémentaire ou ressource ouverte n’est introduit. Les erreurs d’écriture conservent le diagnostic d’entrée-sortie existant ; aucun élément nul n’est transmis à `Filer`.
+
+== Portée et suite
+
+Ces origines fournissent une information standard aux outils de construction ; elles ne déclenchent pas à elles seules une recompilation sélective Maven. Les gabarits sont des fichiers externes, pas des éléments Java : leurs contenus, ajouts et suppressions doivent encore être suivis par l’intégration de construction. Les changements d’options, du compilateur, des dépendances Java et du JDK devront aussi invalider les sorties concernées.
+
+Le nettoyage automatique des exemples Maven reste donc actif. La sélection des gabarits à recompiler, la suppression des sorties obsolètes, la persistance atomique d’un état de construction et la qualification des IDE restent à développer avant de désactiver ce nettoyage.
+
+== Vérification
+
+Six tests instrumentent le `Filer` du vrai processeur et exécutent javac : types traversés et englobants, paramètre déclaré non interpolé, dédoublonnage, séparation des gabarits, refus avant génération, modèle créé au tour suivant, primitifs et compilations concurrentes. La première exécution présentait cinq échecs dus aux origines absentes ; les six tests passent après leur transmission.
+
+La vérification complète `./mvnw -ntp clean verify` du 19 octobre 2026 réussit sur Mac avec Java 25 : 146 tests, zéro échec, erreur ou test ignoré. Les rendus et les trois configurations Maven restent couverts. Aucun gain de vitesse de construction n’est revendiqué pour cette tranche.

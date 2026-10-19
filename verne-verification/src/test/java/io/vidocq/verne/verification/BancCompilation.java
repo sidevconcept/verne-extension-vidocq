@@ -58,6 +58,14 @@ final class BancCompilation {
     static Compilation compiler(Path racine, Map<String, String> gabarits,
                                 Map<String, String> sources, boolean avecVerne,
                                 Path racineDeclaree, List<String> chargementProcesseur) throws IOException {
+        return compiler(racine, gabarits, sources, avecVerne, racineDeclaree, chargementProcesseur, null);
+    }
+
+    /** Un processeur instrumenté peut observer les appels réels ; null conserve le chargement javac. */
+    static Compilation compiler(Path racine, Map<String, String> gabarits,
+                                Map<String, String> sources, boolean avecVerne,
+                                Path racineDeclaree, List<String> chargementProcesseur,
+                                Iterable<? extends javax.annotation.processing.Processor> processeurs) throws IOException {
         Path repertoireJava = Files.createDirectories(racine.resolve("java"));
         Path repertoireGabarits = Files.createDirectories(racine.resolve("gabarits"));
         Path classes = Files.createDirectories(racine.resolve("classes"));
@@ -90,6 +98,7 @@ final class BancCompilation {
                 diagnostics, Locale.FRENCH, StandardCharsets.UTF_8)) {
             var unites = gestionnaire.getJavaFileObjectsFromPaths(chemins);
             var tache = compilateur.getTask(journal, gestionnaire, diagnostics, options, null, unites);
+            if (processeurs != null) tache.setProcessors(processeurs);
             tache.setLocale(Locale.FRENCH);
             boolean reussie = tache.call();
             for (var diagnostic : diagnostics.getDiagnostics()) {
