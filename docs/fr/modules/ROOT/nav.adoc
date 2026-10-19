@@ -5,5 +5,7 @@
 ** xref:compilateur-minimal.adoc[Compilateur minimal]
 ** xref:application-maven.adoc[Application Maven consommatrice]
 ** xref:coexistence-processeurs.adoc[Coexistence des processeurs]
+** xref:chargement-conjoint.adoc[Chargement conjoint Maven et modules]
+** xref:reconstructions-maven.adoc[Reconstructions Maven fiables]
 ** xref:premiers-tests.adoc[Premiers tests exécutables]
 ** xref:mesures-performance.adoc[Mesures de performances]

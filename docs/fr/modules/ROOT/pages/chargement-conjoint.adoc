@@ -1,0 +1,53 @@
+= Verne — Chargement conjoint dans Maven et par modules
+:lang: fr
+:toc:
+
+== Contrat de la tranche
+
+Le chargement conjoint doit fonctionner avec le module Verne et un processeur voisin contrôlé, depuis des répertoires de classes et des JAR explicites sur `--processor-module-path`. Chaque fournisseur est déclaré par `provides javax.annotation.processing.Processor` dans son descripteur de module. La présence d'un fichier de service classique ne remplace pas cette déclaration sur le chemin des modules. Aucun export ni ouverture du paquet du processeur n'est requis ou ajouté.
+
+Le voisin de l'exemple est `exemples/processeur-voisin`, projet Maven autonome ciblant Java 25. Il reçoit l'annotation applicative `exemple.Marque`, la réclame, produit une première source témoin puis le record `PersonneGeneree` au tour suivant. Ses flux de génération sont fermés. Son compteur appartient à l'instance de compilation et n'est partagé avec aucun rendu. L'option obligatoire `voisin.chargement`, chaîne non nulle valant `classique` ou `modules`, vérifie que son module Java est effectivement anonyme ou nommé selon le chemin choisi ; un mode incohérent produit `VOISIN-CFG-001`. Ce contrôle appartient au seul exemple de vérification, pas à l'API du moteur Verne.
+
+L'application autonome `exemples/application-processeurs` n'hérite pas du parent Verne, ne fait pas partie de son réacteur et n'a aucune dépendance d'exécution tierce. Elle utilise son propre module Java, l'annotation source et le modèle généré. Le profil Maven `classique`, actif par défaut, déclare les deux artefacts dans `annotationProcessorPaths`. Le profil `modules` est choisi explicitement et fournit seulement `--processor-module-path`, construit à partir des JAR déjà installés dans le dépôt local. Ces deux profils sont alternatifs, pas cumulatifs. Aucun nom de processeur n'est imposé dans ces profils.
+
+Les deux modes Maven activent `proc=full` et conservent la racine et le profil texte Verne. La construction propre compile les modèles générés et les gabarits, puis le JAR applicatif doit s'exécuter seul et rendre exactement `Bonjour Léa 🚀` suivi de CRLF. Il ne contient ni processeur, ni JAR imbriqué, ni source `.verne`. Les paramètres de rendu conservent leur nullité obligatoire ; ce chargement n'ajoute aucun contrôle au rendu.
+
+Un fournisseur voisin non déclaré par son module doit rester indisponible, même si son service classique est présent ; le gabarit dépendant échoue avec `VERNE-TYP-003`. Une propriété inconnue d'un modèle produit, ou un gabarit inutilisé invalide dans l'application Maven, conserve le diagnostic Verne et sa position. Une construction propre refusée ne produit pas de JAR applicatif.
+
+Les tests javac vérifient les deux ordres explicites de fournisseurs et leur découverte automatique. Les tests Maven réutilisent l'installation temporaire du compilateur, y installent aussi le voisin, et construisent des copies indépendantes de l'application. Les dépôts habituels peuvent fournir l'outillage manquant ; aucune publication distante n'est effectuée. Les processus, délais de garde, fermetures et règles d'isolation du link:application-maven.adoc[banc Maven] restent applicables. Les compilations de cette tranche sont séquentielles ; les essais Windows/Linux, les bibliothèques de processeurs tierces et les reconstructions incrémentales restent à qualifier.
+
+== Construire les exemples
+
+Depuis la racine, avec Java 25, sous macOS ou Linux :
+
+[source,shell]
+----
+./mvnw -ntp clean install
+./mvnw -ntp -f exemples/processeur-voisin/pom.xml clean install
+./mvnw -ntp -f exemples/application-processeurs/pom.xml clean package
+java -Dstdout.encoding=UTF-8 --module-path exemples/application-processeurs/target/application-processeurs-1.0.0.jar --module application.verne/exemple.Application
+----
+
+La troisième commande utilise le profil `classique` par défaut. Pour reconstruire l'application en chargeant les deux fournisseurs comme modules nommés :
+
+[source,shell]
+----
+./mvnw -ntp -f exemples/application-processeurs/pom.xml -Pmodules clean package
+java -Dstdout.encoding=UTF-8 --module-path exemples/application-processeurs/target/application-processeurs-1.0.0.jar --module application.verne/exemple.Application
+----
+
+Sous Windows, remplacer le lanceur par `.\mvnw.cmd` ; cette plateforme reste à qualifier. La sortie des deux lancements est `Bonjour Léa 🚀` suivie de CRLF, fournie par le gabarit. Une règle Git préserve ses octets.
+
+Le profil modulaire utilise les archives installées sous `${settings.localRepository}` et `${path.separator}` pour séparer leurs chemins. Les versions sont fixées par `verne.version` et `voisin.version`. `combine.children="append"` conserve les options Verne lors de l'ajout des arguments du profil. Le profil classique n'est pas actif quand seul `-Pmodules` est choisi ; ne pas activer les deux profils ensemble. Les exemples sont construits séparément, sans les ajouter au réacteur du moteur et sans publication distante.
+
+== Preuves de vérification
+
+Les cinq tests de `ChargementConjointModulesTest` couvrent les répertoires dans les deux ordres de fournisseurs, la découverte automatique depuis deux JAR modulaires, un diagnostic de propriété, l'absence de déclaration modulaire malgré le service classique et le refus d'un mode incompatible avec le module nommé du voisin. Les descripteurs du voisin sont inspectés pour vérifier son nom et l'absence d'exports ou d'ouvertures de paquets. Les options de compilation ne comportent aucun ajout d'export ou d'ouverture.
+
+Trois nouveaux cas de `ApplicationMavenTest` vérifient le profil classique par défaut, le profil modulaire et une erreur de syntaxe dans un gabarit inutilisé du profil modulaire. Les deux succès inspectent l'archive et comparent le rendu exact depuis le seul JAR applicatif. Cette tranche portait la classe à sept tests, en conservant les quatre témoins Maven initiaux.
+
+La première passe ciblée exécutait onze tests, avec six échecs attendus, aucune erreur d'outillage et aucun test ignoré : les configurations Maven ne chargeaient pas les processeurs et le fournisseur modulaire du voisin n'était pas déclaré. Après ajout de `provides` et des deux configurations Maven, ces cas réussissent. Un contrôle supplémentaire vérifie ensuite que le garde de mode du voisin refuse un chargement incohérent.
+
+La vérification complète propre `./mvnw -ntp clean verify` totalise 137 tests sur Mac, sans échec, erreur ni test ignoré. Aucune classe de production du moteur Verne n'est modifiée dans cette tranche. Aucune nouvelle campagne de performances ni compatibilité avec une bibliothèque de processeurs tierce n'est revendiquée.
+
+Les exemples appliquent désormais le link:reconstructions-maven.adoc[contrat des reconstructions Maven] : nettoyage automatique des sorties à `initialize`, puis compilation complète, y compris lors d’un simple `package`.

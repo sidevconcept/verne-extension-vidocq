@@ -14,7 +14,7 @@ L'inventaire, les noms, les liens et les octets des ressources sont contrôlés 
 
 Les entrées doivent rester stables pendant la compilation. Les listes d'attente et les diagnostics appartiennent à l'instance du processeur et sont vidés au tour terminal ; ils ne sont partagés ni entre tâches ni entre compilations concurrentes. Aucun état statique mutable, chargement réflexif de modèle, dépendance tierce ou contrôle supplémentaire au rendu n'est introduit. La progression des tours dépend de javac et des sources produites par les autres processeurs ; Verne ne crée pas de source artificielle pour provoquer un tour et ne borne pas le comportement d'un processeur tiers défectueux.
 
-Les tests emploient un véritable processeur Java contrôlé qui génère des fichiers sources avec `Filer` et vérifie qu'il reçoit son annotation. Ils ne remplacent pas le compilateur Verne. Les essais avec des bibliothèques de processeurs tierces, leur découverte par modules et leur raccordement conjoint dans une application Maven restent des qualifications distinctes.
+Les tests emploient un véritable processeur Java contrôlé qui génère des fichiers sources avec `Filer` et vérifie qu'il reçoit son annotation. Ils ne remplacent pas le compilateur Verne. Le link:chargement-conjoint.adoc[chargement conjoint dans Maven et par modules] est vérifié avec un second exemple contrôlé ; les essais avec des bibliothèques de processeurs tierces restent à réaliser.
 
 == Preuves de vérification
 

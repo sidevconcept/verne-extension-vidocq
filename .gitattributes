@@ -7,3 +7,4 @@ mvnw text eol=lf
 mvnw.cmd text eol=crlf
 # Préserver les octets du témoin CRLF, y compris dans les archives de sources.
 exemples/application-maven/src/main/verne/bonjour.verne -text whitespace=cr-at-eol
+exemples/application-processeurs/src/main/verne/bonjour.verne -text whitespace=cr-at-eol

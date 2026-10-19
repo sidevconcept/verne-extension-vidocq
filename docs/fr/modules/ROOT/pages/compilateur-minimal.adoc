@@ -306,10 +306,14 @@ Le compilateur et son parent sont construits et installés dans un dépôt tempo
 
 Les dix tests de `CoexistenceProcesseursTest` vérifient les annotations du voisin, les types générés aux tours suivants, les erreurs persistantes, le budget des diagnostics et l'isolation entre deux compilations concurrentes. Sept tests ont été observés en échec avant correction ; les dix réussissent après reprise des seuls gabarits en attente. Le code de rendu et les budgets de lecture existants sont conservés. Les détails de la qualification et ses limites figurent dans link:coexistence-processeurs.adoc[le contrat dédié].
 
+== Premier chargement conjoint dans Maven et par modules
+
+Cinq tests de `ChargementConjointModulesTest` et trois cas Maven supplémentaires vérifient les fournisseurs modulaires et les deux configurations Maven. La première passe ciblée avait six échecs sur onze tests ; après déclaration du fournisseur et configuration des profils, ces cas réussissent. Le contrôle négatif supplémentaire du mode de chargement réussit aussi. Les exemples et preuves figurent dans link:chargement-conjoint.adoc[le contrat dédié]. Cette tranche ne modifie aucune classe de production du moteur.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 87 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven et coexistence des processeurs ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 98 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence et chargement conjoint ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -319,7 +323,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 129 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 140 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -340,7 +344,8 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`NombreDiagnosticsTest` |6 |0 |0 |0
 |`BudgetGenerationTest` |7 |0 |0 |0
 |`DecouverteProcesseurTest` |9 |0 |0 |0
-|`ApplicationMavenTest` |4 |0 |0 |0
+|`ApplicationMavenTest` |10 |0 |0 |0
 |`CoexistenceProcesseursTest` |10 |0 |0 |0
-|Total |129 |0 |0 |0
+|`ChargementConjointModulesTest` |5 |0 |0 |0
+|Total |140 |0 |0 |0
 |===

@@ -1,0 +1,24 @@
+= Verne — Reconstructions Maven fiables
+:lang: fr
+
+Les exemples `application-maven` et `application-processeurs` doivent refléter les sources courantes après chaque `package`, sans commande `clean` préalable. Ce contrat couvre les deux profils de chargement des processeurs.
+
+== Contrat
+
+Les entrées sont les sources Java et les fichiers UTF-8 de la racine de gabarits configurée. Une modification doit changer le rendu ; un ajout doit produire sa classe ; une suppression doit retirer sa source générée et sa classe de l’archive. Si une source Java dépend encore d’un gabarit supprimé, la construction doit échouer. Un gabarit invalide, même inutilisé, doit provoquer un diagnostic Verne et empêcher la présence d’une ancienne archive livrable.
+
+La stratégie retenue est une reconstruction complète des sorties Maven dès la phase `initialize`, avant toute génération. Elle supprime les sorties de construction du projet, jamais les sources. Les répertoires de sortie doivent rester réservés aux fichiers reproductibles de la construction ; ne pas les rediriger vers des données à conserver. Le processeur ne supprime aucun fichier lui-même et ne conserve aucun état entre deux compilations.
+
+Une seule construction peut écrire dans un même répertoire de sortie à la fois. Les projets distincts conservent leurs sorties propres. Les erreurs de nettoyage ou de compilation interrompent la construction. Aucun service permanent ni ressource ouverte ne subsiste après Maven.
+
+== Portée
+
+Utiliser le cycle de vie Maven (`compile`, `package`, `verify`) : l’appel direct à un objectif de compilateur ne déclenche pas `initialize`. Cette configuration appartient aux exemples consommateurs et doit être reprise par leurs utilisateurs ; le seul ajout du processeur ne surveille pas les gabarits.
+
+La compilation sélective des seuls dépendants, les constructions simultanées dans les mêmes sorties et l’intégration aux IDE restent hors de cette qualification. Cette stratégie privilégie la fraîcheur des résultats et ne revendique aucun gain de temps de construction.
+
+== Vérification du 19 octobre 2026
+
+Les trois nouveaux scénarios Maven ont d’abord échoué : le rendu conservait `Bonjour` après remplacement par `Salut`. Après raccordement du nettoyage, les trois configurations passent une succession de six constructions : initiale, modification et ajout, suppression, gabarit invalide, réparation, puis suppression du gabarit encore appelé par Java. Les assertions contrôlent le rendu Unicode et CRLF, les sources générées, les classes de l’archive et l’absence d’archive après échec.
+
+La commande `./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 140 tests, zéro échec, erreur ou test ignoré. Windows et Linux restent à qualifier.

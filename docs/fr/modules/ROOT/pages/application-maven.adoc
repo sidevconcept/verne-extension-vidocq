@@ -14,7 +14,7 @@ Un gabarit inutilisé invalide ou une propriété inconnue doit faire échouer M
 
 Les tests lancent de vrais processus Maven via le lanceur du dépôt, qui fixe Maven 3.9.16, avec le JDK de la suite. Ils construisent et installent une copie des sources du compilateur dans un dépôt Maven temporaire, puis construisent des copies indépendantes de l'application. Le dépôt Maven habituel peut servir de source de cache ; les artefacts de la tranche sont installés seulement dans le dépôt temporaire. Les premiers téléchargements d'outillage peuvent être nécessaires. Les processus ont un délai de garde, leurs sorties sont redirigées et ils sont arrêtés si nécessaire. Les flux de copie et d'archive sont fermés ; aucun serveur ni ressource persistante n'est créé. Les constructions de cette tranche sont séquentielles et ne revendiquent pas la sûreté de constructions simultanées dans le même répertoire de sortie.
 
-La configuration n'ajoute aucun état partagé au rendu. Les reconstructions sans nettoyage, le chargement conjoint de plusieurs processeurs dans cette application Maven, les nouvelles plateformes et l'extension Vidocq restent à qualifier séparément. La reprise des types produits aux tours suivants est vérifiée avec javac et décrite dans link:coexistence-processeurs.adoc[son contrat dédié].
+La configuration n'ajoute aucun état partagé au rendu. Les nouvelles plateformes et l’extension Vidocq restent à qualifier séparément. La reprise des types produits aux tours suivants est décrite dans link:coexistence-processeurs.adoc[son contrat dédié] ; un second exemple vérifie le link:chargement-conjoint.adoc[chargement conjoint de deux fournisseurs dans Maven et par modules].
 
 == Construire et lancer l'exemple
 
@@ -37,8 +37,12 @@ Utiliser une construction propre pour cette tranche. La détection incrémentale
 
 == Preuves de vérification
 
-Les quatre tests de `ApplicationMavenTest` couvrent une construction et un rendu réels, une erreur dans un gabarit inutilisé, une propriété inconnue du record source et un profil non pris en charge. Le chemin applicatif contient des espaces, un accent et une esperluette. Les tests inspectent l'archive et lancent une JVM avec son seul module pour comparer exactement Unicode et CRLF.
+Les quatre tests initiaux de `ApplicationMavenTest` couvrent une construction et un rendu réels, une erreur dans un gabarit inutilisé, une propriété inconnue du record source et un profil non pris en charge. Trois cas supplémentaires vérifient le link:chargement-conjoint.adoc[chargement conjoint dans Maven], portant alors cette classe à sept tests. Le chemin applicatif contient des espaces, un accent et une esperluette. Les tests inspectent l'archive et lancent une JVM avec son seul module pour comparer exactement Unicode et CRLF.
 
 Avant la configuration du greffon, les quatre tests échouaient : aucune classe de rendu n'était générée et les diagnostics Verne attendus étaient absents. La préparation du compilateur réussissait déjà ; ces échecs étaient distincts d'un défaut d'installation Maven. Après ajout de `proc=full`, du chemin des processeurs et des deux options Verne, les quatre tests réussissent.
 
 Le dépôt Maven temporaire reçoit le compilateur construit à partir des sources courantes et son parent. Le cache existant peut fournir l'outillage via un dépôt de fichiers ; les dépôts Maven habituels restent disponibles pour les éléments absents. L'option `-o` du processus Maven parent n'est pas transmise aux processus de vérification imbriqués. Les tests ne remplacent pas l'artefact installé dans le dépôt habituel et ne publient aucun artefact distant.
+
+Les exemples appliquent désormais le link:reconstructions-maven.adoc[contrat des reconstructions Maven] : nettoyage automatique des sorties à `initialize`, puis compilation complète, y compris lors d’un simple `package`.
+
+Trois scénarios de reconstruction successifs portent maintenant `ApplicationMavenTest` à dix tests.
