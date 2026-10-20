@@ -8,5 +8,6 @@
 ** xref:chargement-conjoint.adoc[Chargement conjoint Maven et modules]
 ** xref:reconstructions-maven.adoc[Reconstructions Maven fiables]
 ** xref:dependances-recompilation.adoc[Dépendances de recompilation]
+** xref:invalidation-gabarits.adoc[Invalidation sélective des gabarits]
 ** xref:premiers-tests.adoc[Premiers tests exécutables]
 ** xref:mesures-performance.adoc[Mesures de performances]
