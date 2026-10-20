@@ -22,3 +22,5 @@ La compilation sélective des seuls dépendants, les constructions simultanées 
 Les trois nouveaux scénarios Maven ont d’abord échoué : le rendu conservait `Bonjour` après remplacement par `Salut`. Après raccordement du nettoyage, les trois configurations passent une succession de six constructions : initiale, modification et ajout, suppression, gabarit invalide, réparation, puis suppression du gabarit encore appelé par Java. Les assertions contrôlent le rendu Unicode et CRLF, les sources générées, les classes de l’archive et l’absence d’archive après échec.
 
 La commande `./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 140 tests, zéro échec, erreur ou test ignoré. Windows et Linux restent à qualifier.
+
+Le chantier de recompilation sélective commence par les link:dependances-recompilation.adoc[origines Java des sources générées]. Cette première tranche conserve le nettoyage Maven.

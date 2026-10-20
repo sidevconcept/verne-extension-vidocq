@@ -3,6 +3,7 @@ package io.vidocq.verne.compilation;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -29,6 +30,7 @@ final class CompilateurGabarit {
     private final ProcessingEnvironment environnement;
     private final Consumer<String> rapporterErreur;
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
+    private final LinkedHashSet<TypeElement> origines = new LinkedHashSet<>();
     private final List<Partie> parties = new ArrayList<>();
     private String texte;
     private String identifiant;
@@ -86,7 +88,8 @@ final class CompilateurGabarit {
                     }
                 }
             }
-            var source = environnement.getFiler().createSourceFile("io.vidocq.verne.genere." + classe);
+            var source = environnement.getFiler().createSourceFile("io.vidocq.verne.genere." + classe,
+                    origines.toArray(TypeElement[]::new));
             try (var sortie = source.openWriter()) {
                 sortie.write("package io.vidocq.verne.genere;\n"
                         + "import static java.util.Objects.requireNonNull;\n"
@@ -230,6 +233,7 @@ final class CompilateurGabarit {
                 || !publicAvecParents(type)) {
             refuser("VERNE-TYP-003", position, "type inconnu, inaccessible ou non pris en charge.");
         }
+        enregistrerOrigine(type.asType());
         parametres.put(morceaux[1], new Parametre(morceaux[1], type.asType()));
     }
 
@@ -257,6 +261,7 @@ final class CompilateurGabarit {
             }
             type = ((ExecutableType) environnement.getTypeUtils().asMemberOf(
                     declare, composant.get().getAccessor())).getReturnType();
+            enregistrerOrigine(type);
             expression = "requireNonNull(" + expression
                     + ", \"VERNE-REN-001 : objet de navigation nul.\")." + nom + "()";
         }
@@ -268,6 +273,16 @@ final class CompilateurGabarit {
             expression = "requireNonNull(" + expression + ", \"VERNE-REN-001 : valeur interpolée nulle.\")";
         }
         return expression;
+    }
+
+    /** Les origines standard permettent à l'outillage de relier une sortie à ses modèles Java. */
+    private void enregistrerOrigine(TypeMirror type) {
+        if (type instanceof DeclaredType declare && type.getKind() != TypeKind.ERROR) {
+            for (Element element = declare.asElement(); element instanceof TypeElement origine;
+                    element = element.getEnclosingElement()) {
+                origines.add(origine);
+            }
+        }
     }
 
     /** Les types englobants doivent eux aussi être publics pour le paquet généré. */

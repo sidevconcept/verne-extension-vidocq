@@ -16,4 +16,4 @@
 
 ## Vérifications
 
-Utiliser `./mvnw test` sous Unix ou `.\mvnw.cmd test` sous Windows avec Java 25. Le lanceur fixe Maven 3.9.16. Les 140 tests actuels doivent réussir. Pour une nouvelle capacité, constater le test en échec avant son implémentation ; ne pas accepter de régression sur les capacités livrées. Lire `docs/fr/modules/ROOT/pages/premiers-tests.adoc` avant de modifier ce contrat.
+Utiliser `./mvnw test` sous Unix ou `.\mvnw.cmd test` sous Windows avec Java 25. Le lanceur fixe Maven 3.9.16. Les 146 tests actuels doivent réussir. Pour une nouvelle capacité, constater le test en échec avant son implémentation ; ne pas accepter de régression sur les capacités livrées. Lire `docs/fr/modules/ROOT/pages/premiers-tests.adoc` avant de modifier ce contrat.
