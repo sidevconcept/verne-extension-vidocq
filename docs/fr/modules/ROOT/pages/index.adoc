@@ -32,7 +32,7 @@ Le composant transforme des gabarits et des données en documents textuels, avec
 
 * Tout nouveau texte maîtrisé par le projet est en français : code, noms métier, documentation, diagnostics et messages de contribution.
 * Les mots réservés Java, signatures imposées par une interface existante et noms des outils tiers conservent leur orthographe obligatoire.
-* Tout changement se fait sur une branche. L'auteur des contributions est `sidneycohen`, avec DCO et signature GPG, sans attribution à un assistant.
+* Tout changement se fait sur une branche. L'auteur des contributions est l'identité Git configurée pour le dépôt, avec DCO et signature GPG, sans attribution à un assistant.
 * Le développement suit le cycle test en échec, implémentation minimale, test réussi, amélioration et nouvelle vérification.
 * Chaque capacité comporte une description, ses limites, ses erreurs, des exemples et des preuves de test.
 * Les décisions architecturales, coûts mémoire et mesures de performances sont documentés avec leurs conditions de validité.
@@ -44,7 +44,7 @@ Le moteur dispose d'un dépôt Git autonome, sur la branche `fonctionnalite/prem
 Ce dossier constitue la documentation de référence du moteur ; la copie de conception préparée dans Vidocq est antérieure à sa création.
 L'extension sera développée séparément dans le dépôt Vidocq.
 La documentation Antora réside dans `docs/fr`, avec l'attribut `lang: fr`, sans personnalisation de l'interface commune.
-Le dépôt autonome utilise le distant fourni par l'utilisateur : https://github.com/sidevconcept/verne-extension-vidocq.git. Les consignes de contribution sont définies dans `AGENTS.md`, à la racine du dépôt. L'écosystème Vidocq conserve sa forge CodeFloe ; cette exception est propre à Verne.
+Le dépôt autonome utilise le distant `origin` fourni par l'utilisateur. Les consignes de contribution sont définies dans `AGENTS.md`, à la racine du dépôt. L'écosystème Vidocq conserve sa forge CodeFloe ; cette exception est propre à Verne.
 
 == Ordre de réalisation proposé
 
