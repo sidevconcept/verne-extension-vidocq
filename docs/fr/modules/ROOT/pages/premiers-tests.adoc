@@ -11,7 +11,7 @@ Cette tranche ne valide pas les 105 scénarios du plan complet.
 Le dépôt Git autonome réside dans `E:\Dev\Projects\verne`, sur `fonctionnalite/premiers-tests`.
 Il n'a encore aucun commit ni dépôt distant configuré.
 Le dépôt distant pressenti n'était pas accessible lors de la préparation ; aucune publication distante n'a été réalisée.
-L'identité locale est `sidevconcept`, avec l'adresse utilisateur déjà configurée.
+L'identité locale est celle déjà configurée dans Git pour ce dépôt.
 Le journal des prompts est local et exclu par `.git/info/exclude` ; il ne doit jamais être ajouté aux contributions.
 
 Le réacteur contient uniquement `verne-verification`, avec son descripteur de module Java explicite.
