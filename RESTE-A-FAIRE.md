@@ -15,7 +15,7 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Le chargement conjoint dans Maven et par modules est intégré par la PR nº 15, avec huit nouveaux tests. La vérification complète atteint **137 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
 - Les reconstructions des exemples Maven sont intégrées par la PR nº 15 et fiabilisées par nettoyage automatique des sorties, avec trois nouveaux scénarios : **140 tests réussissent sur Mac**. La recompilation sélective reste à développer.
 - Après les quatre fusions, `main` (`d63e20a`) a été vérifié depuis une archive Git indépendante : `./mvnw -ntp clean verify`, **140 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
-- Les origines Java sont publiées dans la [PR nº 16](https://github.com/sidevconcept/verne-extension-vidocq/pull/16), commit signé avec DCO `26ce9a4`, encore à fusionner : **146 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Cette tranche ne désactive pas le nettoyage Maven.
+- Les origines Java sont publiées dans la PR nº 16, commit signé avec DCO `26ce9a4`, encore à fusionner : **146 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Cette tranche ne désactive pas le nettoyage Maven.
 - Le calcul d’invalidation est prêt localement sur `codex/invalidation-gabarits` : **157 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Les empreintes sont encore fournies par l’appelant ; le raccordement aux entrées et sorties Maven reste à réaliser.
 - Les 42 tests initiaux ont également été exécutés sur Windows. Les 115 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
