@@ -20,17 +20,17 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 ## 1. Publier la découverte automatique du processeur
 
 - [x] Créer le commit signé GPG avec DCO pour la tranche locale : `b26f4c8`.
-- [x] Pousser la branche et créer la [pull request nº 12](https://github.com/sidevconcept/verne-extension-vidocq/pull/12) vers `main`.
+- [x] Pousser la branche et créer la pull request nº 12 vers `main`.
 - [ ] Fusionner la pull request après vérification et autorisation correspondante.
 
 ## 2. Finaliser l'intégration à la construction Java
 
 - [x] Vérifier une véritable application Maven consommatrice, distincte du banc interne : `exemples/application-maven`.
 - [x] Qualifier la configuration et le chargement du processeur depuis son artefact installé localement.
-- [x] Publier la tranche d'application Maven : commit signé avec DCO `e116f91` et [PR nº 13](https://github.com/sidevconcept/verne-extension-vidocq/pull/13).
+- [x] Publier la tranche d'application Maven : commit signé avec DCO `e116f91` et PR nº 13.
 - [ ] Intégrer la tranche d'application Maven après fusion de sa dépendance.
 - [x] Tester avec javac la coexistence avec un processeur Java contrôlé et les types générés pendant les tours suivants.
-- [x] Publier la coexistence : commit signé avec DCO `412acd2` et [PR nº 14](https://github.com/sidevconcept/verne-extension-vidocq/pull/14).
+- [x] Publier la coexistence : commit signé avec DCO `412acd2` et PR nº 14.
 - [ ] Intégrer la tranche de coexistence après ses dépendances.
 - [x] Qualifier le chargement conjoint dans Maven et sur le chemin des modules avec le voisin contrôlé.
 - [ ] Publier et intégrer la tranche de chargement conjoint.
