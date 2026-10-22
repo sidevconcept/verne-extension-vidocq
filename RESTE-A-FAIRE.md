@@ -17,8 +17,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Après les quatre fusions, `main` (`d63e20a`) a été vérifié depuis une archive Git indépendante : `./mvnw -ntp clean verify`, **140 tests réussis sur Mac**, sans échec, erreur ni test ignoré.
 - Les origines Java sont intégrées par la PR nº 16 : **146 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Cette tranche ne désactive pas le nettoyage Maven.
 - Le calcul d’invalidation est intégré par la PR nº 17 : **157 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Les empreintes sont encore fournies par l’appelant ; le raccordement aux entrées et sorties Maven reste à réaliser.
-- Les corrections de la revue de code sont prêtes localement sur `correction/revue-de-code` : paquet généré obligatoire, visibilité des modules, chaînes annotées, erreurs de parcours et de `Filer`, interruption des tours, noms NFC, version source, compilation Maven des tests et hygiène de construction. **181 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 139 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Les corrections de la revue de code sont intégrées par la PR nº 19, et la version alignée sur Vidocq `0.4.0-SNAPSHOT` par la PR nº 20 : paquet généré obligatoire, visibilité des modules, chaînes annotées, erreurs de parcours et de `Filer`, interruption des tours, noms NFC, version source, compilation Maven des tests et hygiène de construction. **181 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Le rendu des grands documents en assemblage unique est prêt localement sur `fonctionnalite/rendu-hybride` : **183 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 141 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
