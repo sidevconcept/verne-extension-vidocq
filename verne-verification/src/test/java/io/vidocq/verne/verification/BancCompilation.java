@@ -21,7 +21,7 @@ import javax.tools.ToolProvider;
 final class BancCompilation {
     private BancCompilation() {}
 
-    /** Paquet applicatif des classes générées ; un test peut fournir sa propre option -Averne.paquet. */
+    /** Paquet applicatif des classes générées ; un test peut fournir ses propres options de paquet et de profil. */
     static final String PAQUET = "exemple.gabarits";
 
     /** Résultat immuable : statut du compilateur, diagnostics français et répertoires produits. */
@@ -101,8 +101,10 @@ final class BancCompilation {
                 "-d", classes.toString(), "-s", sourcesGenerees.toString()));
         options.addAll(chargementProcesseur);
         if (avecVerne) {
-            options.addAll(List.of("-Averne.racine.gabarits=" + racineDeclaree,
-                    "-Averne.profil.sortie=texte"));
+            options.add("-Averne.racine.gabarits=" + racineDeclaree);
+            if (chargementProcesseur.stream().noneMatch(option -> option.startsWith("-Averne.profil.sortie"))) {
+                options.add("-Averne.profil.sortie=texte");
+            }
             if (chargementProcesseur.stream().noneMatch(option -> option.startsWith("-Averne.paquet"))) {
                 options.add("-Averne.paquet=" + PAQUET);
             }

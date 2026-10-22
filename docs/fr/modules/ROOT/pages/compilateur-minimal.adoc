@@ -39,8 +39,8 @@ Le fournisseur public sans argument est instancié par le compilateur ; son éta
 
 == Sources et génération
 
-Le processeur reçoit trois options obligatoires : `verne.racine.gabarits`, `verne.paquet` et `verne.profil.sortie=texte`.
-Une racine absente, un paquet absent ou invalide, ou un profil différent produit `VERNE-CFG-001`, sans interprétation implicite comme texte brut ni paquet par défaut.
+Le processeur reçoit trois options obligatoires : `verne.racine.gabarits`, `verne.paquet` et `verne.profil.sortie`, dont la valeur est `texte`, `html` ou `xml`.
+Une racine absente, un paquet absent ou invalide, ou un profil absent ou inconnu produit `VERNE-CFG-001`, sans interprétation implicite comme texte brut ni paquet par défaut. Le profil s'applique à tous les gabarits de l'invocation ; il est décrit dans link:#_profils_de_sortie_html_et_xml[les profils de sortie].
 Les fichiers `.verne` sont parcourus dans un ordre déterministe ; les répertoires symboliques ne sont pas suivis.
 Une ressource réelle hors de la racine est refusée ; les erreurs de lecture ou de génération sont signalées sans chemin machine.
 Le processeur déclare la dernière version source prise en charge par le compilateur Java qui l'exécute ; Java 25 reste la version minimale du projet.
@@ -148,12 +148,61 @@ Une chaîne vide demeure une valeur valide.
 La génération utilise un tampon local par appel ou, pour les grands documents, un assemblage unique ; aucun état global ou contexte de requête n'est ajouté.
 Les variables générées évitent les collisions avec les noms de paramètres, y compris `java`, `resultat` et le nom de tampon proposé par le générateur.
 Les données interpolées ne sont jamais analysées comme des directives.
-Le profil texte n'échappe pas les caractères HTML ; il ne doit donc pas être utilisé comme une protection HTML.
+Le profil texte n'échappe pas les caractères HTML ; il ne doit donc pas être utilisé comme une protection HTML. Les profils `html` et `xml` sont décrits ci-dessous.
 
 Les littéraux Java sont échappés, y compris guillemets, antislashs et caractères de contrôle.
 Le texte est fractionné en fragments d'au plus 4 000 unités UTF-16, sans scinder une paire de substituts.
 Cette borne évite de dépasser la taille d'une constante de classe Java, même avec des caractères dont l'encodage modifié nécessite plusieurs octets.
 Le contrat n'inclut pas encore une sortie en flux, un plafond de caractères rendus ou un rendu asynchrone.
+
+=== Profils de sortie HTML et XML
+
+Le profil est choisi pour toute l'invocation par `-Averne.profil.sortie`. Le choix d'un profil par gabarit, le contenu déclaré fiable et le profil JSON restent à livrer : dans ces profils, toute valeur interpolée est échappée, sans exception.
+
+==== Échappement des valeurs
+
+[cols="1,1,1,2",options="header"]
+|===
+|Caractère |HTML |XML |Remarque
+|`&` |`&amp;` |`&amp;` |
+|`<` |`&lt;` |`&lt;` |
+|`>` |`&gt;` |`&gt;` |Couvre aussi la séquence `]]>` en XML
+|`"` |`&quot;` |`&quot;` |
+|`'` |`&#39;` |`&apos;` |
+|CR |inchangé |`&#13;` |Conservé malgré la normalisation des fins de ligne XML
+|LF, tabulation |inchangés |`&#10;`, `&#9;` dans une valeur d'attribut |Conservés malgré la normalisation des valeurs d'attribut XML
+|===
+
+L'échappement s'applique aux chaînes et au type `char`. Les autres primitives (`boolean`, `byte`, `short`, `int`, `long`, `float`, `double`) ne peuvent contenir aucun de ces caractères et sont rendues sans transformation. La valeur d'origine n'est jamais modifiée ; une valeur déjà échappée l'est une seconde fois, car Verne ne distingue pas encore un contenu fiable.
+Une valeur sans caractère à échapper est rendue telle quelle, sans copie. L'échappement est une méthode privée de chaque classe générée : aucune bibliothèque n'est requise à l'exécution, aucun état n'est partagé et le rendu reste sûr en concurrence.
+
+En XML, une valeur contenant un caractère interdit par XML 1.0 provoque `IllegalArgumentException` avec `VERNE-REN-002`, sans la valeur dans le message. Sont interdits les contrôles de U+0000 à U+001F autres que tabulation, LF et CR, U+FFFE, U+FFFF et les substituts isolés. Aucun texte n'est alors renvoyé. Le texte d'un gabarit XML est soumis à la même règle à la compilation : un caractère interdit dans le fichier source produit `VERNE-SYN-004` à sa position.
+
+==== Contextes d'interpolation
+
+À la compilation, Verne suit le balisage du texte statique pour connaître le contexte de chaque interpolation. Les directives Verne, commentaires et déclarations, ne participent pas au balisage ; un délimiteur échappé `\{` y compte comme une accolade.
+Une interpolation n'est acceptée que dans deux contextes :
+
+* le texte d'un élément ;
+* une valeur d'attribut entre guillemets doubles ou simples.
+
+Tout autre contexte produit `VERNE-SEC-002` à la position de l'interpolation, avant création de la source Java, avec le nom du contexte et sans valeur : nom de balise ouvrante ou fermante, nom d'attribut, emplacement entre les attributs, valeur d'attribut sans guillemets, commentaire, déclaration (`<!DOCTYPE`, déclaration d'entité), section `CDATA` et instruction de traitement.
+
+Le profil HTML refuse en plus :
+
+* le contenu des éléments `script`, `style`, `xmp`, `iframe`, `noembed`, `noframes`, `noscript` et `plaintext`, dont le texte n'est pas décodé par le navigateur ;
+* les attributs d'événement, dont le nom commence par `on`, et les attributs `style` et `srcdoc` ;
+* les attributs portant une URL : `href`, `src`, `action`, `formaction`, `srcset`, `imagesrcset`, `xlink:href`, `data`, `poster`, `background`, `cite`, `longdesc`, `lowsrc`, `dynsrc`, `usemap`, `codebase`, `classid`, `archive`, `profile`, `manifest`, `ping`, `icon`, `itemtype` et `itemid` ;
+* la valeur de `http-equiv`, et celle de `content` dans un élément `meta` qui porte aussi `http-equiv`.
+
+Les noms de balise et d'attribut sont comparés sans tenir compte de la casse en HTML. Le contenu de `textarea` et `title` est du texte échappé : une interpolation y est acceptée, sauf au milieu d'une balise fermante en cours d'écriture. Un chevron `<` suivi d'un caractère qui n'ouvre pas de balise reste du texte, comme dans un navigateur.
+
+Une URL dynamique exige une validation de schéma que ce profil ne fournit pas encore : elle est refusée plutôt que simplement échappée. Le profil XML ne connaît pas la sémantique des vocabulaires XHTML, SVG ou autres ; il ne détecte ni URL ni script dans un attribut et ne doit pas remplacer le profil HTML pour une page web.
+
+==== Limites
+
+L'échappement ne garantit pas la validité structurelle du document : un gabarit peut produire un balisage mal formé, et Verne ne vérifie pas qu'un gabarit se termine hors d'une balise, car un fragment est admis. Une référence de caractère formée par le texte statique et une valeur, comme `&` suivi de `lt;`, reste un caractère de texte et ne peut pas créer de balise.
+Le coût pondéré de génération est inchangé ; l'appel d'échappement ajoute quelques octets par interpolation à la méthode de rendu, dans la marge du budget.
 
 === Assemblage unique des grands documents
 
@@ -202,7 +251,7 @@ La compilation échoue dès la première erreur ; les sources déjà générées
 [cols="1,3",options="header"]
 |===
 |Code |Sens
-|`VERNE-CFG-001` |Racine ou paquet non déclaré, paquet invalide, cible non répertoire ou profil différent de texte
+|`VERNE-CFG-001` |Racine ou paquet non déclaré, paquet invalide, cible non répertoire, profil absent ou inconnu
 |`VERNE-IO-001` |Parcours, lecture ou génération impossible
 |`VERNE-LIA-001` |Nom de gabarit inadmissible ou collision de classe générée
 |`VERNE-LIM-001` |Source supérieure à un mébioctet
@@ -214,15 +263,18 @@ La compilation échoue dès la première erreur ; les sources déjà générées
 |`VERNE-LIM-007` |Saturation après 64 erreurs Verne détaillées ; arrêt de la vérification
 |`VERNE-LIM-008` |Coût pondéré de génération supérieur à 60 000 unités pour un gabarit
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
+|`VERNE-SEC-002` |Interpolation dans un contexte HTML ou XML non pris en charge
 |`VERNE-SYN-001` |Interpolation, déclaration ou commentaire non fermé
 |`VERNE-SYN-002` |Syntaxe, directive, identifiant ou échappement non pris en charge
 |`VERNE-SYN-003` |Séquence d'octets UTF-8 invalide
+|`VERNE-SYN-004` |Caractère interdit par XML 1.0 dans le texte d'un gabarit XML
 |`VERNE-TYP-001` |Paramètre inconnu ou propriété inaccessible
 |`VERNE-TYP-002` |Déclaration du même paramètre plusieurs fois
 |`VERNE-TYP-003` |Type inconnu, inaccessible, non exporté vers le module compilé ou non pris en charge
 |`VERNE-TYP-004` |Résultat d'interpolation non scalaire
 |`VERNE-TYP-005` |Avertissement : gabarits en attente non vérifiés après l'interruption des tours par une erreur
 |`VERNE-REN-001` |Valeur obligatoire ou objet de navigation nul pendant le rendu
+|`VERNE-REN-002` |Caractère interdit par XML 1.0 dans une valeur rendue avec le profil XML
 |===
 
 Les diagnostics d'analyse portent `identifiant.verne:ligne:colonne`, avec indices commençant à un et colonnes comptées en points de code.
@@ -372,10 +424,16 @@ Une mesure indépendante compare la révision précédente et la candidate, dans
 
 Les écarts des petits documents restent dans le bruit de mesure, puisque leur code est identique. Ces résultats proviennent d'un poste partagé ; ils ne constituent ni une garantie en production ni une campagne de référence.
 
+== Profils HTML et XML : vérification
+
+Les 51 cas de `ProfilsSortieTest` couvrent T-SOR-01 (même valeur en texte brut et en HTML), T-SEC-03 (texte, attributs entre guillemets doubles ou simples, `textarea`, `title`, `meta` descriptif), les primitives et `char`, les grands documents, la fin des éléments bruts sans tenir compte de la casse, 26 contextes HTML refusés et 8 contextes XML refusés (T-SEC-04), un document XML relu par l'analyseur du JDK avec tabulation, LF, CR, `]]>` et emoji conservés, quatre caractères interdits au rendu et un caractère interdit dans le texte d'un gabarit XML (T-SEC-07), les profils inconnus et 32 rendus HTML concurrents. Deux cas de `BudgetGenerationTest` compilent un gabarit à exactement 60 000 unités en HTML et en XML : la méthode de rendu mesure 39 678 et 39 572 octets, contre 39 251 en texte.
+Avant implémentation, les 50 nouveaux cas échouaient tous par `VERNE-CFG-001`, le profil étant refusé ; le contrôle des profils inconnus réussissait déjà. Le refus d'un profil `html` dans l'application Maven devient celui d'un profil `json`. Le module de vérification lit `java.xml`, seulement pour l'oracle XML des tests.
+`./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 236 tests, zéro échec, erreur ou test ignoré.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 141 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules et robustesse ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 194 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique et profils HTML et XML ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -385,7 +443,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 183 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 236 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -404,7 +462,7 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`ProfondeurNavigationsTest` |8 |0 |0 |0
 |`VolumeSourcesTest` |9 |0 |0 |0
 |`NombreDiagnosticsTest` |6 |0 |0 |0
-|`BudgetGenerationTest` |7 |0 |0 |0
+|`BudgetGenerationTest` |9 |0 |0 |0
 |`DecouverteProcesseurTest` |9 |0 |0 |0
 |`ApplicationMavenTest` |11 |0 |0 |0
 |`CoexistenceProcesseursTest` |12 |0 |0 |0
@@ -414,7 +472,8 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`PaquetGenereTest` |10 |0 |0 |0
 |`VisibiliteModulesTest` |6 |0 |0 |0
 |`RobustesseCompilationTest` |5 |0 |0 |0
-|Total |183 |0 |0 |0
+|`ProfilsSortieTest` |51 |0 |0 |0
+|Total |236 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

@@ -28,6 +28,14 @@ class BudgetGenerationTest {
         rendre(gabarit(31, 40), appel("Bonjour"), "a".repeat(40) + "Léa🚀".repeat(106));
     }
 
+    @Test void accepteExactementSoixanteMilleUnitesAvecLEchappementHtml() throws Exception {
+        rendre(gabarit(31, 40), appel("Bonjour"), "a".repeat(40) + "Léa🚀".repeat(106), "html");
+    }
+
+    @Test void accepteExactementSoixanteMilleUnitesAvecLEchappementXml() throws Exception {
+        rendre(gabarit(31, 40), appel("Bonjour"), "a".repeat(40) + "Léa🚀".repeat(106), "xml");
+    }
+
     @Test void refuseSoixanteMilleQuatreUnitesAvantGeneration() throws Exception {
         // 128 + 4 * 12 + 106 * 48 + 106 * 32 * 16 + 39 * 12 = 60 004.
         refuser(gabarit(32, 39));
@@ -121,8 +129,14 @@ class BudgetGenerationTest {
     }
 
     private void rendre(String texte, String expression, String attendu) throws Exception {
+        rendre(texte, expression, attendu, "texte");
+    }
+
+    /** Le profil change l'appel d'échappement de chaque interpolation, pas le coût pondéré. */
+    private void rendre(String texte, String expression, String attendu, String profil) throws Exception {
         var compilation = BancCompilation.compiler(repertoire, Map.of("bonjour.verne", texte),
-                sources(expression), true);
+                sources(expression), true, repertoire.resolve("gabarits"),
+                BancCompilation.chargementVerne("-Averne.profil.sortie=" + profil));
         assertTrue(compilation.reussie(), compilation.diagnostics());
         var execution = BancCompilation.executer(compilation);
         assertAll(() -> assertEquals(0, execution.codeSortie(), execution.erreurs()),

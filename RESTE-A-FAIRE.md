@@ -18,8 +18,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Les origines Java sont intégrées par la PR nº 16 : **146 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Cette tranche ne désactive pas le nettoyage Maven.
 - Le calcul d’invalidation est intégré par la PR nº 17 : **157 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Les empreintes sont encore fournies par l’appelant ; le raccordement aux entrées et sorties Maven reste à réaliser.
 - Les corrections de la revue de code sont intégrées par la PR nº 19, et la version alignée sur Vidocq `0.4.0-SNAPSHOT` par la PR nº 20 : paquet généré obligatoire, visibilité des modules, chaînes annotées, erreurs de parcours et de `Filer`, interruption des tours, noms NFC, version source, compilation Maven des tests et hygiène de construction. **181 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Le rendu des grands documents en assemblage unique est prêt localement sur `fonctionnalite/rendu-hybride` : **183 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 141 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Le rendu des grands documents en assemblage unique est intégré par la PR nº 21 : **183 tests réussissent sur Mac**.
+- Les profils de sortie HTML et XML sont prêts localement sur `fonctionnalite/profils-html-xml` : **236 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 194 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -71,8 +72,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 ## 6. Étendre les sorties et leur sécurité
 
-- [ ] Définir les profils de sortie, types de média et encodages au-delà du profil texte.
-- [ ] Ajouter l'échappement contextuel et refuser les contextes non pris en charge.
+- [x] Livrer les profils HTML et XML : échappement des valeurs, refus des contextes non pris en charge et des caractères interdits en XML.
+- [ ] Choisir le profil par gabarit plutôt que pour toute l'invocation ; ajouter le profil JSON, les types de média et les encodages.
+- [ ] Ajouter la validation des URL dynamiques, aujourd'hui refusées en HTML.
 - [ ] Définir les types de contenus déclarés fiables et les encodeurs personnalisés.
 - [ ] Ajouter les sections personnalisées avec validation à la construction.
 
