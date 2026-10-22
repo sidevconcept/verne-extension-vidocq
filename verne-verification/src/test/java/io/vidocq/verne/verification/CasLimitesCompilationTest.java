@@ -87,7 +87,7 @@ class CasLimitesCompilationTest {
     @Test void refuseUneValeurNullePourUnParametreObligatoire() throws Exception {
         var compilation = BancCompilation.compiler(repertoire,
                 Map.of("bonjour.verne", "{@java.lang.String nom}{nom}"),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre((String) null)"), true);
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre((String) null)"), true);
         assertTrue(compilation.reussie(), compilation.diagnostics());
         var execution = BancCompilation.executer(compilation);
         assertAll(() -> assertNotEquals(0, execution.codeSortie()),
@@ -116,7 +116,7 @@ class CasLimitesCompilationTest {
 
     @Test void resoutDeuxAccesseursDeRecordsSansReflexion() throws Exception {
         var sources = new java.util.HashMap<>(BancCompilation.application(
-                "io.vidocq.verne.genere.Bonjour.rendre(new Personne(new Adresse(\"Paris\")))"));
+                "exemple.gabarits.Bonjour.rendre(new Personne(new Adresse(\"Paris\")))"));
         sources.put("exemple/Personne.java", "package exemple; public record Personne(Adresse adresse) {}");
         sources.put("exemple/Adresse.java", "package exemple; public record Adresse(String ville) {}");
         var compilation = BancCompilation.compiler(repertoire,
@@ -135,7 +135,7 @@ class CasLimitesCompilationTest {
     private void rendreParametre(String nom) throws Exception {
         var compilation = BancCompilation.compiler(repertoire,
                 Map.of("bonjour.verne", "{@java.lang.String " + nom + "}{" + nom + "}"),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre(\"valeur\")"), true);
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre(\"valeur\")"), true);
         assertTrue(compilation.reussie(), compilation.diagnostics());
         var execution = BancCompilation.executer(compilation);
         assertAll(() -> assertEquals(0, execution.codeSortie(), execution.erreurs()),
@@ -161,7 +161,7 @@ class CasLimitesCompilationTest {
 
     private void rendre(String source, String attendu) throws Exception {
         var compilation = BancCompilation.compiler(repertoire, Map.of("bonjour.verne", source),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre()"), true);
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre()"), true);
         assertTrue(compilation.reussie(), compilation.diagnostics());
         var execution = BancCompilation.executer(compilation);
         assertAll(() -> assertEquals(0, execution.codeSortie(), execution.erreurs()),

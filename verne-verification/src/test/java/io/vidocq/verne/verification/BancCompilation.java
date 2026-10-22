@@ -21,6 +21,9 @@ import javax.tools.ToolProvider;
 final class BancCompilation {
     private BancCompilation() {}
 
+    /** Paquet applicatif des classes générées ; un test peut fournir sa propre option -Averne.paquet. */
+    static final String PAQUET = "exemple.gabarits";
+
     /** Résultat immuable : statut du compilateur, diagnostics français et répertoires produits. */
     record Compilation(boolean reussie, String diagnostics, Path classes, Path sourcesGenerees) {}
 
@@ -37,17 +40,24 @@ final class BancCompilation {
         return compiler(racine, gabarits, sources, avecVerne, racine.resolve("gabarits"));
     }
 
+    /** Options du processeur réel chargé explicitement, suivies des options javac supplémentaires. */
+    static List<String> chargementVerne(String... supplements) {
+        Path projet = Path.of(System.getProperty("verne.racine.projet"));
+        String cheminProcesseur = System.getProperty("verne.chemin.processeur",
+                projet.resolve("verne-compilation/target/classes").toString());
+        var options = new ArrayList<>(List.of("-proc:full", "-processorpath", cheminProcesseur,
+                "-processor", "io.vidocq.verne.compilation.ProcesseurVerne"));
+        options.addAll(List.of(supplements));
+        return options;
+    }
+
     /** La racine déclarée, non nulle, peut différer des fixtures pour vérifier les refus et les alias. */
     static Compilation compiler(Path racine, Map<String, String> gabarits,
                                 Map<String, String> sources, boolean avecVerne,
                                 Path racineDeclaree) throws IOException {
         List<String> chargementProcesseur;
         if (avecVerne) {
-            Path projet = Path.of(System.getProperty("verne.racine.projet"));
-            String cheminProcesseur = System.getProperty("verne.chemin.processeur",
-                    projet.resolve("verne-compilation/target/classes").toString());
-            chargementProcesseur = List.of("-proc:full", "-processorpath", cheminProcesseur,
-                    "-processor", "io.vidocq.verne.compilation.ProcesseurVerne");
+            chargementProcesseur = chargementVerne();
         } else {
             chargementProcesseur = List.of("-proc:none");
         }
@@ -93,6 +103,9 @@ final class BancCompilation {
         if (avecVerne) {
             options.addAll(List.of("-Averne.racine.gabarits=" + racineDeclaree,
                     "-Averne.profil.sortie=texte"));
+            if (chargementProcesseur.stream().noneMatch(option -> option.startsWith("-Averne.paquet"))) {
+                options.add("-Averne.paquet=" + PAQUET);
+            }
         }
         try (var gestionnaire = compilateur.getStandardFileManager(
                 diagnostics, Locale.FRENCH, StandardCharsets.UTF_8)) {
@@ -111,17 +124,22 @@ final class BancCompilation {
 
     /**
      * Lance la classe d'application sur le chemin des modules, sans ouverture de module.
+     * Les modules supplémentaires, déjà compilés, complètent ce chemin sans le remplacer.
      * Le délai de garde de 15 secondes protège le banc ; ce n'est pas une mesure de performance.
      */
-    static Execution executer(Compilation compilation) throws IOException, InterruptedException {
+    static Execution executer(Compilation compilation, Path... modulesSupplementaires)
+            throws IOException, InterruptedException {
         Path racine = compilation.classes().getParent();
+        var modules = new ArrayList<String>(List.of(compilation.classes().toString()));
+        for (Path module : modulesSupplementaires) modules.add(module.toString());
+        String cheminModules = String.join(java.io.File.pathSeparator, modules);
         Path sortie = racine.resolve("sortie.txt");
         Path erreurs = racine.resolve("erreurs.txt");
         String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
         Path java = Path.of(System.getProperty("java.home"), "bin", executable);
         Process processus = new ProcessBuilder(java.toString(), "-Dfile.encoding=UTF-8",
                 "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8",
-                "--module-path", compilation.classes().toString(),
+                "--module-path", cheminModules,
                 "--module", "application.verne/exemple.Application")
                 .redirectOutput(sortie.toFile()).redirectError(erreurs.toFile()).start();
         try {

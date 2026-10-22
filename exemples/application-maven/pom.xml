@@ -36,6 +36,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.1</version>
+                <executions>
+                    <execution>
+                        <!-- Les tests utilisent les classes principales : Verne ne régénère pas les gabarits pour eux. -->
+                        <id>default-testCompile</id>
+                        <configuration><proc>none</proc></configuration>
+                    </execution>
+                </executions>
                 <configuration>
                     <proc>full</proc>
                     <annotationProcessorPaths>
@@ -47,6 +54,7 @@
                     </annotationProcessorPaths>
                     <compilerArgs>
                         <arg>-Averne.racine.gabarits=${project.basedir}/src/main/verne</arg>
+                        <arg>-Averne.paquet=exemple.gabarits</arg>
                         <arg>-Averne.profil.sortie=${verne.profil.sortie}</arg>
                     </compilerArgs>
                 </configuration>

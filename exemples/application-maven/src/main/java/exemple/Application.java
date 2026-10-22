@@ -1,6 +1,6 @@
 package exemple;
 
-import io.vidocq.verne.genere.Bonjour;
+import exemple.gabarits.Bonjour;
 
 /** Lance le rendu sans processeur ni moteur chargé à l'exécution. */
 public final class Application {

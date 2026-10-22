@@ -56,6 +56,7 @@ final class DecouverteProcesseurTest {
                     "-J-Dstderr.encoding=UTF-8", "-J-Dstdout.encoding=UTF-8",
                     "--release", "25", "-encoding", "UTF-8", option, archive.toString(),
                     "-Averne.racine.gabarits=" + gabarits, "-Averne.profil.sortie=texte",
+                    "-Averne.paquet=" + BancCompilation.PAQUET,
                     "-d", Files.createDirectories(racine.resolve("classes")).toString(), temoin.toString())
                     .redirectErrorStream(true).redirectOutput(journal.toFile()).start();
             try {
@@ -89,13 +90,13 @@ final class DecouverteProcesseurTest {
     private void verifierRendu(String option, Path processeur, Path racine) throws Exception {
         var options = List.of("-proc:full", option, processeur.toString());
         var sources = new java.util.HashMap<>(BancCompilation.application(
-                "io.vidocq.verne.genere.Bonjour.rendre(new Personne(\"Léa 🚀\"))"));
+                "exemple.gabarits.Bonjour.rendre(new Personne(\"Léa 🚀\"))"));
         sources.put("exemple/Personne.java", "package exemple; public record Personne(String nom) {}");
         var compilation = BancCompilation.compiler(racine,
                 Map.of("bonjour.verne", "{@exemple.Personne personne}Bonjour {personne.nom}\r\n"),
                 sources, true, racine.resolve("gabarits"), options);
         assertTrue(compilation.reussie(), compilation.diagnostics());
-        assertTrue(Files.exists(compilation.sourcesGenerees().resolve("io/vidocq/verne/genere/Bonjour.java")));
+        assertTrue(Files.exists(compilation.sourcesGenerees().resolve("exemple/gabarits/Bonjour.java")));
         var execution = BancCompilation.executer(compilation);
         assertEquals(0, execution.codeSortie(), execution.erreurs());
         assertEquals("Bonjour Léa 🚀\r\n", execution.sortie());
@@ -109,7 +110,7 @@ final class DecouverteProcesseurTest {
         assertFalse(compilation.reussie(), "Un processeur absent ne valide pas le gabarit inutilisé.");
         assertTrue(compilation.diagnostics().contains("VERNE-SYN-001"), compilation.diagnostics());
         assertTrue(compilation.diagnostics().contains("inutilise.verne:2:1"), compilation.diagnostics());
-        assertFalse(Files.exists(compilation.sourcesGenerees().resolve("io/vidocq/verne/genere/Inutilise.java")));
+        assertFalse(Files.exists(compilation.sourcesGenerees().resolve("exemple/gabarits/Inutilise.java")));
     }
 
     private void verifierAbsenceDeTraitement(Path racine, List<String> options) throws Exception {

@@ -27,8 +27,8 @@ class PortabiliteGabaritsTest {
     @Test void conserveDeuxNomsDistinctsEtLeurRenduUnicode() throws Exception {
         var compilation = BancCompilation.compiler(repertoire,
                 Map.of("premier/café.verne", "café", "second/cafes.verne", "cafe\u0301s"),
-                BancCompilation.application("io.vidocq.verne.genere.Café.rendre() + \" / \""
-                        + " + io.vidocq.verne.genere.Cafes.rendre()"), true);
+                BancCompilation.application("exemple.gabarits.Café.rendre() + \" / \""
+                        + " + exemple.gabarits.Cafes.rendre()"), true);
         assertTrue(compilation.reussie(), compilation.diagnostics());
         var execution = BancCompilation.executer(compilation);
         assertAll(() -> assertEquals(0, execution.codeSortie(), execution.erreurs()),

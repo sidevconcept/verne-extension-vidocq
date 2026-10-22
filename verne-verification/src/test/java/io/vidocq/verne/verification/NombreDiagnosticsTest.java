@@ -86,7 +86,7 @@ class NombreDiagnosticsTest {
                 () -> assertEquals(nombre, compter(compilation, "VERNE-TYP-001")),
                 () -> assertEquals(0, compter(compilation, "VERNE-LIM-007")),
                 () -> assertTrue(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Z.java"))));
+                        .resolve("exemple/gabarits/Z.java"))));
     }
 
     private void verifierSaturation(BancCompilation.Compilation compilation, String code,

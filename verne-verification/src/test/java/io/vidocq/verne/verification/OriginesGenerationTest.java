@@ -42,14 +42,14 @@ final class OriginesGenerationTest {
                 "exemple/Inutilise.java", "package exemple; public record Inutilise(int nombre) {}",
                 "exemple/Etranger.java", "package exemple; public record Etranger(String nom) {}"), true, false);
         assertEquals(List.of("exemple.Modele.Personne", "exemple.Modele", "exemple.Inutilise",
-                "exemple.Adresse", "java.lang.String"), origines.get("io.vidocq.verne.genere.Bonjour"));
+                "exemple.Adresse", "java.lang.String"), origines.get("exemple.gabarits.Bonjour"));
     }
 
     @Test void isoleLesOriginesDeChaqueGabarit() throws Exception {
         var origines = compiler(repertoire, Map.of("bonjour.verne", "{@java.lang.String nom}{nom}",
                 "statique.verne", "Texte"), Map.of(), true, false);
-        assertEquals(List.of("java.lang.String"), origines.get("io.vidocq.verne.genere.Bonjour"));
-        assertEquals(List.of(), origines.get("io.vidocq.verne.genere.Statique"));
+        assertEquals(List.of("java.lang.String"), origines.get("exemple.gabarits.Bonjour"));
+        assertEquals(List.of(), origines.get("exemple.gabarits.Statique"));
     }
 
     @Test void nePubliePasLesOriginesDunGabaritRefuse() throws Exception {
@@ -61,13 +61,13 @@ final class OriginesGenerationTest {
     @Test void reprendLesOriginesDuModeleGenereAuTourSuivant() throws Exception {
         var origines = compiler(repertoire, Map.of("bonjour.verne", "{@exemple.Personne p}{p.nom}"),
                 Map.of(), true, true);
-        assertEquals(List.of("exemple.Personne", "java.lang.String"), origines.get("io.vidocq.verne.genere.Bonjour"));
+        assertEquals(List.of("exemple.Personne", "java.lang.String"), origines.get("exemple.gabarits.Bonjour"));
     }
 
     @Test void neDeclarePasDeTypePourUnScalairePrimitif() throws Exception {
         var origines = compiler(repertoire, Map.of("bonjour.verne", "{@exemple.Nombre n}{n.valeur}"),
                 Map.of("exemple/Nombre.java", "package exemple; public record Nombre(int valeur) {}"), true, false);
-        assertEquals(List.of("exemple.Nombre"), origines.get("io.vidocq.verne.genere.Bonjour"));
+        assertEquals(List.of("exemple.Nombre"), origines.get("exemple.gabarits.Bonjour"));
     }
 
     @Test void conserveDesCollectesIndependantesEnConcurrence() throws Exception {
@@ -76,8 +76,8 @@ final class OriginesGenerationTest {
                     Map.of("bonjour.verne", "{@java.lang.String nom}{nom}"), Map.of(), true, false));
             var seconde = execution.submit(() -> compiler(repertoire.resolve("deux"),
                     Map.of("bonjour.verne", "Texte"), Map.of(), true, false));
-            assertEquals(List.of("java.lang.String"), premiere.get().get("io.vidocq.verne.genere.Bonjour"));
-            assertEquals(List.of(), seconde.get().get("io.vidocq.verne.genere.Bonjour"));
+            assertEquals(List.of("java.lang.String"), premiere.get().get("exemple.gabarits.Bonjour"));
+            assertEquals(List.of(), seconde.get().get("exemple.gabarits.Bonjour"));
         }
     }
 

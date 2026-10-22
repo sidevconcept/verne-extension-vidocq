@@ -74,7 +74,7 @@ final class ApplicationMavenTest {
         try (var jar = new JarFile(archive.toFile())) {
             assertNotNull(jar.getJarEntry("module-info.class"));
             assertNotNull(jar.getJarEntry("exemple/Personne.class"));
-            assertNotNull(jar.getJarEntry("io/vidocq/verne/genere/Bonjour.class"));
+            assertNotNull(jar.getJarEntry("exemple/gabarits/Bonjour.class"));
             assertTrue(jar.stream().noneMatch(entree -> entree.getName().startsWith("io/vidocq/verne/compilation/")
                     || entree.getName().endsWith(".verne") || entree.getName().endsWith(".jar")));
         }
@@ -82,6 +82,26 @@ final class ApplicationMavenTest {
                 application.resolve("target/generated-sources/annotations")));
         assertEquals(0, execution.codeSortie(), execution.erreurs());
         assertEquals("Bonjour Léa 🚀\r\n", execution.sortie());
+    }
+
+    /** Les tests utilisent les classes principales : aucune copie des gabarits n'est générée pour eux. */
+    @Test void neRegenerePasLesGabaritsPendantLaCompilationDesTests() throws Exception {
+        Path application = preparerApplication();
+        Path test = application.resolve("src/test/java/exemple/RenduTest.java");
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, """
+                package exemple;
+                final class RenduTest {
+                    String rendu() { return exemple.gabarits.Bonjour.rendre(new Personne("Léa")); }
+                }
+                """);
+        var construction = construire(application.resolve("pom.xml"), "test-compile");
+        assertEquals(0, construction.codeSortie(), construction.journal());
+        assertTrue(Files.exists(application.resolve("target/test-classes/exemple/RenduTest.class")));
+        assertTrue(Files.exists(application.resolve("target/classes/exemple/gabarits/Bonjour.class")));
+        assertFalse(Files.exists(application.resolve("target/test-classes/exemple/gabarits")), construction.journal());
+        assertFalse(Files.exists(application.resolve(
+                "target/generated-test-sources/test-annotations/exemple/gabarits")), construction.journal());
     }
 
     @Test void refuseUnGabaritInutiliseInvalide() throws Exception {
@@ -150,14 +170,14 @@ final class ApplicationMavenTest {
         assertEquals(0, execution.codeSortie(), execution.erreurs());
         assertEquals("Salut Léa 🚀\r\n", execution.sortie());
         try (var jar = new JarFile(archive.toFile())) {
-            assertNotNull(jar.getJarEntry("io/vidocq/verne/genere/Ajout.class"));
+            assertNotNull(jar.getJarEntry("exemple/gabarits/Ajout.class"));
         }
         Files.delete(gabarits.resolve("ajout.verne"));
         var suppression = construire(application.resolve("pom.xml"), arguments);
         assertEquals(0, suppression.codeSortie(), suppression.journal());
-        assertFalse(Files.exists(application.resolve("target/generated-sources/annotations/io/vidocq/verne/genere/Ajout.java")));
+        assertFalse(Files.exists(application.resolve("target/generated-sources/annotations/exemple/gabarits/Ajout.java")));
         try (var jar = new JarFile(archive.toFile())) {
-            assertNull(jar.getJarEntry("io/vidocq/verne/genere/Ajout.class"));
+            assertNull(jar.getJarEntry("exemple/gabarits/Ajout.class"));
         }
         Files.writeString(gabarits.resolve("invalide.verne"), "{nom");
         var invalide = construire(application.resolve("pom.xml"), arguments);
@@ -170,8 +190,8 @@ final class ApplicationMavenTest {
         Files.delete(bonjour);
         var dependant = construire(application.resolve("pom.xml"), arguments);
         assertNotEquals(0, dependant.codeSortie(), dependant.journal());
-        assertTrue(dependant.journal().contains("io.vidocq.verne.genere"), dependant.journal());
-        assertFalse(Files.exists(application.resolve("target/classes/io/vidocq/verne/genere/Bonjour.class")));
+        assertTrue(dependant.journal().contains("exemple.gabarits"), dependant.journal());
+        assertFalse(Files.exists(application.resolve("target/classes/exemple/gabarits/Bonjour.class")));
         assertFalse(Files.exists(archive));
     }
 
@@ -185,7 +205,7 @@ final class ApplicationMavenTest {
         try (var jar = new JarFile(archive.toFile())) {
             assertNotNull(jar.getJarEntry("module-info.class"));
             assertNotNull(jar.getJarEntry("exemple/PersonneGeneree.class"));
-            assertNotNull(jar.getJarEntry("io/vidocq/verne/genere/Bonjour.class"));
+            assertNotNull(jar.getJarEntry("exemple/gabarits/Bonjour.class"));
             assertTrue(jar.stream().noneMatch(entree -> entree.getName().startsWith("exemple/voisin/")
                     || entree.getName().startsWith("io/vidocq/verne/compilation/")
                     || entree.getName().endsWith(".verne") || entree.getName().endsWith(".jar")));

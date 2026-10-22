@@ -29,9 +29,9 @@ class ProfondeurNavigationsTest {
         assertAll(() -> assertFalse(compilation.reussie()),
                 () -> assertTrue(compilation.diagnostics().contains("VERNE-LIM-005"), compilation.diagnostics()),
                 () -> assertFalse(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Bonjour.java"))),
+                        .resolve("exemple/gabarits/Bonjour.java"))),
                 () -> assertTrue(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Salut.java"))));
+                        .resolve("exemple/gabarits/Salut.java"))));
     }
 
     @Test void refuseAvantResolutionAvecPositionApresCrLfEtEmoji() throws Exception {
@@ -59,7 +59,7 @@ class ProfondeurNavigationsTest {
     }
 
     @Test void refuseUneValeurTerminaleNulleALaBorne() throws Exception {
-        verifierRendu(gabarit(32), "try { return io.vidocq.verne.genere.Bonjour.rendre(chaine(32, null));"
+        verifierRendu(gabarit(32), "try { return exemple.gabarits.Bonjour.rendre(chaine(32, null));"
                 + " } catch (NullPointerException erreur) { return erreur.getMessage(); }",
                 "VERNE-REN-001 : valeur interpolée nulle.");
     }
@@ -77,7 +77,7 @@ class ProfondeurNavigationsTest {
     }
 
     private String appel(int profondeur) {
-        return "io.vidocq.verne.genere.Bonjour.rendre(chaine(" + profondeur + ", \"Léa🚀\"))";
+        return "exemple.gabarits.Bonjour.rendre(chaine(" + profondeur + ", \"Léa🚀\"))";
     }
 
     private Map<String, String> sources(String corps) {

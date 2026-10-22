@@ -6,7 +6,7 @@
 
 Une application d'exemple autonome réside dans `exemples/application-maven`. Son POM n'hérite pas du parent Verne et elle ne fait pas partie du réacteur du moteur. Elle cible Java 25, possède un module explicite et déclare le compilateur Verne uniquement dans `annotationProcessorPaths` du greffon de compilation Maven 3.14.1, avec `proc=full`, sans nommer le processeur. Aucun artefact Verne ni bibliothèque tierce n'est une dépendance applicative d'exécution.
 
-Le compilateur doit être installé dans un dépôt Maven accessible à l'application ; la tranche n'implique aucune publication dans un dépôt d'artefacts distant. L'application fournit une racine locale de gabarits par `${project.basedir}/src/main/verne` et le profil `texte`. Ces chaînes de configuration sont non nulles ; une option absente conserve les erreurs existantes du compilateur. Les paramètres du rendu restent obligatoires et non nuls selon le contrat du moteur.
+Le compilateur doit être installé dans un dépôt Maven accessible à l'application ; la tranche n'implique aucune publication dans un dépôt d'artefacts distant. L'application fournit une racine locale de gabarits par `${project.basedir}/src/main/verne`, le paquet `exemple.gabarits` et le profil `texte`. Ces chaînes de configuration sont non nulles ; une option absente conserve les erreurs existantes du compilateur. Les paramètres du rendu restent obligatoires et non nuls selon le contrat du moteur.
 
 Une construction propre `clean package` compile les modèles Java sources et les gabarits dans la même invocation. L'exemple imprime exactement `Bonjour Léa 🚀`, suivi de CRLF. La JVM exécute uniquement le module applicatif empaqueté dans son JAR, sans le compilateur ni les sources de gabarits. Ce JAR contient le descripteur de module, le modèle, l'application et la classe de rendu générée.
 
@@ -33,6 +33,8 @@ La première commande installe le parent et le compilateur après les tests du r
 
 Le POM de l'exemple fixe les versions des greffons et place `verne-compilation` dans `annotationProcessorPaths`, sans section `dependencies`. La version du compilateur est portée par `verne.version`. Les sources générées se trouvent sous `target/generated-sources/annotations` et les gabarits sous `src/main/verne` ; ce dernier répertoire n'est pas inclus dans les ressources de l'archive. Une règle `.gitattributes` propre au gabarit témoin désactive la normalisation de ses octets pour conserver CRLF après extraction Git et dans les archives de sources.
 
+La configuration du greffon s'applique aussi à la compilation des tests. Sans précaution, Verne régénérerait alors les gabarits principaux dans `target/generated-test-sources/test-annotations` et une copie de chaque classe masquerait la classe principale pendant les tests. Les exemples désactivent donc le traitement des annotations pour l'exécution `default-testCompile` (`proc=none`) : les tests utilisent les classes principales. Une application dont les tests ont besoin d'autres processeurs doit les déclarer pour cette exécution sans les options Verne.
+
 Utiliser une construction propre pour cette tranche. La détection incrémentale des modifications ou suppressions de seuls fichiers `.verne` n'est pas encore qualifiée : une commande `compile` sans nettoyage ne constitue pas la preuve de leur revérification.
 
 == Preuves de vérification
@@ -45,4 +47,4 @@ Le dépôt Maven temporaire reçoit le compilateur construit à partir des sourc
 
 Les exemples appliquent désormais le link:reconstructions-maven.adoc[contrat des reconstructions Maven] : nettoyage automatique des sorties à `initialize`, puis compilation complète, y compris lors d’un simple `package`.
 
-Trois scénarios de reconstruction successifs portent maintenant `ApplicationMavenTest` à dix tests.
+Trois scénarios de reconstruction successifs portent `ApplicationMavenTest` à dix tests. Un onzième compile une source de test avec `test-compile` et vérifie qu'aucune copie des classes générées n'apparaît dans `target/test-classes` ni dans `target/generated-test-sources` ; il échouait avant l'ajout de `proc=none` pour `default-testCompile`.

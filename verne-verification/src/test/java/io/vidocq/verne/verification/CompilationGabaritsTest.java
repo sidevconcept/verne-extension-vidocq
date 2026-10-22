@@ -20,15 +20,15 @@ class CompilationGabaritsTest {
                 Map.of("exemple/Ancrage.java", "package exemple; public class Ancrage {}"), true);
         assertTrue(compilation.reussie(), compilation.diagnostics());
         assertAll(() -> assertTrue(Files.isRegularFile(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Bonjour.java")), "Source du gabarit absente"),
+                        .resolve("exemple/gabarits/Bonjour.java")), "Source du gabarit absente"),
                 () -> assertTrue(Files.isRegularFile(compilation.classes()
-                        .resolve("io/vidocq/verne/genere/Bonjour.class")), "Classe du gabarit absente"));
+                        .resolve("exemple/gabarits/Bonjour.class")), "Classe du gabarit absente"));
     }
 
     @Test
     void resoutUnRecordSourcePendantLaMemeCompilation() throws Exception {
         var sources = new java.util.HashMap<>(BancCompilation.application(
-                "io.vidocq.verne.genere.Bonjour.rendre(new Personne(\"Léa\"))"));
+                "exemple.gabarits.Bonjour.rendre(new Personne(\"Léa\"))"));
         sources.put("exemple/Personne.java", "package exemple; public record Personne(String nom) {}");
         var compilation = BancCompilation.compiler(repertoire, Map.of("bonjour.verne",
                 "{@exemple.Personne personne}Bonjour {personne.nom}"), sources, true);
@@ -84,12 +84,12 @@ class CompilationGabaritsTest {
     @Test
     void produitLaMemeSourceDansDeuxRepertoiresDifferents() throws Exception {
         var gabarits = Map.of("bonjour.verne", "{@java.lang.String nom}Bonjour {nom}");
-        var sources = BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre(\"Léa\")");
+        var sources = BancCompilation.application("exemple.gabarits.Bonjour.rendre(\"Léa\")");
         var premiere = BancCompilation.compiler(repertoire.resolve("premier"), gabarits, sources, true);
         var seconde = BancCompilation.compiler(repertoire.resolve("second"), gabarits, sources, true);
         assertTrue(premiere.reussie(), premiere.diagnostics());
         assertTrue(seconde.reussie(), seconde.diagnostics());
-        Path relatif = Path.of("io/vidocq/verne/genere/Bonjour.java");
+        Path relatif = Path.of("exemple/gabarits/Bonjour.java");
         String source = Files.readString(premiere.sourcesGenerees().resolve(relatif));
         assertAll(() -> assertEquals(source, Files.readString(seconde.sourcesGenerees().resolve(relatif))),
                 () -> assertFalse(source.contains(repertoire.toString()), "Chemin absolu dans le code généré"));

@@ -30,7 +30,7 @@ class RacinesEtLiensGabaritsTest {
         Path cible = Files.createDirectory(repertoire.resolve("cible"));
         Files.createSymbolicLink(repertoire.resolve("gabarits"), cible);
         var compilation = BancCompilation.compiler(repertoire, Map.of("bonjour.verne", "été 🚀"),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre()"), true);
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre()"), true);
         rendre(compilation, "été 🚀");
     }
 
@@ -39,7 +39,7 @@ class RacinesEtLiensGabaritsTest {
         Files.writeString(gabarits.resolve("contenu.txt"), "été 🚀");
         Files.createSymbolicLink(gabarits.resolve("bonjour.verne"), Path.of("contenu.txt"));
         var compilation = BancCompilation.compiler(repertoire, Map.of(),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre()"), true);
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre()"), true);
         rendre(compilation, "été 🚀");
     }
 
@@ -53,7 +53,7 @@ class RacinesEtLiensGabaritsTest {
                 () -> assertFalse(compilation.diagnostics().contains("VERNE-TYP-001")),
                 () -> assertFalse(compilation.diagnostics().contains("{inconnu}")),
                 () -> assertFalse(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Bonjour.java"))));
+                        .resolve("exemple/gabarits/Bonjour.java"))));
     }
 
     @Test void refuseUnLienDeFichierCasse() throws Exception {

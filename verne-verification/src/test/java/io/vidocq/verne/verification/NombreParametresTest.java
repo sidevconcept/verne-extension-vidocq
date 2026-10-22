@@ -34,7 +34,7 @@ class NombreParametresTest {
                 () -> assertFalse(compilation.diagnostics().contains("confidentiel")),
                 () -> assertFalse(compilation.diagnostics().contains(repertoire.toString())),
                 () -> assertFalse(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Bonjour.java"))));
+                        .resolve("exemple/gabarits/Bonjour.java"))));
     }
 
     @Test void conserveLeDiagnosticDeDeclarationDupliqueeALaLimite() throws Exception {
@@ -59,11 +59,11 @@ class NombreParametresTest {
         assertAll(() -> assertFalse(compilation.reussie()),
                 () -> assertTrue(compilation.diagnostics().contains("VERNE-LIM-004"), compilation.diagnostics()),
                 () -> assertFalse(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/A.java"))),
+                        .resolve("exemple/gabarits/A.java"))),
                 () -> assertTrue(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Bonjour.java"))),
+                        .resolve("exemple/gabarits/Bonjour.java"))),
                 () -> assertTrue(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Salut.java"))));
+                        .resolve("exemple/gabarits/Salut.java"))));
     }
 
     private String declarations(int nombre) {
@@ -80,7 +80,7 @@ class NombreParametresTest {
                 .collect(Collectors.joining("|"));
         var compilation = BancCompilation.compiler(repertoire,
                 Map.of("bonjour.verne", prefixe + declarations(nombre) + interpolations),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre(" + arguments + ")"), true);
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre(" + arguments + ")"), true);
         assertTrue(compilation.reussie(), compilation.diagnostics());
         var execution = BancCompilation.executer(compilation);
         assertAll(() -> assertEquals(0, execution.codeSortie(), execution.erreurs()),
