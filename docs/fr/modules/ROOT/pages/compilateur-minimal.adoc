@@ -145,7 +145,7 @@ Les références obligatoires sont contrôlées avant le rendu, et chaque naviga
 Une référence nulle provoque `NullPointerException` avec un message français portant `VERNE-REN-001` ; aucun contenu métier n'est inclus dans ce message.
 Une chaîne vide demeure une valeur valide.
 
-La génération utilise un tampon local par appel ; aucun état global ou contexte de requête n'est ajouté.
+La génération utilise un tampon local par appel ou, pour les grands documents, un assemblage unique ; aucun état global ou contexte de requête n'est ajouté.
 Les variables générées évitent les collisions avec les noms de paramètres, y compris `java`, `resultat` et le nom de tampon proposé par le générateur.
 Les données interpolées ne sont jamais analysées comme des directives.
 Le profil texte n'échappe pas les caractères HTML ; il ne doit donc pas être utilisé comme une protection HTML.
@@ -155,13 +155,15 @@ Le texte est fractionné en fragments d'au plus 4 000 unités UTF-16, sans scind
 Cette borne évite de dépasser la taille d'une constante de classe Java, même avec des caractères dont l'encodage modifié nécessite plusieurs octets.
 Le contrat n'inclut pas encore une sortie en flux, un plafond de caractères rendus ou un rendu asynchrone.
 
-=== Préparation du tampon des grands documents
+=== Assemblage unique des grands documents
 
-À partir de 4 000 unités UTF-16 de texte statique rendu, la génération prépare la capacité du tampon à partir du texte et des valeurs interpolées. Les déclarations et commentaires retirés ne participent pas à cette longueur.
-Chaque interpolation est évaluée une seule fois, dans l'ordre du gabarit, après le contrôle des paramètres obligatoires. Sa représentation textuelle est conservée dans une variable locale avant l'assemblage ; les primitives gardent la représentation de leur ajout au tampon Java.
-Les chaînes vides, les diagnostics de nullité et le découpage des constantes restent inchangés. Les noms locaux évitent ceux de tous les paramètres. Aucun état partagé, dépendance tierce ou second appel d'accesseur n'est introduit.
-La somme des longueurs est calculée en `long`, puis saturée à la capacité entière maximale du tampon pour éviter un débordement arithmétique. Ce calcul n'ajoute pas de limite de rendu ; une allocation impossible reste soumise aux erreurs de ressources de la JVM.
-Les documents plus petits conservent leur stratégie d'assemblage. Le contrôle d'allocations de vérification utilise `jdk.management` uniquement dans son application de test : sur le JDK 25 de référence, le rendu d'un bloc ASCII de 65 536 caractères suivi d'une valeur Unicode doit allouer moins de sept octets par caractère statique après échauffement. Ce budget ciblé n'est pas une garantie globale de mémoire ni un seuil de temps d'exécution.
+À partir de 4 000 unités UTF-16 de texte statique rendu, la classe générée n'utilise plus de tampon. Les déclarations et commentaires retirés ne participent pas à cette longueur.
+Chaque interpolation est évaluée une seule fois, dans l'ordre du gabarit, après le contrôle des paramètres obligatoires. Sa représentation textuelle est conservée dans une variable locale ; les primitives gardent la représentation Java de `String.valueOf`.
+Le document est ensuite assemblé en une seule opération à partir des fragments statiques et de ces représentations, dans l'ordre du gabarit. La longueur et l'encodage interne de la chaîne finale sont déterminés avant la copie : le texte est copié une seule fois, y compris lorsqu'une valeur hors Latin-1 suit un long texte Latin-1. Cet assemblage utilise uniquement le JDK.
+Les chaînes vides, les diagnostics de nullité, le découpage des constantes et le budget pondéré de génération restent inchangés. Les noms locaux évitent ceux de tous les paramètres. Aucun état partagé, dépendance tierce ou second appel d'accesseur n'est introduit ; chaque appel n'utilise que ses variables locales et reste sûr en concurrence.
+Ce mode n'ajoute pas de limite de rendu : un document dont la longueur dépasse la capacité d'une chaîne Java provoque l'erreur de ressources levée par la JVM.
+Sous le seuil, la stratégie et les sources générées sont inchangées : un tampon local par appel, sans évaluation préalable des valeurs. Ce choix est mesuré : l'assemblage unique ralentit les petits documents.
+Les contrôles d'allocations de vérification utilisent `jdk.management` uniquement dans leur application de test. Sur le JDK 25 de référence, après échauffement, le rendu d'un bloc ASCII de 65 536 caractères doit allouer, par caractère statique, moins de 1,5 octet lorsqu'il est suivi d'une valeur Latin-1, moins de 2,5 octets lorsqu'il est suivi d'une valeur hors Latin-1, et moins de sept octets dans le contrôle historique. Ces budgets ciblés ne sont ni une garantie globale de mémoire ni un seuil de temps d'exécution.
 
 === Nombre de paramètres déclarés
 
@@ -351,10 +353,29 @@ Après correction, `./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 18
 
 La construction impose aussi Java 25 et Maven 3.9.16 au minimum avec `maven-enforcer-plugin`, fixe les versions des greffons d'installation et de déploiement et l'horodatage des archives : deux constructions successives produisent une archive `verne-compilation` identique.
 
+== Assemblage unique des grands documents : vérification
+
+Deux contrôles d'allocations de `GrandsDocumentsTest` ont d'abord échoué pour la cause attendue : 131 168 octets par rendu avec une valeur Latin-1, soit deux copies du texte, et 327 816 octets avec une valeur hors Latin-1, soit un élargissement puis une copie. Après génération de l'assemblage unique, les huit tests de la classe réussissent. Le test existant de collision de noms a aussi détecté qu'un paramètre nommé `java` masquait un appel qualifié ; l'assemblage passe donc par un import statique.
+Les sources générées pour les gabarits sous le seuil sont identiques octet par octet à celles de la révision précédente. Pour les grands documents, la méthode de rendu reste dans le budget de génération : les tailles observées par `BudgetGenerationTest` passent de 40 129 à 27 017 octets et de 40 430 à 39 395 octets.
+`./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 183 tests, zéro échec, erreur ou test ignoré.
+
+Une mesure indépendante compare la révision précédente et la candidate, dans l'ordre référence, candidate, candidate, référence. Chaque passe compte trois JVM, cinq échauffements et cinq mesures d'une seconde, avec le profileur GC. Le poste est passé de la batterie au secteur pendant la campagne ; les deux passes de référence restent concordantes.
+
+[cols="2,2,2,1,1",options="header"]
+|===
+|Document |Avant (ns, octets) |Après (ns, octets) |Temps |Allocations
+|Bloc de 64 Kio, valeur Latin-1 |2 792 · 131 144 |1 541 · 65 760 |−44,8 % |−49,9 %
+|Bloc de 64 Kio, valeur hors Latin-1 |5 182 · 229 468 |2 313 · 98 532 |−55,4 % |−57,1 %
+|Petits documents (3 cas) |sources identiques |sources identiques |+0,3 à +2,3 % |0 %
+|Premier document, JVM neuve |287 µs (médiane) |293 µs (médiane) |non significatif |–
+|===
+
+Les écarts des petits documents restent dans le bruit de mesure, puisque leur code est identique. Ces résultats proviennent d'un poste partagé ; ils ne constituent ni une garantie en production ni une campagne de référence.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 139 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules et robustesse ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 141 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules et robustesse ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -364,7 +385,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 181 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 183 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -378,7 +399,7 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`RacinesEtLiensGabaritsTest` |9 |0 |0 |0
 |`NombreGabaritsTest` |4 |0 |0 |0
 |`NombreInterpolationsTest` |5 |0 |0 |0
-|`GrandsDocumentsTest` |6 |0 |0 |0
+|`GrandsDocumentsTest` |8 |0 |0 |0
 |`NombreParametresTest` |6 |0 |0 |0
 |`ProfondeurNavigationsTest` |8 |0 |0 |0
 |`VolumeSourcesTest` |9 |0 |0 |0
@@ -393,7 +414,7 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`PaquetGenereTest` |10 |0 |0 |0
 |`VisibiliteModulesTest` |6 |0 |0 |0
 |`RobustesseCompilationTest` |5 |0 |0 |0
-|Total |181 |0 |0 |0
+|Total |183 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

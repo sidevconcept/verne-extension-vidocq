@@ -71,7 +71,7 @@ final class CompilateurGabarit {
             verifierBudgetGeneration();
             var instructions = new ArrayList<String>();
             var valeurs = new ArrayList<String>();
-            var longueurs = new ArrayList<String>();
+            var elements = new ArrayList<String>();
             int longueurStatique = parties.stream().filter(partie -> !partie.interpolation())
                     .mapToInt(partie -> partie.contenu().length()).sum();
             boolean grandDocument = longueurStatique >= 4_000;
@@ -82,16 +82,17 @@ final class CompilateurGabarit {
                     if (grandDocument) {
                         String valeur = nomLibre("$verneValeur" + valeurs.size());
                         valeurs.add("var " + valeur + " = valueOf(" + expression + ");\n");
-                        longueurs.add(valeur + ".length()");
-                        expression = valeur;
+                        elements.add(valeur);
+                    } else {
+                        instructions.add(resultat + ".append(" + expression + ");\n");
                     }
-                    instructions.add(resultat + ".append(" + expression + ");\n");
                 } else {
                     String contenu = partie.contenu();
                     for (int debut = 0; debut < contenu.length();) {
                         int fin = finFragment(contenu, debut);
-                        instructions.add(resultat + ".append(\""
-                                + ProcesseurVerne.echapper(contenu.substring(debut, fin)) + "\");\n");
+                        String litteral = "\"" + ProcesseurVerne.echapper(contenu.substring(debut, fin)) + "\"";
+                        if (grandDocument) elements.add(litteral);
+                        else instructions.add(resultat + ".append(" + litteral + ");\n");
                         debut = fin;
                     }
                 }
@@ -101,7 +102,7 @@ final class CompilateurGabarit {
             try (var sortie = source.openWriter()) {
                 sortie.write("package " + paquet + ";\n"
                         + "import static java.util.Objects.requireNonNull;\n"
-                        + (grandDocument ? "import static java.lang.String.valueOf;\nimport static java.lang.Math.min;\n" : "")
+                        + (grandDocument ? "import static java.lang.String.join;\nimport static java.lang.String.valueOf;\n" : "")
                         + "/** Gabarit textuel compilé, sans analyse à la demande. */\n"
                         + "public final class " + classe + " {\nprivate " + classe + "() {}\n");
                 sortie.write("/** Produit le document texte ; aucun état partagé entre appels.\n");
@@ -121,13 +122,14 @@ final class CompilateurGabarit {
                             + ", \"VERNE-REN-001 : paramètre obligatoire nul.\");\n");
                 }
                 for (String valeur : valeurs) sortie.write(valeur);
-                String capacite = grandDocument
-                        ? "(int) min(2_147_483_647L, " + longueurStatique + "L"
-                            + (longueurs.isEmpty() ? "" : " + " + String.join(" + ", longueurs)) + ")"
-                        : "";
-                sortie.write("var " + resultat + " = new java.lang.StringBuilder(" + capacite + ");\n");
-                for (String instruction : instructions) sortie.write(instruction);
-                sortie.write("return " + resultat + ".toString();\n}\n}\n");
+                if (grandDocument) {
+                    // Longueur et encodage connus avant l'unique copie ; l'import statique évite qu'un paramètre masque java.
+                    sortie.write("return join(\"\",\n" + String.join(",\n", elements) + ");\n}\n}\n");
+                } else {
+                    sortie.write("var " + resultat + " = new java.lang.StringBuilder();\n");
+                    for (String instruction : instructions) sortie.write(instruction);
+                    sortie.write("return " + resultat + ".toString();\n}\n}\n");
+                }
             }
         } catch (Refus refus) {
             if (refus.differe) return refus.getMessage();

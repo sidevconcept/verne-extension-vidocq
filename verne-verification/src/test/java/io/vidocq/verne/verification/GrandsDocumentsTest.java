@@ -14,6 +14,21 @@ class GrandsDocumentsTest {
     private static final String PREFIXE = "a".repeat(65_536);
 
     @Test void respecteLeBudgetDAllocationsDuDocumentUnicodeDeSoixanteQuatreKio() throws Exception {
+        verifierBudget("Léa🚀", 70);
+    }
+
+    /** Assemblage unique : le texte Latin-1 n'est copié qu'une fois, sans tampon intermédiaire. */
+    @Test void copieUneSeuleFoisUnGrandDocumentLatin1() throws Exception {
+        verifierBudget("Léa", 15);
+    }
+
+    /** Une valeur hors Latin-1 en fin de document ne provoque ni élargissement ni seconde copie du texte. */
+    @Test void copieUneSeuleFoisUnGrandDocumentSuiviDUneValeurHorsLatin1() throws Exception {
+        verifierBudget("Léa🚀", 25);
+    }
+
+    /** Budget moyen, en dixièmes d'octet par caractère statique, après échauffement et sur 100 rendus. */
+    private void verifierBudget(String valeur, int dixiemesParCaractere) throws Exception {
         var sources = Map.of("module-info.java", "module application.verne { requires java.management; requires jdk.management; }",
                 "exemple/Application.java", """
                 package exemple;
@@ -25,17 +40,17 @@ class GrandsDocumentsTest {
                             throw new IllegalStateException("Comptage des allocations indisponible dans ce JDK de vérification.");
                         }
                         compteur.setThreadAllocatedMemoryEnabled(true);
-                        for (int index = 0; index < 2_000; index++) temoin = exemple.gabarits.Bonjour.rendre("Léa🚀");
+                        for (int index = 0; index < 2_000; index++) temoin = exemple.gabarits.Bonjour.rendre("%1$s");
                         long fil = Thread.currentThread().threadId();
                         long debut = compteur.getThreadAllocatedBytes(fil);
-                        for (int index = 0; index < 100; index++) temoin = exemple.gabarits.Bonjour.rendre("Léa🚀");
+                        for (int index = 0; index < 100; index++) temoin = exemple.gabarits.Bonjour.rendre("%1$s");
                         long moyenne = (compteur.getThreadAllocatedBytes(fil) - debut) / 100;
-                        if (moyenne >= 7L * 65_536) throw new AssertionError("Budget d'allocations dépassé : " + moyenne);
-                        if (!temoin.equals("a".repeat(65_536) + "Léa🚀")) throw new AssertionError("Rendu incorrect.");
+                        if (moyenne >= %2$dL * 65_536 / 10) throw new AssertionError("Budget d'allocations dépassé : " + moyenne);
+                        if (!temoin.equals("a".repeat(65_536) + "%1$s")) throw new AssertionError("Rendu incorrect.");
                         System.out.print("budget respecté");
                     }
                 }
-                """);
+                """.formatted(valeur, dixiemesParCaractere));
         verifier("{@java.lang.String nom}" + PREFIXE + "{nom}", sources, "budget respecté");
     }
 
