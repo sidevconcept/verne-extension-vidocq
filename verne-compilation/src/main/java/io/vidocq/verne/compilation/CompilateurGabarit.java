@@ -31,6 +31,7 @@ final class CompilateurGabarit {
     private final Consumer<String> rapporterErreur;
     private final String paquet;
     private final VisibiliteModules visibilite;
+    private final Profil profil;
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
     private final LinkedHashSet<TypeElement> origines = new LinkedHashSet<>();
     private final List<Partie> parties = new ArrayList<>();
@@ -40,6 +41,8 @@ final class CompilateurGabarit {
     /** Le type symbolique est conservé pour vérifier chaque navigation avant génération. */
     private record Parametre(String nom, TypeMirror type) {}
     private record Partie(String contenu, boolean interpolation, int position) {}
+    /** Expression Java d'une interpolation ; texte vaut vrai pour une chaîne ou un char, seuls échappés. */
+    private record Resolution(String expression, boolean texte) {}
 
     /** Une tentative s'arrête sur un refus définitif ou un type encore absent. */
     private static final class Refus extends RuntimeException {
@@ -52,14 +55,15 @@ final class CompilateurGabarit {
 
     /**
      * Les arguments non nuls sont propres à l'invocation et partagent son budget d'erreurs ;
-     * le paquet est un nom qualifié déjà validé par le processeur.
+     * le paquet est un nom qualifié et le profil une valeur déjà validés par le processeur.
      */
     CompilateurGabarit(ProcessingEnvironment environnement, Consumer<String> rapporterErreur,
-                       String paquet, VisibiliteModules visibilite) {
+                       String paquet, VisibiliteModules visibilite, Profil profil) {
         this.environnement = environnement;
         this.rapporterErreur = rapporterErreur;
         this.paquet = paquet;
         this.visibilite = visibilite;
+        this.profil = profil;
     }
 
     /** Vérifie avant création ; diagnostic différé, ou null après génération ou refus définitif. */
@@ -69,6 +73,8 @@ final class CompilateurGabarit {
         try {
             analyser();
             verifierBudgetGeneration();
+            var emplacements = verifierContextes().iterator();
+            boolean echappement = false;
             var instructions = new ArrayList<String>();
             var valeurs = new ArrayList<String>();
             var elements = new ArrayList<String>();
@@ -78,10 +84,16 @@ final class CompilateurGabarit {
             String resultat = nomLibre("$verneResultat");
             for (Partie partie : parties) {
                 if (partie.interpolation()) {
-                    String expression = resoudre(partie);
+                    var resolution = resoudre(partie);
+                    boolean attribut = emplacements.hasNext() && emplacements.next();
+                    boolean aEchapper = profil != Profil.TEXTE && resolution.texte();
+                    echappement |= aEchapper;
+                    String expression = grandDocument ? "valueOf(" + resolution.expression() + ")" : resolution.expression();
+                    if (aEchapper) expression = profil == Profil.XML
+                            ? "echapper(" + expression + ", " + attribut + ")" : "echapper(" + expression + ")";
                     if (grandDocument) {
                         String valeur = nomLibre("$verneValeur" + valeurs.size());
-                        valeurs.add("var " + valeur + " = valueOf(" + expression + ");\n");
+                        valeurs.add("var " + valeur + " = " + expression + ";\n");
                         elements.add(valeur);
                     } else {
                         instructions.add(resultat + ".append(" + expression + ");\n");
@@ -124,12 +136,14 @@ final class CompilateurGabarit {
                 for (String valeur : valeurs) sortie.write(valeur);
                 if (grandDocument) {
                     // Longueur et encodage connus avant l'unique copie ; l'import statique évite qu'un paramètre masque java.
-                    sortie.write("return join(\"\",\n" + String.join(",\n", elements) + ");\n}\n}\n");
+                    sortie.write("return join(\"\",\n" + String.join(",\n", elements) + ");\n}\n");
                 } else {
                     sortie.write("var " + resultat + " = new java.lang.StringBuilder();\n");
                     for (String instruction : instructions) sortie.write(instruction);
-                    sortie.write("return " + resultat + ".toString();\n}\n}\n");
+                    sortie.write("return " + resultat + ".toString();\n}\n");
                 }
+                if (echappement) sortie.write(profil == Profil.XML ? ECHAPPEMENT_XML : ECHAPPEMENT_HTML);
+                sortie.write("}\n");
             }
         } catch (Refus refus) {
             if (refus.differe) return refus.getMessage();
@@ -163,6 +177,113 @@ final class CompilateurGabarit {
         if (fin < contenu.length() && Character.isHighSurrogate(contenu.charAt(fin - 1))) fin--;
         return fin;
     }
+
+    /**
+     * Profils HTML et XML : caractères interdits du gabarit XML, puis emplacement de chaque interpolation.
+     * Renvoie, dans l'ordre des interpolations, vrai pour une valeur d'attribut ; liste vide en profil texte.
+     */
+    private List<Boolean> verifierContextes() {
+        var emplacements = new ArrayList<Boolean>();
+        if (profil == Profil.TEXTE) return emplacements;
+        if (profil == Profil.XML) {
+            for (int index = 0; index < texte.length(); index++) {
+                char caractere = texte.charAt(index);
+                if (caractere < 0x20 && caractere != '\t' && caractere != '\n' && caractere != '\r'
+                        || caractere == 0xFFFE || caractere == 0xFFFF) {
+                    throw refus("VERNE-SYN-004", index, "caractère interdit par XML 1.0 dans le texte du gabarit.");
+                }
+            }
+        }
+        var contexte = new ContexteBalisage(profil);
+        String nomProfil = profil == Profil.XML ? "XML" : "HTML";
+        for (Partie partie : parties) {
+            if (partie.interpolation()) {
+                String interdit = contexte.refus();
+                if (interdit != null) {
+                    throw refus("VERNE-SEC-002", partie.position(),
+                            "interpolation interdite dans ce contexte " + nomProfil + " : " + interdit + ".");
+                }
+                emplacements.add(contexte.dansAttribut());
+                contexte.noterInterpolation(partie.position());
+            } else {
+                var interdiction = contexte.avancer(partie.contenu());
+                if (interdiction != null) {
+                    throw refus("VERNE-SEC-002", interdiction.position(), "interpolation interdite dans ce contexte "
+                            + nomProfil + " : " + interdiction.contexte() + ".");
+                }
+            }
+        }
+        return emplacements;
+    }
+
+    /** Échappement HTML généré dans chaque classe : aucune copie sans caractère à remplacer. */
+    private static final String ECHAPPEMENT_HTML = """
+            private static java.lang.String echapper(char caractere) {
+            return echapper(java.lang.String.valueOf(caractere));
+            }
+            private static java.lang.String echapper(java.lang.String valeur) {
+            java.lang.StringBuilder resultat = null;
+            for (int index = 0; index < valeur.length(); index++) {
+            char caractere = valeur.charAt(index);
+            java.lang.String remplacement = switch (caractere) {
+            case '&' -> "&amp;";
+            case '<' -> "&lt;";
+            case '>' -> "&gt;";
+            case '"' -> "&quot;";
+            case '\\'' -> "&#39;";
+            default -> null;
+            };
+            if (remplacement == null) {
+            if (resultat != null) resultat.append(caractere);
+            } else {
+            if (resultat == null) resultat = new java.lang.StringBuilder(valeur.length() + 16).append(valeur, 0, index);
+            resultat.append(remplacement);
+            }
+            }
+            return resultat == null ? valeur : resultat.toString();
+            }
+            """;
+
+    /** Échappement XML généré : contenu ou attribut, refus des caractères interdits par XML 1.0. */
+    private static final String ECHAPPEMENT_XML = """
+            private static java.lang.String echapper(char caractere, boolean attribut) {
+            return echapper(java.lang.String.valueOf(caractere), attribut);
+            }
+            private static java.lang.String echapper(java.lang.String valeur, boolean attribut) {
+            java.lang.StringBuilder resultat = null;
+            for (int index = 0; index < valeur.length(); index++) {
+            char caractere = valeur.charAt(index);
+            java.lang.String remplacement = switch (caractere) {
+            case '&' -> "&amp;";
+            case '<' -> "&lt;";
+            case '>' -> "&gt;";
+            case '"' -> "&quot;";
+            case '\\'' -> "&apos;";
+            case '\\r' -> "&#13;";
+            case '\\n' -> attribut ? "&#10;" : null;
+            case '\\t' -> attribut ? "&#9;" : null;
+            default -> null;
+            };
+            if (remplacement != null) {
+            if (resultat == null) resultat = new java.lang.StringBuilder(valeur.length() + 16).append(valeur, 0, index);
+            resultat.append(remplacement);
+            continue;
+            }
+            boolean paire = java.lang.Character.isHighSurrogate(caractere) && index + 1 < valeur.length()
+            && java.lang.Character.isLowSurrogate(valeur.charAt(index + 1));
+            if (caractere < 0x20 && caractere != '\\n' && caractere != '\\t' || caractere == 0xFFFE || caractere == 0xFFFF
+            || java.lang.Character.isSurrogate(caractere) && !paire) {
+            throw new java.lang.IllegalArgumentException("VERNE-REN-002 : caractère interdit par XML 1.0 dans une valeur interpolée.");
+            }
+            if (resultat != null) resultat.append(caractere);
+            if (paire) {
+            index++;
+            if (resultat != null) resultat.append(valeur.charAt(index));
+            }
+            }
+            return resultat == null ? valeur : resultat.toString();
+            }
+            """;
 
     /** Les deux familles de variables locales restent distinctes et évitent tous les paramètres. */
     private String nomLibre(String nom) {
@@ -247,7 +368,7 @@ final class CompilateurGabarit {
     }
 
     /** Résout seulement les composants déclarés des records, puis vérifie le type scalaire final. */
-    private String resoudre(Partie partie) {
+    private Resolution resoudre(Partie partie) {
         String[] chemin = partie.contenu().split("\\.");
         Parametre parametre = parametres.get(chemin[0]);
         if (parametre == null) throw refus("VERNE-TYP-001", partie.position(), "paramètre inconnu.");
@@ -279,7 +400,7 @@ final class CompilateurGabarit {
         if (!type.getKind().isPrimitive()) {
             expression = "requireNonNull(" + expression + ", \"VERNE-REN-001 : valeur interpolée nulle.\")";
         }
-        return expression;
+        return new Resolution(expression, !type.getKind().isPrimitive() || type.getKind() == TypeKind.CHAR);
     }
 
     /** Les origines standard permettent à l'outillage de relier une sortie à ses modèles Java. */

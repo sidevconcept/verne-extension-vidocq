@@ -33,7 +33,7 @@ ____
 * Contrôle des racines et liens symboliques ; refus des cibles externes et des liens de fichiers cassés.
 * Bornes initiales : *1 mébioctet par source*, *1 024 gabarits par compilation* et *1 024 interpolations par gabarit*, bornes incluses.
 
-Le profil livré est *texte*. Il conserve les caractères spéciaux et ne fournit pas de protection HTML.
+Trois profils de sortie sont livrés : *texte*, qui conserve les caractères spéciaux, *html* et *xml*, qui échappent chaque valeur interpolée et refusent à la compilation les contextes non pris en charge (script, style, attributs d'événement ou d'URL, commentaires, sections CDATA). Le contenu déclaré fiable n'est pas encore disponible.
 Les règles précises, erreurs et limites sont décrites dans link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[le contrat du compilateur].
 
 == Modules
@@ -111,10 +111,10 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 == État du projet
 
 *Version de développement : `0.4.0-SNAPSHOT`*, alignée sur celle de l'écosystème Vidocq. Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *183 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 141 tests supplémentaires restent à qualifier sur Windows et Linux.
+La dernière vérification complète sur Mac réussit avec *236 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 194 tests supplémentaires restent à qualifier sur Windows et Linux.
 
-Les conditions, boucles, inclusions, profils de sortie sécurisés, rendu en flux et asynchronisme ne sont pas encore livrés.
+Les conditions, boucles, inclusions, contenus déclarés fiables, profil JSON, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.
 Aucune performance n'est revendiquée sans mesures reproductibles.
 Les prochaines priorités figurent dans link:docs/fr/modules/ROOT/pages/index.adoc[le dossier de conception].

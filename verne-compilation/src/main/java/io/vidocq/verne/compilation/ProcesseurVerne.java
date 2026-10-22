@@ -28,6 +28,7 @@ import javax.tools.Diagnostic;
 public final class ProcesseurVerne extends AbstractProcessor {
     private boolean traite;
     private String paquet;
+    private Profil profil;
     private VisibiliteModules visibilite;
     private int nombreDiagnostics;
     private boolean diagnosticsSatures;
@@ -81,9 +82,9 @@ public final class ProcesseurVerne extends AbstractProcessor {
             traite = true;
             String racineDeclaree = processingEnv.getOptions().get("verne.racine.gabarits");
             paquet = processingEnv.getOptions().get("verne.paquet");
-            if (racineDeclaree == null || paquet == null || !CompilateurGabarit.nomQualifie(paquet)
-                    || !"texte".equals(processingEnv.getOptions().get("verne.profil.sortie"))) {
-                erreur("VERNE-CFG-001", "déclarer une racine de gabarits, un paquet Java qualifié et le profil texte.");
+            profil = Profil.depuis(processingEnv.getOptions().get("verne.profil.sortie"));
+            if (racineDeclaree == null || paquet == null || !CompilateurGabarit.nomQualifie(paquet) || profil == null) {
+                erreur("VERNE-CFG-001", "déclarer une racine de gabarits, un paquet Java qualifié et le profil texte, html ou xml.");
                 return false;
             }
             visibilite = new VisibiliteModules(processingEnv.getElementUtils(), moduleCourant(tour));
@@ -160,7 +161,7 @@ public final class ProcesseurVerne extends AbstractProcessor {
     /** Chaque ressource dispose de son analyseur ; un échec de création Java n'arrête pas les suivantes. */
     private void compilerTexte(String classe, String texte, String identifiant) {
         try {
-            String diagnostic = new CompilateurGabarit(processingEnv, this::signalerErreur, paquet, visibilite)
+            String diagnostic = new CompilateurGabarit(processingEnv, this::signalerErreur, paquet, visibilite, profil)
                     .compiler(classe, texte, identifiant);
             if (diagnostic != null) enAttente.add(new GabaritEnAttente(classe, texte, identifiant, diagnostic));
         } catch (IOException exception) {
