@@ -52,7 +52,7 @@ class BudgetGenerationTest {
         verifierRefus(compilation, "a.verne");
         for (String classe : new String[] {"Bonjour", "Salut"}) {
             assertTrue(Files.exists(compilation.sourcesGenerees()
-                    .resolve("io/vidocq/verne/genere/" + classe + ".java")));
+                    .resolve("exemple/gabarits/" + classe + ".java")));
         }
     }
 
@@ -65,7 +65,7 @@ class BudgetGenerationTest {
                 .collect(Collectors.joining(", "));
         // 128 + 255 * 12 + 225 * 12 + 1 024 * 48 = 55 040 unités.
         rendre(parametres + "a".repeat(900_000) + expressions,
-                "io.vidocq.verne.genere.Bonjour.rendre(" + arguments + ")",
+                "exemple.gabarits.Bonjour.rendre(" + arguments + ")",
                 "a".repeat(900_000) + "é🚀".repeat(1_024));
     }
 
@@ -84,7 +84,7 @@ class BudgetGenerationTest {
     }
 
     private String appel(String classe) {
-        return "io.vidocq.verne.genere." + classe + ".rendre(chaine(), \"\", \"\", \"\")";
+        return "exemple.gabarits." + classe + ".rendre(chaine(), \"\", \"\", \"\")";
     }
 
     private Map<String, String> sources(String expression) {
@@ -117,7 +117,7 @@ class BudgetGenerationTest {
                 () -> assertFalse(compilation.diagnostics().contains("compiler.err.limit.code")),
                 () -> assertFalse(compilation.diagnostics().contains(repertoire.toString())),
                 () -> assertFalse(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/" + (identifiant.startsWith("a.") ? "A" : "Bonjour") + ".java"))));
+                        .resolve("exemple/gabarits/" + (identifiant.startsWith("a.") ? "A" : "Bonjour") + ".java"))));
     }
 
     private void rendre(String texte, String expression, String attendu) throws Exception {
@@ -127,7 +127,7 @@ class BudgetGenerationTest {
         var execution = BancCompilation.executer(compilation);
         assertAll(() -> assertEquals(0, execution.codeSortie(), execution.erreurs()),
                 () -> assertEquals(attendu, execution.sortie()));
-        var modele = ClassFile.of().parse(compilation.classes().resolve("io/vidocq/verne/genere/Bonjour.class"));
+        var modele = ClassFile.of().parse(compilation.classes().resolve("exemple/gabarits/Bonjour.class"));
         var methode = modele.methods().stream().filter(candidat -> candidat.methodName().equalsString("rendre"))
                 .findFirst().orElseThrow();
         var code = (CodeAttribute) methode.code().orElseThrow();

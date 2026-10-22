@@ -14,61 +14,61 @@ class RenduGabaritsTest {
 
     @Test
     void rendUnDocumentVide() throws Exception {
-        verifier("", "io.vidocq.verne.genere.Bonjour.rendre()", "");
+        verifier("", "exemple.gabarits.Bonjour.rendre()", "");
     }
 
     @Test
     void preserveLeTexteUnicode() throws Exception {
-        verifier("été, cœur, e\u0301 et 🚀", "io.vidocq.verne.genere.Bonjour.rendre()",
+        verifier("été, cœur, e\u0301 et 🚀", "exemple.gabarits.Bonjour.rendre()",
                 "été, cœur, e\u0301 et 🚀");
     }
 
     @Test
     void preserveEspacesTabulationsEtFinsDeLigne() throws Exception {
-        verifier(" \tbonjour\r\n\nfin \t", "io.vidocq.verne.genere.Bonjour.rendre()",
+        verifier(" \tbonjour\r\n\nfin \t", "exemple.gabarits.Bonjour.rendre()",
                 " \tbonjour\r\n\nfin \t");
     }
 
     @Test
     void interpoleUnParametreDeclareSansProduireLaDeclaration() throws Exception {
         verifier("{@java.lang.String nom}Bonjour {nom}",
-                "io.vidocq.verne.genere.Bonjour.rendre(\"Léa\")", "Bonjour Léa");
+                "exemple.gabarits.Bonjour.rendre(\"Léa\")", "Bonjour Léa");
     }
 
     @Test
     void conserveUneChaineVideCommeValeurPresente() throws Exception {
         verifier("{@java.lang.String nom}avant{nom}après",
-                "io.vidocq.verne.genere.Bonjour.rendre(\"\")", "avantaprès");
+                "exemple.gabarits.Bonjour.rendre(\"\")", "avantaprès");
     }
 
     @Test
     void neReinterpretePasUneDonneeCommeUnGabarit() throws Exception {
         verifier("{@java.lang.String nom}{nom}",
-                "io.vidocq.verne.genere.Bonjour.rendre(\"{! contenu utilisateur !}\")",
+                "exemple.gabarits.Bonjour.rendre(\"{! contenu utilisateur !}\")",
                 "{! contenu utilisateur !}");
     }
 
     @Test
     void conserveLesCaracteresSpeciauxDansLeProfilTexte() throws Exception {
         verifier("{@java.lang.String nom}{nom}",
-                "io.vidocq.verne.genere.Bonjour.rendre(\"&<>\\\"'\")", "&<>\"'");
+                "exemple.gabarits.Bonjour.rendre(\"&<>\\\"'\")", "&<>\"'");
     }
 
     @Test
     void retireUnCommentaireSansRetirerSaFinDeLigne() throws Exception {
         verifier("avant{! commentaire !}après\n{! ligne !}\nfin",
-                "io.vidocq.verne.genere.Bonjour.rendre()", "avantaprès\n\nfin");
+                "exemple.gabarits.Bonjour.rendre()", "avantaprès\n\nfin");
     }
 
     @Test
     void rendUnDelimiteurEchappeCommeTexte() throws Exception {
-        verifier("\\{nom}", "io.vidocq.verne.genere.Bonjour.rendre()", "{nom}");
+        verifier("\\{nom}", "exemple.gabarits.Bonjour.rendre()", "{nom}");
     }
 
     @Test
     void rendUnTexteDepassantLaTailleDuneConstanteDeClasse() throws Exception {
         String texte = "é🚀".repeat(24_000);
-        verifier(texte, "io.vidocq.verne.genere.Bonjour.rendre()", texte);
+        verifier(texte, "exemple.gabarits.Bonjour.rendre()", texte);
     }
 
     /** Compare une sortie indépendante, sans utiliser le moteur pour construire l'oracle. */

@@ -25,10 +25,10 @@ class GrandsDocumentsTest {
                             throw new IllegalStateException("Comptage des allocations indisponible dans ce JDK de vérification.");
                         }
                         compteur.setThreadAllocatedMemoryEnabled(true);
-                        for (int index = 0; index < 2_000; index++) temoin = io.vidocq.verne.genere.Bonjour.rendre("Léa🚀");
+                        for (int index = 0; index < 2_000; index++) temoin = exemple.gabarits.Bonjour.rendre("Léa🚀");
                         long fil = Thread.currentThread().threadId();
                         long debut = compteur.getThreadAllocatedBytes(fil);
-                        for (int index = 0; index < 100; index++) temoin = io.vidocq.verne.genere.Bonjour.rendre("Léa🚀");
+                        for (int index = 0; index < 100; index++) temoin = exemple.gabarits.Bonjour.rendre("Léa🚀");
                         long moyenne = (compteur.getThreadAllocatedBytes(fil) - debut) / 100;
                         if (moyenne >= 7L * 65_536) throw new AssertionError("Budget d'allocations dépassé : " + moyenne);
                         if (!temoin.equals("a".repeat(65_536) + "Léa🚀")) throw new AssertionError("Rendu incorrect.");
@@ -47,7 +47,7 @@ class GrandsDocumentsTest {
                 public final class Application {
                     static final StringBuilder trace = new StringBuilder();
                     public static void main(String[] arguments) {
-                        String document = io.vidocq.verne.genere.Bonjour.rendre(new Valeur("A"), new Valeur("B"), "C");
+                        String document = exemple.gabarits.Bonjour.rendre(new Valeur("A"), new Valeur("B"), "C");
                         System.out.print(document + "#" + trace);
                     }
                 }
@@ -64,7 +64,7 @@ class GrandsDocumentsTest {
         String gabarit = "{@exemple.Mesure mesure}{@java.lang.String texte}" + PREFIXE
                 + "{mesure.entier}|{mesure.total}|{mesure.decimal}|{mesure.actif}|{mesure.lettre}|{texte}";
         var sources = new java.util.HashMap<>(BancCompilation.application(
-                "io.vidocq.verne.genere.Bonjour.rendre(new Mesure(Integer.MIN_VALUE, Long.MIN_VALUE, -0.0, true, 'é'), \"é🚀\".repeat(30_000))"));
+                "exemple.gabarits.Bonjour.rendre(new Mesure(Integer.MIN_VALUE, Long.MIN_VALUE, -0.0, true, 'é'), \"é🚀\".repeat(30_000))"));
         sources.put("exemple/Mesure.java", "package exemple; public record Mesure(int entier, long total, double decimal, boolean actif, char lettre) {}");
         verifier(gabarit, sources, PREFIXE + "-2147483648|-9223372036854775808|-0.0|true|é|" + "é🚀".repeat(30_000));
     }
@@ -74,7 +74,7 @@ class GrandsDocumentsTest {
                 package exemple;
                 public final class Application {
                     public static void main(String[] arguments) {
-                        try { io.vidocq.verne.genere.Bonjour.rendre(new Valeur(null)); throw new AssertionError("Nullité ignorée."); }
+                        try { exemple.gabarits.Bonjour.rendre(new Valeur(null)); throw new AssertionError("Nullité ignorée."); }
                         catch (NullPointerException exception) {
                             if (!exception.getMessage().contains("VERNE-REN-001")) throw exception;
                             System.out.print("nullité contrôlée");
@@ -97,7 +97,7 @@ class GrandsDocumentsTest {
                                 taches.add(fils.submit(() -> {
                                     String attendu = "a".repeat(65_536) + valeur;
                                     for (int numero = 0; numero < 16; numero++) {
-                                        if (!attendu.equals(io.vidocq.verne.genere.Bonjour.rendre(valeur))) throw new AssertionError("Rendus concurrents mélangés.");
+                                        if (!attendu.equals(exemple.gabarits.Bonjour.rendre(valeur))) throw new AssertionError("Rendus concurrents mélangés.");
                                     }
                                 }));
                             }
@@ -112,7 +112,7 @@ class GrandsDocumentsTest {
 
     @Test void compileUnGrandDocumentAtteignantLaLimiteDInterpolations() throws Exception {
         verifier("{@java.lang.String nom}" + PREFIXE + "{nom}".repeat(1_024),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre(\"é🚀\")"),
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre(\"é🚀\")"),
                 PREFIXE + "é🚀".repeat(1_024));
     }
 

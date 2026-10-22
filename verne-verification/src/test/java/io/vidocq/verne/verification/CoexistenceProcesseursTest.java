@@ -25,7 +25,7 @@ final class CoexistenceProcesseursTest {
     @Test void conserveLAnnotationDuVoisinDansLesDeuxOrdres() throws Exception {
         Path voisin = preparerVoisin("case 1 -> " + emettre("Preuve", "public record Preuve() {}"));
         for (var ordre : List.of(List.of(VERNE, VOISIN), List.of(VOISIN, VERNE))) {
-            var sources = application("io.vidocq.verne.genere.Bonjour.rendre(new PersonneSource(\"Léa\"))");
+            var sources = application("exemple.gabarits.Bonjour.rendre(new PersonneSource(\"Léa\"))");
             sources.put("exemple/PersonneSource.java", "package exemple; public record PersonneSource(String nom) {}");
             var compilation = compiler(repertoire.resolve(ordre.getFirst()),
                     Map.of("bonjour.verne", "{@exemple.PersonneSource personne}Bonjour {personne.nom}"),
@@ -41,7 +41,7 @@ final class CoexistenceProcesseursTest {
         for (var ordre : List.of(List.of(VERNE, VOISIN), List.of(VOISIN, VERNE))) {
             var compilation = compiler(repertoire.resolve(ordre.getFirst()),
                     Map.of("bonjour.verne", "{@exemple.PersonneGeneree personne}Bonjour {personne.nom} 🚀\r\n"),
-                    application("io.vidocq.verne.genere.Bonjour.rendre(new PersonneGeneree(\"Léa\"))"), voisin, ordre);
+                    application("exemple.gabarits.Bonjour.rendre(new PersonneGeneree(\"Léa\"))"), voisin, ordre);
             verifierRendu(compilation, "Bonjour Léa 🚀\r\n");
         }
     }
@@ -51,14 +51,14 @@ final class CoexistenceProcesseursTest {
                 + "case 2 -> " + emettre("PersonneGeneree", "public record PersonneGeneree(String nom) {}"));
         verifierRendu(compiler(repertoire.resolve("application"),
                 Map.of("bonjour.verne", "{@exemple.PersonneGeneree personne}{personne.nom}"),
-                application("io.vidocq.verne.genere.Bonjour.rendre(new PersonneGeneree(\"Léa\"))"),
+                application("exemple.gabarits.Bonjour.rendre(new PersonneGeneree(\"Léa\"))"),
                 voisin, List.of(VERNE, VOISIN)), "Léa");
     }
 
     @Test void attendUnTypeDeNavigationGenerePourUnRecordSource() throws Exception {
         Path voisin = preparerVoisin("case 1 -> " + emettre("AdresseGeneree",
                 "public record AdresseGeneree(String ville) {}"));
-        var sources = application("io.vidocq.verne.genere.Bonjour.rendre(new PersonneSource(new AdresseGeneree(\"Paris\")))");
+        var sources = application("exemple.gabarits.Bonjour.rendre(new PersonneSource(new AdresseGeneree(\"Paris\")))");
         sources.put("exemple/PersonneSource.java", "package exemple; public record PersonneSource(AdresseGeneree adresse) {}");
         verifierRendu(compiler(repertoire.resolve("application"),
                 Map.of("bonjour.verne", "{@exemple.PersonneSource personne}{personne.adresse.ville}"),
@@ -71,7 +71,7 @@ final class CoexistenceProcesseursTest {
                 + "case 2 -> " + emettre("AdresseGeneree", "public record AdresseGeneree(String ville) {}"));
         verifierRendu(compiler(repertoire.resolve("application"),
                 Map.of("bonjour.verne", "{@exemple.PersonneGeneree personne}{personne.adresse.ville}"),
-                application("io.vidocq.verne.genere.Bonjour.rendre(new PersonneGeneree(new AdresseGeneree(\"Paris\")))"),
+                application("exemple.gabarits.Bonjour.rendre(new PersonneGeneree(new AdresseGeneree(\"Paris\")))"),
                 voisin, List.of(VERNE, VOISIN)), "Paris");
     }
 
@@ -84,7 +84,7 @@ final class CoexistenceProcesseursTest {
         assertEquals(1, compilation.diagnostics().lines().filter(ligne -> ligne.contains("VERNE-TYP-003")).count(),
                 compilation.diagnostics());
         assertTrue(compilation.diagnostics().contains("bonjour.verne:1:1"), compilation.diagnostics());
-        assertFalse(Files.exists(compilation.sourcesGenerees().resolve("io/vidocq/verne/genere/Bonjour.java")));
+        assertFalse(Files.exists(compilation.sourcesGenerees().resolve("exemple/gabarits/Bonjour.java")));
     }
 
     @Test void conserveUneErreurDeProprieteApresApparitionDuType() throws Exception {
@@ -97,7 +97,7 @@ final class CoexistenceProcesseursTest {
         assertEquals(1, compilation.diagnostics().lines().filter(ligne -> ligne.contains("VERNE-TYP-001")).count(),
                 compilation.diagnostics());
         assertTrue(compilation.diagnostics().contains("bonjour.verne:2:1"), compilation.diagnostics());
-        assertFalse(Files.exists(compilation.sourcesGenerees().resolve("io/vidocq/verne/genere/Bonjour.java")));
+        assertFalse(Files.exists(compilation.sourcesGenerees().resolve("exemple/gabarits/Bonjour.java")));
     }
 
     @Test void lesRefusDifferesPartagentLeBudgetDeDiagnostics() throws Exception {
@@ -115,16 +115,49 @@ final class CoexistenceProcesseursTest {
                 compilation.diagnostics());
     }
 
+    /** javac arrête les tours après une erreur : l'attente n'est pas une preuve d'absence du type. */
+    @Test void neSignalePasDeTypeAbsentApresUneErreurInterrompantLesTours() throws Exception {
+        Path voisin = preparerVoisin("case 1 -> " + emettre("PersonneGeneree",
+                "public record PersonneGeneree(String nom) {}"));
+        var compilation = compiler(repertoire.resolve("application"), Map.of(
+                        "erreur.verne", "{inconnu}",
+                        "attente.verne", "{@exemple.PersonneGeneree personne}{personne.nom}"),
+                application("\"Témoin\""), voisin, List.of(VERNE, VOISIN));
+        assertFalse(compilation.reussie());
+        assertEquals(1, compilation.diagnostics().lines().filter(ligne -> ligne.contains("VERNE-TYP-001")
+                && ligne.contains("erreur.verne:1:1")).count(), compilation.diagnostics());
+        assertFalse(compilation.diagnostics().contains("VERNE-TYP-003"), compilation.diagnostics());
+        assertEquals(1, compilation.diagnostics().lines().filter(ligne -> ligne.contains("VERNE-TYP-005")).count(),
+                compilation.diagnostics());
+        assertFalse(compilation.diagnostics().contains("attente.verne"), compilation.diagnostics());
+    }
+
+    /** Une création Java refusée par Filer est rattachée à son gabarit sans arrêter les suivants. */
+    @Test void poursuitApresUneCreationJavaImpossible() throws Exception {
+        Path voisin = preparerVoisin("case 1 -> { try (var sortie = processingEnv.getFiler()"
+                + ".createSourceFile(\"exemple.gabarits.Collision\").openWriter()) {"
+                + " sortie.write(\"package exemple.gabarits; public final class Collision {}\"); } }\n");
+        var compilation = compiler(repertoire.resolve("application"),
+                Map.of("collision.verne", "Collision", "suivant.verne", "Suivant"),
+                application("\"Témoin\""), voisin, List.of(VOISIN, VERNE));
+        assertFalse(compilation.reussie());
+        assertEquals(1, compilation.diagnostics().lines().filter(ligne -> ligne.contains("VERNE-IO-001")
+                && ligne.contains("collision.verne:1:1")).count(), compilation.diagnostics());
+        assertFalse(compilation.diagnostics().contains(repertoire.toString()), compilation.diagnostics());
+        assertTrue(Files.exists(compilation.sourcesGenerees().resolve("exemple/gabarits/Suivant.java")),
+                compilation.diagnostics());
+    }
+
     @Test void isoleLesAttentesEntreDeuxCompilationsConcurrentes() throws Exception {
         Path voisin = preparerVoisin("case 1 -> " + emettre("Etape", "public record Etape() {}")
                 + "case 2 -> " + emettre("PersonneGeneree", "public record PersonneGeneree(String nom) {}"));
         var gabarits = Map.of("bonjour.verne", "{@exemple.PersonneGeneree personne}{personne.nom}");
         try (var groupe = Executors.newFixedThreadPool(2)) {
             var premiere = groupe.submit(() -> compiler(repertoire.resolve("premiere"), gabarits,
-                    application("io.vidocq.verne.genere.Bonjour.rendre(new PersonneGeneree(\"Léa\"))"),
+                    application("exemple.gabarits.Bonjour.rendre(new PersonneGeneree(\"Léa\"))"),
                     voisin, List.of(VERNE, VOISIN)));
             var seconde = groupe.submit(() -> compiler(repertoire.resolve("seconde"), gabarits,
-                    application("io.vidocq.verne.genere.Bonjour.rendre(new PersonneGeneree(\"Émile\"))"),
+                    application("exemple.gabarits.Bonjour.rendre(new PersonneGeneree(\"Émile\"))"),
                     voisin, List.of(VERNE, VOISIN)));
             verifierRendu(premiere.get(15, TimeUnit.SECONDS), "Léa");
             verifierRendu(seconde.get(15, TimeUnit.SECONDS), "Émile");
@@ -136,7 +169,7 @@ final class CoexistenceProcesseursTest {
                 "public record PersonneGeneree(String nom) {}"));
         verifierRendu(compiler(repertoire.resolve("application"),
                 Map.of("bonjour.verne", "{@exemple.PersonneGeneree personne}{personne.nom}"),
-                application("io.vidocq.verne.genere.Bonjour.rendre(new PersonneGeneree(\"Léa\"))"),
+                application("exemple.gabarits.Bonjour.rendre(new PersonneGeneree(\"Léa\"))"),
                 voisin, List.of()), "Léa");
     }
 

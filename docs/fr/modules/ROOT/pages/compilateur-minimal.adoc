@@ -39,10 +39,19 @@ Le fournisseur public sans argument est instancié par le compilateur ; son éta
 
 == Sources et génération
 
-Le processeur reçoit `verne.racine.gabarits` et `verne.profil.sortie=texte`.
-Une racine absente ou un profil différent produit `VERNE-CFG-001`, sans interprétation implicite comme texte brut.
+Le processeur reçoit trois options obligatoires : `verne.racine.gabarits`, `verne.paquet` et `verne.profil.sortie=texte`.
+Une racine absente, un paquet absent ou invalide, ou un profil différent produit `VERNE-CFG-001`, sans interprétation implicite comme texte brut ni paquet par défaut.
 Les fichiers `.verne` sont parcourus dans un ordre déterministe ; les répertoires symboliques ne sont pas suivis.
 Une ressource réelle hors de la racine est refusée ; les erreurs de lecture ou de génération sont signalées sans chemin machine.
+Le processeur déclare la dernière version source prise en charge par le compilateur Java qui l'exécute ; Java 25 reste la version minimale du projet.
+
+=== Paquet des classes générées
+
+`verne.paquet` désigne le paquet Java qui reçoit toutes les classes générées de l'invocation, par exemple `-Averne.paquet=exemple.gabarits`.
+La valeur est un nom qualifié Java : chaque segment est un identifiant non réservé, sans caractère ignoré par Java ; une valeur vide, un segment vide ou un mot réservé produit `VERNE-CFG-001` sans lecture des gabarits.
+Le paquet appartient à l'application : dans un module nommé, il fait partie du module compilé et n'est exporté que si son descripteur le demande.
+Deux modules chargés ensemble doivent déclarer des paquets distincts, car la plateforme de modules refuse un même paquet dans deux modules d'une même couche ; Verne n'impose plus de paquet commun.
+Les sous-répertoires de la racine ne participent pas encore au paquet. Verne ne vérifie pas qu'une classe applicative du même nom existe déjà dans ce paquet ; une création impossible relève de `VERNE-IO-001` ou du diagnostic de javac.
 Les essais de liens symboliques sur plusieurs systèmes restent à compléter.
 
 === Racine et liens symboliques
@@ -53,6 +62,7 @@ Un lien de fichier `.verne` est accepté si sa cible réelle reste sous cette fr
 Un lien de fichier `.verne` cassé ou impossible à résoudre produit `VERNE-IO-001`, avec son identifiant relatif et la position `1:1` ; les autres ressources continuent à être vérifiées et la compilation entière échoue.
 Les liens vers des répertoires ne sont pas parcourus, même si leur nom se termine par `.verne` ou qu'ils créent un cycle.
 Les diagnostics n'exposent ni chemin absolu de la racine ou de la cible, ni contenu du fichier externe.
+Une erreur pendant le parcours de la racine, par exemple un sous-répertoire illisible, produit un unique `VERNE-IO-001` sans chemin machine ; l'inventaire est alors abandonné et aucun gabarit de l'invocation n'est lu ni généré. Le processeur ne laisse jamais une exception de parcours interrompre javac.
 Les parcours et flux sont fermés à la fin de leur utilisation ; aucun état ni ressource n'est partagé entre compilations. Les entrées doivent rester stables pendant la compilation ; aucune garantie contre leur remplacement concurrent n'est revendiquée.
 
 === Nombre de ressources
@@ -77,15 +87,17 @@ La limite initiale est un mébioctet, soit 1 048 576 octets par fichier, borne i
 La lecture s'arrête au premier octet au-delà de cette borne.
 Cette limite concerne les octets sources, et non le nombre de caractères ou la taille du document rendu.
 
-Le nom simple du fichier détermine la classe, en mettant sa première lettre en majuscule : `bonjour.verne` produit `io.vidocq.verne.genere.Bonjour`.
+Le nom simple du fichier, normalisé en NFC, détermine la classe, en mettant sa première lettre en majuscule : avec `-Averne.paquet=exemple.gabarits`, `bonjour.verne` produit `exemple.gabarits.Bonjour`.
+Un même nom écrit en NFC ou en NFD, selon le système de fichiers ou l'outil qui l'a créé, produit donc la même classe, utilisable depuis des sources Java écrites en NFC.
 Les répertoires ne participent pas encore au nom de classe : deux ressources de même nom simple sont donc refusées, même dans des sous-répertoires différents.
 Le nom doit être un identifiant Java admissible.
 Pour détecter les collisions, le nom de classe est normalisé en NFC, converti en minuscules avec `Locale.ROOT`, puis normalisé à nouveau en NFC. Deux noms donnant la même clé sont refusés avec `VERNE-LIA-001`, indépendamment de la langue du poste.
-Cette clé ne renomme ni la classe générée ni les données du document. Les équivalences de compatibilité Unicode ne sont pas fusionnées ; cette règle ne prétend pas reproduire tous les systèmes de fichiers.
+Cette clé ne modifie ni la casse de la classe générée ni les données du document. Les équivalences de compatibilité Unicode ne sont pas fusionnées ; cette règle ne prétend pas reproduire tous les systèmes de fichiers.
 Le diagnostic porte l'identifiant relatif et la position `1:1` de la seconde ressource dans l'ordre de parcours ; le fichier en collision n'est ni lu ni généré. La compilation entière échoue, même si le programme ne référence aucun de ces gabarits.
 La table des noms reste locale à l'invocation du processeur ; aucun état partagé, accès réflexif ou ressource supplémentaire à fermer n'est introduit.
 Les autres règles de nommage portable restent à préciser avant généralisation.
 Les sources générées ne contiennent ni horodatage, ni chemin absolu.
+Une création ou une écriture de source Java impossible, par exemple un type déjà produit par un autre processeur, produit `VERNE-IO-001` à `identifiant.verne:1:1` ; les ressources suivantes continuent à être vérifiées et la compilation échoue.
 
 == Grammaire effectivement acceptée
 
@@ -104,6 +116,7 @@ Les sources générées ne contiennent ni horodatage, ni chemin absolu.
 |===
 
 Les espaces entourant le contenu d'une directive sont retirés pour son analyse, pas ceux du document.
+Les fins de ligne du fichier sont rendues telles quelles : un dépôt Git qui normalise les fins de ligne peut donc changer le document selon le poste. Déclarer `*.verne -text`, ou une fin de ligne fixe, dans le `.gitattributes` de l'application rend le rendu indépendant de l'extraction.
 Les déclarations sont collectées dans l'ordre source, qui détermine l'ordre des paramètres de la méthode générée.
 Elles ont une portée globale dans le gabarit : cette tranche n'a pas de blocs ni de portée locale.
 Chaque nom de paramètre doit être un identifiant Java non réservé, sans caractère ignoré par Java.
@@ -113,6 +126,13 @@ Les types génériques, tableaux et déclarations de paramètres primitifs ne fo
 Un objet public peut être reçu comme paramètre, mais seules les propriétés correspondant aux composants de records sont accessibles.
 Les champs ordinaires, accesseurs de classes ordinaires, méthodes arbitraires et opérations d'introspection ne sont pas exposés.
 Un record ne peut pas être interpolé directement par un appel implicite à `toString` ; sa valeur finale doit être une chaîne ou un scalaire primitif.
+Les annotations de type, par exemple `@Nullable String` sur un composant de record, ne changent pas cette classification : la valeur reste une chaîne et son contrôle de nullité au rendu est conservé.
+
+=== Visibilité entre modules
+
+Lorsque l'application est un module nommé, chaque type déclaré et chaque record traversé par une navigation doit être accessible depuis le paquet généré : il appartient au module compilé, ou à un module que celui-ci lit et qui exporte son paquet, sans restriction ou vers ce module.
+La lecture comprend `java.base`, les modules requis par le descripteur et, de proche en proche, leurs dépendances `requires transitive`. Un type déclaré dans un paquet non exporté, exporté seulement vers d'autres modules ou appartenant à un module non lu produit `VERNE-TYP-003` à la position de la déclaration. Une navigation vers un record inaccessible produit `VERNE-TYP-001` à la position de l'interpolation, comme pour un record non public. Ces refus interviennent avant création de la source Java, au lieu d'une erreur javac dans le code généré.
+Dans le module sans nom, seuls les paquets exportés sans restriction des modules nommés sont accessibles ; les types du chemin des classes le restent. Cette vérification utilise uniquement le modèle symbolique de javac.
 
 Les sections, conditions, boucles, opérateurs, remplacements, inclusions et formats autres que texte sont explicitement hors de cette tranche.
 Leur syntaxe ne doit pas être rendue silencieusement comme si elle était prise en charge.
@@ -180,8 +200,8 @@ La compilation échoue dès la première erreur ; les sources déjà générées
 [cols="1,3",options="header"]
 |===
 |Code |Sens
-|`VERNE-CFG-001` |Racine non déclarée, cible non répertoire ou profil différent de texte
-|`VERNE-IO-001` |Lecture ou génération impossible
+|`VERNE-CFG-001` |Racine ou paquet non déclaré, paquet invalide, cible non répertoire ou profil différent de texte
+|`VERNE-IO-001` |Parcours, lecture ou génération impossible
 |`VERNE-LIA-001` |Nom de gabarit inadmissible ou collision de classe générée
 |`VERNE-LIM-001` |Source supérieure à un mébioctet
 |`VERNE-LIM-002` |Plus de 1 024 ressources de gabarits dans une compilation
@@ -197,8 +217,9 @@ La compilation échoue dès la première erreur ; les sources déjà générées
 |`VERNE-SYN-003` |Séquence d'octets UTF-8 invalide
 |`VERNE-TYP-001` |Paramètre inconnu ou propriété inaccessible
 |`VERNE-TYP-002` |Déclaration du même paramètre plusieurs fois
-|`VERNE-TYP-003` |Type inconnu, inaccessible ou non pris en charge
+|`VERNE-TYP-003` |Type inconnu, inaccessible, non exporté vers le module compilé ou non pris en charge
 |`VERNE-TYP-004` |Résultat d'interpolation non scalaire
+|`VERNE-TYP-005` |Avertissement : gabarits en attente non vérifiés après l'interruption des tours par une erreur
 |`VERNE-REN-001` |Valeur obligatoire ou objet de navigation nul pendant le rendu
 |===
 
@@ -310,10 +331,30 @@ Les dix tests de `CoexistenceProcesseursTest` vérifient les annotations du vois
 
 Cinq tests de `ChargementConjointModulesTest` et trois cas Maven supplémentaires vérifient les fournisseurs modulaires et les deux configurations Maven. La première passe ciblée avait six échecs sur onze tests ; après déclaration du fournisseur et configuration des profils, ces cas réussissent. Le contrôle négatif supplémentaire du mode de chargement réussit aussi. Les exemples et preuves figurent dans link:chargement-conjoint.adoc[le contrat dédié]. Cette tranche ne modifie aucune classe de production du moteur.
 
+== Corrections issues de la revue de code
+
+La revue du 19 octobre 2026 a relevé des défauts reproduits avec javac. Cette tranche les corrige selon les contrats ci-dessus :
+
+* paquet généré fixe, incompatible avec deux modules chargés ensemble : option obligatoire `verne.paquet` ;
+* type d'un paquet non exporté ou d'un module non lu accepté par Verne puis refusé par javac dans le code généré : `VERNE-TYP-003` ou `VERNE-TYP-001` avant génération ;
+* chaîne portant une annotation de type refusée par `VERNE-TYP-004` : comparaison de types par javac ;
+* sous-répertoire illisible interrompant javac par une exception et exposant un chemin absolu : `VERNE-IO-001` sans chemin ;
+* erreur d'un gabarit provoquant un faux `VERNE-TYP-003` sur un gabarit en attente : avertissement `VERNE-TYP-005` ;
+* nom de fichier NFD produisant une classe NFD : nom de classe normalisé en NFC ;
+* création Java refusée par `Filer` arrêtant tous les gabarits suivants : `VERNE-IO-001` rattaché au gabarit ;
+* version source figée à Java 25 : dernière version prise en charge par le compilateur ;
+* régénération des gabarits par la compilation Maven des tests : `proc=none` pour `default-testCompile` dans les exemples.
+
+Les nouveaux tests sont `PaquetGenereTest` (10), `VisibiliteModulesTest` (6), `RobustesseCompilationTest` (5), deux cas de `CoexistenceProcesseursTest` et un cas de `ApplicationMavenTest`. Les tests existants utilisent désormais le paquet applicatif `exemple.gabarits`.
+Avec le code de production inchangé, la suite comptait 181 tests, dont 100 échecs et 1 erreur : option de paquet ignorée, erreurs javac dans le code généré, `VERNE-TYP-004` sur la chaîne annotée, `UncheckedIOException` du parcours et `VERNE-TYP-003` en cascade. Les échecs NFC, `Filer` et de compilation Maven des tests, d'abord masqués par le paquet, ont été observés séparément pour leur cause propre. Le contrôle de version source réussit déjà avec le JDK 25 de référence, dont la dernière version est `RELEASE_25` ; il protège les compilateurs suivants.
+Après correction, `./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 181 tests, zéro échec, erreur ou test ignoré. Le cas du répertoire illisible exige des permissions POSIX effectives ; il n'a pas été qualifié sur Windows.
+
+La construction impose aussi Java 25 et Maven 3.9.16 au minimum avec `maven-enforcer-plugin`, fixe les versions des greffons d'installation et de déploiement et l'horodatage des archives : deux constructions successives produisent une archive `verne-compilation` identique.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 115 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence et chargement conjoint ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 139 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules et robustesse ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -323,7 +364,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 157 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 181 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -344,12 +385,15 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`NombreDiagnosticsTest` |6 |0 |0 |0
 |`BudgetGenerationTest` |7 |0 |0 |0
 |`DecouverteProcesseurTest` |9 |0 |0 |0
-|`ApplicationMavenTest` |10 |0 |0 |0
-|`CoexistenceProcesseursTest` |10 |0 |0 |0
+|`ApplicationMavenTest` |11 |0 |0 |0
+|`CoexistenceProcesseursTest` |12 |0 |0 |0
 |`ChargementConjointModulesTest` |5 |0 |0 |0
 |`OriginesGenerationTest` |6 |0 |0 |0
 |`InvalidationGabaritsTest` |11 |0 |0 |0
-|Total |157 |0 |0 |0
+|`PaquetGenereTest` |10 |0 |0 |0
+|`VisibiliteModulesTest` |6 |0 |0 |0
+|`RobustesseCompilationTest` |5 |0 |0 |0
+|Total |181 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

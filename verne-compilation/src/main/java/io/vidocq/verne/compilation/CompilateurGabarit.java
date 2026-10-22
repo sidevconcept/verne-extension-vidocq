@@ -29,6 +29,8 @@ final class CompilateurGabarit {
     private static final int COUT_MAXIMAL_GENERATION = 60_000;
     private final ProcessingEnvironment environnement;
     private final Consumer<String> rapporterErreur;
+    private final String paquet;
+    private final VisibiliteModules visibilite;
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
     private final LinkedHashSet<TypeElement> origines = new LinkedHashSet<>();
     private final List<Partie> parties = new ArrayList<>();
@@ -48,10 +50,16 @@ final class CompilateurGabarit {
         }
     }
 
-    /** Les deux arguments non nuls sont propres à l'invocation et partagent son budget d'erreurs. */
-    CompilateurGabarit(ProcessingEnvironment environnement, Consumer<String> rapporterErreur) {
+    /**
+     * Les arguments non nuls sont propres à l'invocation et partagent son budget d'erreurs ;
+     * le paquet est un nom qualifié déjà validé par le processeur.
+     */
+    CompilateurGabarit(ProcessingEnvironment environnement, Consumer<String> rapporterErreur,
+                       String paquet, VisibiliteModules visibilite) {
         this.environnement = environnement;
         this.rapporterErreur = rapporterErreur;
+        this.paquet = paquet;
+        this.visibilite = visibilite;
     }
 
     /** Vérifie avant création ; diagnostic différé, ou null après génération ou refus définitif. */
@@ -88,10 +96,10 @@ final class CompilateurGabarit {
                     }
                 }
             }
-            var source = environnement.getFiler().createSourceFile("io.vidocq.verne.genere." + classe,
+            var source = environnement.getFiler().createSourceFile(paquet + "." + classe,
                     origines.toArray(TypeElement[]::new));
             try (var sortie = source.openWriter()) {
-                sortie.write("package io.vidocq.verne.genere;\n"
+                sortie.write("package " + paquet + ";\n"
                         + "import static java.util.Objects.requireNonNull;\n"
                         + (grandDocument ? "import static java.lang.String.valueOf;\nimport static java.lang.Math.min;\n" : "")
                         + "/** Gabarit textuel compilé, sans analyse à la demande. */\n"
@@ -142,7 +150,7 @@ final class CompilateurGabarit {
                 }
             }
             if (cout > COUT_MAXIMAL_GENERATION) {
-                refuser("VERNE-LIM-008", 0, "coût de génération de la méthode supérieur à 60 000 unités.");
+                throw refus("VERNE-LIM-008", 0, "coût de génération de la méthode supérieur à 60 000 unités.");
             }
         }
     }
@@ -169,7 +177,7 @@ final class CompilateurGabarit {
             if (caractere == '\\') {
                 if (position + 1 >= texte.length()
                         || (texte.charAt(position + 1) != '{' && texte.charAt(position + 1) != '\\')) {
-                    refuser("VERNE-SYN-002", position, "échappement inconnu ou incomplet.");
+                    throw refus("VERNE-SYN-002", position, "échappement inconnu ou incomplet.");
                 }
                 fragment.append(texte.charAt(position + 1));
                 position += 2;
@@ -177,23 +185,23 @@ final class CompilateurGabarit {
                 vider(fragment);
                 if (texte.startsWith("{!", position)) {
                     int fin = texte.indexOf("!}", position + 2);
-                    if (fin < 0) refuser("VERNE-SYN-001", position, "commentaire non fermé.");
+                    if (fin < 0) throw refus("VERNE-SYN-001", position, "commentaire non fermé.");
                     position = fin + 2;
                 } else {
                     int fin = texte.indexOf('}', position + 1);
-                    if (fin < 0) refuser("VERNE-SYN-001", position, "interpolation ou déclaration non fermée.");
+                    if (fin < 0) throw refus("VERNE-SYN-001", position, "interpolation ou déclaration non fermée.");
                     String contenu = texte.substring(position + 1, fin).trim();
                     if (contenu.startsWith("@")) declarer(contenu.substring(1), position);
                     else {
                         if (!nomQualifie(contenu)) {
-                            refuser("VERNE-SYN-002", position, "expression ou directive non prise en charge.");
+                            throw refus("VERNE-SYN-002", position, "expression ou directive non prise en charge.");
                         }
                         if (++nombreInterpolations > NOMBRE_MAXIMAL_INTERPOLATIONS) {
-                            refuser("VERNE-LIM-003", position, "plus de 1 024 interpolations dans un gabarit.");
+                            throw refus("VERNE-LIM-003", position, "plus de 1 024 interpolations dans un gabarit.");
                         }
                         if (contenu.chars().filter(caractereExpression -> caractereExpression == '.').count()
                                 > PROFONDEUR_MAXIMALE_NAVIGATION) {
-                            refuser("VERNE-LIM-005", position, "plus de 32 accès de record dans une interpolation.");
+                            throw refus("VERNE-LIM-005", position, "plus de 32 accès de record dans une interpolation.");
                         }
                         parties.add(new Partie(contenu, true, position));
                     }
@@ -215,23 +223,22 @@ final class CompilateurGabarit {
         }
     }
 
-    /** Déclare un type public non générique ; seules les propriétés de records sont exposées. */
+    /** Déclare un type accessible non générique ; seules les propriétés de records sont exposées. */
     private void declarer(String declaration, int position) {
         String[] morceaux = declaration.trim().split("\\s+");
         if (morceaux.length != 2 || !nomQualifie(morceaux[0]) || !nomSimple(morceaux[1])) {
-            refuser("VERNE-SYN-002", position, "déclaration attendue : type Java qualifié et nom de paramètre.");
+            throw refus("VERNE-SYN-002", position, "déclaration attendue : type Java qualifié et nom de paramètre.");
         }
         if (parametres.containsKey(morceaux[1])) {
-            refuser("VERNE-TYP-002", position, "paramètre déclaré plusieurs fois.");
+            throw refus("VERNE-TYP-002", position, "paramètre déclaré plusieurs fois.");
         }
         if (parametres.size() >= NOMBRE_MAXIMAL_PARAMETRES) {
-            refuser("VERNE-LIM-004", position, "plus de 255 paramètres déclarés dans un gabarit.");
+            throw refus("VERNE-LIM-004", position, "plus de 255 paramètres déclarés dans un gabarit.");
         }
         TypeElement type = environnement.getElementUtils().getTypeElement(morceaux[0]);
-        if (type == null || type.asType().getKind() == TypeKind.ERROR) attendreType(position);
-        if (!type.getTypeParameters().isEmpty()
-                || !publicAvecParents(type)) {
-            refuser("VERNE-TYP-003", position, "type inconnu, inaccessible ou non pris en charge.");
+        if (type == null || type.asType().getKind() == TypeKind.ERROR) throw attendreType(position);
+        if (!type.getTypeParameters().isEmpty() || !visibilite.accessible(type)) {
+            throw refus("VERNE-TYP-003", position, "type inconnu, inaccessible ou non pris en charge.");
         }
         enregistrerOrigine(type.asType());
         parametres.put(morceaux[1], new Parametre(morceaux[1], type.asType()));
@@ -241,33 +248,31 @@ final class CompilateurGabarit {
     private String resoudre(Partie partie) {
         String[] chemin = partie.contenu().split("\\.");
         Parametre parametre = parametres.get(chemin[0]);
-        if (parametre == null) refuser("VERNE-TYP-001", partie.position(), "paramètre inconnu.");
+        if (parametre == null) throw refus("VERNE-TYP-001", partie.position(), "paramètre inconnu.");
         TypeMirror type = parametre.type();
         String expression = parametre.nom();
         for (int index = 1; index < chemin.length; index++) {
-            if (type.getKind() == TypeKind.ERROR) attendreType(partie.position());
+            if (type.getKind() == TypeKind.ERROR) throw attendreType(partie.position());
             if (!(type instanceof DeclaredType declare)
                     || !(declare.asElement() instanceof TypeElement element)
-                    || element.getKind() != ElementKind.RECORD || !publicAvecParents(element)) {
-                refuser("VERNE-TYP-001", partie.position(), "propriété inconnue ou inaccessible.");
+                    || element.getKind() != ElementKind.RECORD || !visibilite.accessible(element)) {
+                throw refus("VERNE-TYP-001", partie.position(), "propriété inconnue ou inaccessible.");
             }
-            var declare = (DeclaredType) type;
-            var element = (TypeElement) declare.asElement();
             String nom = chemin[index];
             var composant = element.getRecordComponents().stream()
-                    .filter(candidat -> candidat.getSimpleName().contentEquals(nom)).findFirst();
-            if (composant.isEmpty() || !composant.get().getAccessor().getModifiers().contains(Modifier.PUBLIC)) {
-                refuser("VERNE-TYP-001", partie.position(), "propriété inconnue ou inaccessible.");
-            }
+                    .filter(candidat -> candidat.getSimpleName().contentEquals(nom)).findFirst()
+                    .filter(candidat -> candidat.getAccessor().getModifiers().contains(Modifier.PUBLIC))
+                    .orElseThrow(() -> refus("VERNE-TYP-001", partie.position(), "propriété inconnue ou inaccessible."));
             type = ((ExecutableType) environnement.getTypeUtils().asMemberOf(
-                    declare, composant.get().getAccessor())).getReturnType();
+                    declare, composant.getAccessor())).getReturnType();
             enregistrerOrigine(type);
             expression = "requireNonNull(" + expression
                     + ", \"VERNE-REN-001 : objet de navigation nul.\")." + nom + "()";
         }
-        if (type.getKind() == TypeKind.ERROR) attendreType(partie.position());
-        if (!type.toString().equals("java.lang.String") && !type.getKind().isPrimitive()) {
-            refuser("VERNE-TYP-004", partie.position(), "la valeur interpolée doit être une chaîne ou un scalaire primitif.");
+        if (type.getKind() == TypeKind.ERROR) throw attendreType(partie.position());
+        var chaine = environnement.getElementUtils().getTypeElement("java.lang.String").asType();
+        if (!type.getKind().isPrimitive() && !environnement.getTypeUtils().isSameType(type, chaine)) {
+            throw refus("VERNE-TYP-004", partie.position(), "la valeur interpolée doit être une chaîne ou un scalaire primitif.");
         }
         if (!type.getKind().isPrimitive()) {
             expression = "requireNonNull(" + expression + ", \"VERNE-REN-001 : valeur interpolée nulle.\")";
@@ -285,34 +290,27 @@ final class CompilateurGabarit {
         }
     }
 
-    /** Les types englobants doivent eux aussi être publics pour le paquet généré. */
-    private static boolean publicAvecParents(TypeElement type) {
-        for (Element element = type; element instanceof TypeElement; element = element.getEnclosingElement()) {
-            if (!element.getModifiers().contains(Modifier.PUBLIC)) return false;
-        }
-        return true;
-    }
-
     /** Les caractères ignorés par Java sont refusés pour éviter des noms visuellement distincts équivalents. */
     private static boolean nomSimple(String nom) {
         return SourceVersion.isIdentifier(nom) && !SourceVersion.isKeyword(nom)
                 && nom.codePoints().noneMatch(Character::isIdentifierIgnorable);
     }
 
-    private static boolean nomQualifie(String nom) {
+    /** Nom qualifié Java dont chaque segment respecte les règles de nomSimple. */
+    static boolean nomQualifie(String nom) {
         return !nom.isEmpty() && java.util.Arrays.stream(nom.split("\\.", -1)).allMatch(CompilateurGabarit::nomSimple);
     }
 
     /** Les colonnes comptent les points de code ; CRLF désigne une seule fin de ligne. */
-    private void refuser(String code, int position, String message) {
-        refuser(code, position, message, false);
+    private Refus refus(String code, int position, String message) {
+        return refus(code, position, message, false);
     }
 
-    private void attendreType(int position) {
-        refuser("VERNE-TYP-003", position, "type inconnu, inaccessible ou non pris en charge.", true);
+    private Refus attendreType(int position) {
+        return refus("VERNE-TYP-003", position, "type inconnu, inaccessible ou non pris en charge.", true);
     }
 
-    private void refuser(String code, int position, String message, boolean differe) {
+    private Refus refus(String code, int position, String message, boolean differe) {
         int ligne = 1;
         int debutLigne = 0;
         for (int index = 0; index < position; index++) {
@@ -327,6 +325,6 @@ final class CompilateurGabarit {
             }
         }
         int colonne = texte.codePointCount(debutLigne, position) + 1;
-        throw new Refus(code + " : " + identifiant + ":" + ligne + ":" + colonne + " : " + message, differe);
+        return new Refus(code + " : " + identifiant + ":" + ligne + ":" + colonne + " : " + message, differe);
     }
 }

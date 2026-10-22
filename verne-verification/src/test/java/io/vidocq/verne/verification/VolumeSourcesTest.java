@@ -36,7 +36,7 @@ class VolumeSourcesTest {
         assertAll(() -> assertFalse(compilation.diagnostics().contains("VERNE-SYN-001")),
                 () -> assertFalse(compilation.diagnostics().contains("VERNE-TYP-001")),
                 () -> assertFalse(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Zz.java"))));
+                        .resolve("exemple/gabarits/Zz.java"))));
     }
 
     @Test void refuseAvantDecodageDunPointDeCodeTronqueParLaBorne() throws Exception {
@@ -113,7 +113,7 @@ class VolumeSourcesTest {
 
     private BancCompilation.Compilation compiler(Path racine, Map<String, String> gabarits) throws Exception {
         return BancCompilation.compiler(racine, gabarits,
-                BancCompilation.application("io.vidocq.verne.genere.Gabarit0.rendre()"), true);
+                BancCompilation.application("exemple.gabarits.Gabarit0.rendre()"), true);
     }
 
     private void verifierAcceptation(BancCompilation.Compilation compilation, long nombre) throws Exception {

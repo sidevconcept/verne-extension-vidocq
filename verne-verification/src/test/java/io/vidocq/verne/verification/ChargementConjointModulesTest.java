@@ -44,7 +44,7 @@ final class ChargementConjointModulesTest {
         assertFalse(compilation.reussie());
         assertTrue(compilation.diagnostics().contains("VERNE-TYP-001"), compilation.diagnostics());
         assertTrue(compilation.diagnostics().contains("bonjour.verne:2:1"), compilation.diagnostics());
-        assertFalse(Files.exists(compilation.sourcesGenerees().resolve("io/vidocq/verne/genere/Bonjour.java")));
+        assertFalse(Files.exists(compilation.sourcesGenerees().resolve("exemple/gabarits/Bonjour.java")));
     }
 
     @Test void leServiceClassiqueNeRemplacePasLaDeclarationDuModule() throws Exception {
@@ -70,7 +70,7 @@ final class ChargementConjointModulesTest {
     private BancCompilation.Compilation compiler(Path racine, Path voisin, Path verne, List<String> ordre,
                                                  String gabarit, boolean utiliseRendu, String mode) throws IOException {
         var sources = new HashMap<>(BancCompilation.application(utiliseRendu
-                ? "io.vidocq.verne.genere.Bonjour.rendre(new PersonneGeneree(\"Léa\"))" : "\"Témoin\""));
+                ? "exemple.gabarits.Bonjour.rendre(new PersonneGeneree(\"Léa\"))" : "\"Témoin\""));
         sources.computeIfPresent("exemple/Application.java", (nom, contenu) ->
                 contenu.replace("public final class Application", "@Marque public final class Application"));
         sources.put("exemple/Marque.java", "package exemple; public @interface Marque {}");

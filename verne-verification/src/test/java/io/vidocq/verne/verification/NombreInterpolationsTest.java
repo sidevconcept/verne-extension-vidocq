@@ -31,7 +31,7 @@ class NombreInterpolationsTest {
                 () -> assertFalse(compilation.diagnostics().contains(repertoire.toString())),
                 () -> assertFalse(compilation.diagnostics().contains("🚀")),
                 () -> assertFalse(Files.exists(compilation.sourcesGenerees()
-                        .resolve("io/vidocq/verne/genere/Bonjour.java"))));
+                        .resolve("exemple/gabarits/Bonjour.java"))));
     }
 
     @Test void neComptePasLesCommentairesDeclarationsEtDelimiteursEchappes() throws Exception {
@@ -42,8 +42,8 @@ class NombreInterpolationsTest {
     @Test void appliqueLaBorneSeparementAChaqueGabarit() throws Exception {
         var compilation = BancCompilation.compiler(repertoire,
                 Map.of("bonjour.verne", gabarit(1_024), "salut.verne", gabarit(1_024)),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre(\"é\")"
-                        + " + io.vidocq.verne.genere.Salut.rendre(\"é\")"), true);
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre(\"é\")"
+                        + " + exemple.gabarits.Salut.rendre(\"é\")"), true);
         verifierRendu(compilation, "é".repeat(2_048));
     }
 
@@ -53,7 +53,7 @@ class NombreInterpolationsTest {
 
     private void rendre(String texte, String attendu) throws Exception {
         var compilation = BancCompilation.compiler(repertoire, Map.of("bonjour.verne", texte),
-                BancCompilation.application("io.vidocq.verne.genere.Bonjour.rendre(\"é\")"), true);
+                BancCompilation.application("exemple.gabarits.Bonjour.rendre(\"é\")"), true);
         verifierRendu(compilation, attendu);
     }
 

@@ -1,6 +1,6 @@
 package exemple;
 
-import io.vidocq.verne.genere.Bonjour;
+import exemple.gabarits.Bonjour;
 
 /** Utilise le modèle et le gabarit produits par les deux processeurs. */
 @Marque
