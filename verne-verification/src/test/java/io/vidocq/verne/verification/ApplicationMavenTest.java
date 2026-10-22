@@ -59,7 +59,7 @@ final class ApplicationMavenTest {
         var installation = construire(copie.resolve("pom.xml"), "-pl", "verne-compilation", "-am", "install");
         assertEquals(0, installation.codeSortie(), installation.journal());
         assertTrue(Files.isRegularFile(depot.resolve(
-                "io/vidocq/verne/verne-compilation/0.1.0-SNAPSHOT/verne-compilation-0.1.0-SNAPSHOT.jar")));
+                "io/vidocq/verne/verne-compilation/0.4.0-SNAPSHOT/verne-compilation-0.4.0-SNAPSHOT.jar")));
         Path voisin = preparation.resolve("processeur-voisin");
         copier(projet.resolve("exemples/processeur-voisin"), voisin);
         var installationVoisin = construire(voisin.resolve("pom.xml"), "install");

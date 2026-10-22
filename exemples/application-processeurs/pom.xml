@@ -10,7 +10,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>25</maven.compiler.release>
-        <verne.version>0.1.0-SNAPSHOT</verne.version>
+        <verne.version>0.4.0-SNAPSHOT</verne.version>
         <voisin.version>1.0.0</voisin.version>
     </properties>
     <build>

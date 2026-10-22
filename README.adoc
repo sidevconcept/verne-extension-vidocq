@@ -110,7 +110,7 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 
 == État du projet
 
-*Version de développement : `0.1.0-SNAPSHOT`.* Le sous-ensemble texte est implémenté.
+*Version de développement : `0.4.0-SNAPSHOT`*, alignée sur celle de l'écosystème Vidocq. Le sous-ensemble texte est implémenté.
 La dernière vérification complète sur Mac réussit avec *181 tests, zéro échec, zéro erreur et zéro test ignoré*.
 Les 42 tests initiaux ont également été exécutés sur Windows ; les 139 tests supplémentaires restent à qualifier sur Windows et Linux.
 
