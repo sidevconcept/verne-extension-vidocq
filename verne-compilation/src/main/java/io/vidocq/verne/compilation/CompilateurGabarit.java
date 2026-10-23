@@ -42,7 +42,7 @@ final class CompilateurGabarit {
     private record Parametre(String nom, TypeMirror type) {}
     private record Partie(String contenu, boolean interpolation, int position) {}
     /** Expression Java d'une interpolation ; texte vaut vrai pour une chaîne ou un char, seuls échappés. */
-    private record Resolution(String expression, boolean texte) {}
+    private record Resolution(String expression, boolean texte, boolean primitif) {}
 
     /** Une tentative s'arrête sur un refus définitif ou un type encore absent. */
     private static final class Refus extends RuntimeException {
@@ -78,6 +78,7 @@ final class CompilateurGabarit {
             var instructions = new ArrayList<String>();
             var valeurs = new ArrayList<String>();
             var elements = new ArrayList<String>();
+            var longueurs = new ArrayList<String>();
             int longueurStatique = parties.stream().filter(partie -> !partie.interpolation())
                     .mapToInt(partie -> partie.contenu().length()).sum();
             boolean grandDocument = longueurStatique >= 4_000;
@@ -88,15 +89,19 @@ final class CompilateurGabarit {
                     boolean attribut = emplacements.hasNext() && emplacements.next();
                     boolean aEchapper = profil != Profil.TEXTE && resolution.texte();
                     echappement |= aEchapper;
-                    String expression = grandDocument ? "valueOf(" + resolution.expression() + ")" : resolution.expression();
-                    if (aEchapper) expression = profil == Profil.XML
-                            ? "echapper(" + expression + ", " + attribut + ")" : "echapper(" + expression + ")";
+                    String valeur = nomLibre("$verneValeur" + valeurs.size());
+                    String suffixe = profil == Profil.XML ? ", " + attribut : "";
                     if (grandDocument) {
-                        String valeur = nomLibre("$verneValeur" + valeurs.size());
+                        String expression = "valueOf(" + resolution.expression() + ")";
+                        if (aEchapper) expression = "echapper(" + expression + suffixe + ")";
                         valeurs.add("var " + valeur + " = " + expression + ";\n");
                         elements.add(valeur);
                     } else {
-                        instructions.add(resultat + ".append(" + expression + ");\n");
+                        // Valeurs évaluées d'abord pour dimensionner le tampon ; l'échappement écrit directement dedans.
+                        valeurs.add("var " + valeur + " = " + resolution.expression() + ";\n");
+                        longueurs.add(resolution.primitif() ? "24" : valeur + ".length()");
+                        instructions.add(aEchapper ? "echapper(" + resultat + ", " + valeur + suffixe + ");\n"
+                                : resultat + ".append(" + valeur + ");\n");
                     }
                 } else {
                     String contenu = partie.contenu();
@@ -114,7 +119,8 @@ final class CompilateurGabarit {
             try (var sortie = source.openWriter()) {
                 sortie.write("package " + paquet + ";\n"
                         + "import static java.util.Objects.requireNonNull;\n"
-                        + (grandDocument ? "import static java.lang.String.join;\nimport static java.lang.String.valueOf;\n" : "")
+                        + (grandDocument ? "import static java.lang.String.join;\nimport static java.lang.String.valueOf;\n"
+                            : longueurs.isEmpty() ? "" : "import static java.lang.Math.min;\n")
                         + "/** Gabarit textuel compilé, sans analyse à la demande. */\n"
                         + "public final class " + classe + " {\nprivate " + classe + "() {}\n");
                 sortie.write("/** Produit le document texte ; aucun état partagé entre appels.\n");
@@ -138,11 +144,16 @@ final class CompilateurGabarit {
                     // Longueur et encodage connus avant l'unique copie ; l'import statique évite qu'un paramètre masque java.
                     sortie.write("return join(\"\",\n" + String.join(",\n", elements) + ");\n}\n");
                 } else {
-                    sortie.write("var " + resultat + " = new java.lang.StringBuilder();\n");
+                    String capacite = longueurs.isEmpty() ? String.valueOf(longueurStatique)
+                            : "(int) min(2_147_483_647L, " + longueurStatique + "L + " + String.join(" + ", longueurs) + ")";
+                    sortie.write("var " + resultat + " = new java.lang.StringBuilder(" + capacite + ");\n");
                     for (String instruction : instructions) sortie.write(instruction);
                     sortie.write("return " + resultat + ".toString();\n}\n");
                 }
-                if (echappement) sortie.write(profil == Profil.XML ? ECHAPPEMENT_XML : ECHAPPEMENT_HTML);
+                if (echappement) {
+                    sortie.write(grandDocument ? (profil == Profil.XML ? ECHAPPEMENT_XML : ECHAPPEMENT_HTML)
+                            : (profil == Profil.XML ? ECHAPPEMENT_XML_TAMPON : ECHAPPEMENT_HTML_TAMPON));
+                }
                 sortie.write("}\n");
             }
         } catch (Refus refus) {
@@ -241,6 +252,83 @@ final class CompilateurGabarit {
             }
             }
             return resultat == null ? valeur : resultat.toString();
+            }
+            """;
+
+    /**
+     * Échappement HTML des petits documents, dans le tampon : copie en bloc jusqu'au premier remplacement
+     * (debut vaut alors -1), puis caractère par caractère, ce qui reste efficace aux fortes densités.
+     */
+    private static final String ECHAPPEMENT_HTML_TAMPON = """
+            private static void echapper(java.lang.StringBuilder destination, char caractere) {
+            echapper(destination, java.lang.String.valueOf(caractere));
+            }
+            private static void echapper(java.lang.StringBuilder destination, java.lang.String valeur) {
+            int debut = 0;
+            for (int index = 0; index < valeur.length(); index++) {
+            char caractere = valeur.charAt(index);
+            java.lang.String remplacement = switch (caractere) {
+            case '&' -> "&amp;";
+            case '<' -> "&lt;";
+            case '>' -> "&gt;";
+            case '"' -> "&quot;";
+            case '\\'' -> "&#39;";
+            default -> null;
+            };
+            if (remplacement != null) {
+            if (debut >= 0) destination.append(valeur, debut, index);
+            destination.append(remplacement);
+            debut = -1;
+            } else if (debut < 0) {
+            destination.append(caractere);
+            }
+            }
+            if (debut >= 0) destination.append(valeur, debut, valeur.length());
+            }
+            """;
+
+    /**
+     * Échappement XML des petits documents, dans le tampon : copie en bloc jusqu'au premier remplacement
+     * (debut vaut alors -1), puis caractère par caractère ; un caractère interdit abandonne le rendu.
+     */
+    private static final String ECHAPPEMENT_XML_TAMPON = """
+            private static void echapper(java.lang.StringBuilder destination, char caractere, boolean attribut) {
+            echapper(destination, java.lang.String.valueOf(caractere), attribut);
+            }
+            private static void echapper(java.lang.StringBuilder destination, java.lang.String valeur, boolean attribut) {
+            int debut = 0;
+            for (int index = 0; index < valeur.length(); index++) {
+            char caractere = valeur.charAt(index);
+            java.lang.String remplacement = switch (caractere) {
+            case '&' -> "&amp;";
+            case '<' -> "&lt;";
+            case '>' -> "&gt;";
+            case '"' -> "&quot;";
+            case '\\'' -> "&apos;";
+            case '\\r' -> "&#13;";
+            case '\\n' -> attribut ? "&#10;" : null;
+            case '\\t' -> attribut ? "&#9;" : null;
+            default -> null;
+            };
+            if (remplacement != null) {
+            if (debut >= 0) destination.append(valeur, debut, index);
+            destination.append(remplacement);
+            debut = -1;
+            continue;
+            }
+            boolean paire = java.lang.Character.isHighSurrogate(caractere) && index + 1 < valeur.length()
+            && java.lang.Character.isLowSurrogate(valeur.charAt(index + 1));
+            if (caractere < 0x20 && caractere != '\\n' && caractere != '\\t' || caractere == 0xFFFE || caractere == 0xFFFF
+            || java.lang.Character.isSurrogate(caractere) && !paire) {
+            throw new java.lang.IllegalArgumentException("VERNE-REN-002 : caractère interdit par XML 1.0 dans une valeur interpolée.");
+            }
+            if (debut < 0) destination.append(caractere);
+            if (paire) {
+            index++;
+            if (debut < 0) destination.append(valeur.charAt(index));
+            }
+            }
+            if (debut >= 0) destination.append(valeur, debut, valeur.length());
             }
             """;
 
@@ -400,7 +488,8 @@ final class CompilateurGabarit {
         if (!type.getKind().isPrimitive()) {
             expression = "requireNonNull(" + expression + ", \"VERNE-REN-001 : valeur interpolée nulle.\")";
         }
-        return new Resolution(expression, !type.getKind().isPrimitive() || type.getKind() == TypeKind.CHAR);
+        return new Resolution(expression, !type.getKind().isPrimitive() || type.getKind() == TypeKind.CHAR,
+                type.getKind().isPrimitive());
     }
 
     /** Les origines standard permettent à l'outillage de relier une sortie à ses modèles Java. */

@@ -111,8 +111,8 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 == État du projet
 
 *Version de développement : `0.4.0-SNAPSHOT`*, alignée sur celle de l'écosystème Vidocq. Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *236 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 194 tests supplémentaires restent à qualifier sur Windows et Linux.
+La dernière vérification complète sur Mac réussit avec *239 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 197 tests supplémentaires restent à qualifier sur Windows et Linux.
 
 Les conditions, boucles, inclusions, contenus déclarés fiables, profil JSON, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.

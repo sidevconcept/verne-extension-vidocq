@@ -19,8 +19,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Le calcul d’invalidation est intégré par la PR nº 17 : **157 tests réussissent sur Mac**, sans échec, erreur ni test ignoré. Les empreintes sont encore fournies par l’appelant ; le raccordement aux entrées et sorties Maven reste à réaliser.
 - Les corrections de la revue de code sont intégrées par la PR nº 19, et la version alignée sur Vidocq `0.4.0-SNAPSHOT` par la PR nº 20 : paquet généré obligatoire, visibilité des modules, chaînes annotées, erreurs de parcours et de `Filer`, interruption des tours, noms NFC, version source, compilation Maven des tests et hygiène de construction. **181 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Le rendu des grands documents en assemblage unique est intégré par la PR nº 21 : **183 tests réussissent sur Mac**.
-- Les profils de sortie HTML et XML sont prêts localement sur `fonctionnalite/profils-html-xml` : **236 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 194 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Les profils de sortie HTML et XML sont intégrés par la PR nº 22 : **236 tests réussissent sur Mac**.
+- Le tampon dimensionné et l'échappement direct des petits documents sont prêts localement sur `fonctionnalite/tampon-dimensionne` : **239 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 197 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
