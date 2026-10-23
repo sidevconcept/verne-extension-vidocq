@@ -20,8 +20,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Les corrections de la revue de code sont intégrées par la PR nº 19, et la version alignée sur Vidocq `0.4.0-SNAPSHOT` par la PR nº 20 : paquet généré obligatoire, visibilité des modules, chaînes annotées, erreurs de parcours et de `Filer`, interruption des tours, noms NFC, version source, compilation Maven des tests et hygiène de construction. **181 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Le rendu des grands documents en assemblage unique est intégré par la PR nº 21 : **183 tests réussissent sur Mac**.
 - Les profils de sortie HTML et XML sont intégrés par la PR nº 22 : **236 tests réussissent sur Mac**.
-- Le tampon dimensionné et l'échappement direct des petits documents sont prêts localement sur `fonctionnalite/tampon-dimensionne` : **239 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 197 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Le tampon dimensionné et l'échappement direct des petits documents sont commités localement sur `fonctionnalite/tampon-dimensionne` : **239 tests réussissent sur Mac**.
+- Le choix du profil par gabarit est prêt localement sur `fonctionnalite/profil-par-gabarit` : **244 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 202 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -74,7 +75,8 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 ## 6. Étendre les sorties et leur sécurité
 
 - [x] Livrer les profils HTML et XML : échappement des valeurs, refus des contextes non pris en charge et des caractères interdits en XML.
-- [ ] Choisir le profil par gabarit plutôt que pour toute l'invocation ; ajouter le profil JSON, les types de média et les encodages.
+- [x] Choisir le profil par gabarit, par suffixe de nom, avec un profil par défaut configuré.
+- [ ] Ajouter le profil JSON, les types de média et les encodages.
 - [ ] Ajouter la validation des URL dynamiques, aujourd'hui refusées en HTML.
 - [ ] Définir les types de contenus déclarés fiables et les encodeurs personnalisés.
 - [ ] Ajouter les sections personnalisées avec validation à la construction.
