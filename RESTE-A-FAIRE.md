@@ -53,6 +53,7 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - [ ] Raccorder l’inventaire réel des fichiers et la collecte des empreintes au calcul ; vérifier les sorties, appliquer le plan et persister l’état après succès. Le nettoyage automatique reste actif.
 - [ ] Qualifier l’intégration aux IDE.
 - [ ] Rattacher les erreurs du Java généré aux identifiants et positions des gabarits.
+- [ ] Pendant la construction, présenter chaque erreur de compilation d'un fichier `.verne` sur son fichier réel, avec ligne et colonne exploitables par Maven et les IDE (lien cliquable, soulignement à la position), et un extrait de la ligne fautive avec un repère sous la colonne. Aujourd'hui la position n'apparaît que dans le texte du message (`bonjour.verne:2:1`), relative à la racine, sans rattachement au fichier.
 - [ ] Compléter la qualification du budget de génération et des limites restantes de javac.
 - [ ] Compléter les règles de nommage portable, les racines multiples et les collisions entre fournisseurs.
 
