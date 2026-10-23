@@ -42,7 +42,7 @@ final class CompilateurGabarit {
     private record Parametre(String nom, TypeMirror type) {}
     private record Partie(String contenu, boolean interpolation, int position) {}
     /** Expression Java d'une interpolation ; texte vaut vrai pour une chaîne ou un char, seuls échappés. */
-    private record Resolution(String expression, boolean texte, boolean primitif) {}
+    private record Resolution(String expression, boolean texte, boolean primitif, boolean flottant) {}
 
     /** Une tentative s'arrête sur un refus définitif ou un type encore absent. */
     private static final class Refus extends RuntimeException {
@@ -75,6 +75,7 @@ final class CompilateurGabarit {
             verifierBudgetGeneration();
             var emplacements = verifierContextes().iterator();
             boolean echappement = false;
+            boolean nombreFini = false;
             var instructions = new ArrayList<String>();
             var valeurs = new ArrayList<String>();
             var elements = new ArrayList<String>();
@@ -86,19 +87,31 @@ final class CompilateurGabarit {
             for (Partie partie : parties) {
                 if (partie.interpolation()) {
                     var resolution = resoudre(partie);
+                    // Attribut entre guillemets en XML ; littéral de chaîne en JSON.
                     boolean attribut = emplacements.hasNext() && emplacements.next();
+                    String brute = resolution.expression();
+                    if (profil == Profil.JSON && !attribut) {
+                        if (resolution.texte()) {
+                            throw refus("VERNE-SEC-002", partie.position(), "interpolation interdite dans ce contexte JSON :"
+                                    + " chaîne ou caractère hors d'un littéral entre guillemets.");
+                        }
+                        if (resolution.flottant()) {
+                            brute = "fini(" + brute + ")";
+                            nombreFini = true;
+                        }
+                    }
                     boolean aEchapper = profil != Profil.TEXTE && resolution.texte();
                     echappement |= aEchapper;
                     String valeur = nomLibre("$verneValeur" + valeurs.size());
                     String suffixe = profil == Profil.XML ? ", " + attribut : "";
                     if (grandDocument) {
-                        String expression = "valueOf(" + resolution.expression() + ")";
+                        String expression = "valueOf(" + brute + ")";
                         if (aEchapper) expression = "echapper(" + expression + suffixe + ")";
                         valeurs.add("var " + valeur + " = " + expression + ";\n");
                         elements.add(valeur);
                     } else {
                         // Valeurs évaluées d'abord pour dimensionner le tampon ; l'échappement écrit directement dedans.
-                        valeurs.add("var " + valeur + " = " + resolution.expression() + ";\n");
+                        valeurs.add("var " + valeur + " = " + brute + ";\n");
                         longueurs.add(resolution.primitif() ? "24" : valeur + ".length()");
                         instructions.add(aEchapper ? "echapper(" + resultat + ", " + valeur + suffixe + ");\n"
                                 : resultat + ".append(" + valeur + ");\n");
@@ -151,9 +164,13 @@ final class CompilateurGabarit {
                     sortie.write("return " + resultat + ".toString();\n}\n");
                 }
                 if (echappement) {
-                    sortie.write(grandDocument ? (profil == Profil.XML ? ECHAPPEMENT_XML : ECHAPPEMENT_HTML)
-                            : (profil == Profil.XML ? ECHAPPEMENT_XML_TAMPON : ECHAPPEMENT_HTML_TAMPON));
+                    sortie.write(switch (profil) {
+                        case XML -> grandDocument ? ECHAPPEMENT_XML : ECHAPPEMENT_XML_TAMPON;
+                        case JSON -> grandDocument ? ECHAPPEMENT_JSON_TAMPON + ECHAPPEMENT_JSON_CHAINE : ECHAPPEMENT_JSON_TAMPON;
+                        default -> grandDocument ? ECHAPPEMENT_HTML : ECHAPPEMENT_HTML_TAMPON;
+                    });
                 }
+                if (nombreFini) sortie.write(NOMBRE_FINI_JSON);
                 sortie.write("}\n");
             }
         } catch (Refus refus) {
@@ -190,8 +207,9 @@ final class CompilateurGabarit {
     }
 
     /**
-     * Profils HTML et XML : caractères interdits du gabarit XML, puis emplacement de chaque interpolation.
-     * Renvoie, dans l'ordre des interpolations, vrai pour une valeur d'attribut ; liste vide en profil texte.
+     * Profils HTML, XML et JSON : caractères interdits du gabarit XML, puis emplacement de chaque interpolation.
+     * Renvoie, dans l'ordre des interpolations, vrai pour une valeur d'attribut (HTML, XML) ou un littéral de chaîne
+     * (JSON) ; liste vide en profil texte.
      */
     private List<Boolean> verifierContextes() {
         var emplacements = new ArrayList<Boolean>();
@@ -204,6 +222,21 @@ final class CompilateurGabarit {
                     throw refus("VERNE-SYN-004", index, "caractère interdit par XML 1.0 dans le texte du gabarit.");
                 }
             }
+        }
+        if (profil == Profil.JSON) {
+            var json = new ContexteJson();
+            for (Partie partie : parties) {
+                if (!partie.interpolation()) {
+                    json.avancer(partie.contenu());
+                    continue;
+                }
+                String interdit = json.refus();
+                if (interdit != null) {
+                    throw refus("VERNE-SEC-002", partie.position(), "interpolation interdite dans ce contexte JSON : " + interdit + ".");
+                }
+                emplacements.add(json.dansChaine());
+            }
+            return emplacements;
         }
         var contexte = new ContexteBalisage(profil);
         String nomProfil = profil == Profil.XML ? "XML" : "HTML";
@@ -373,6 +406,71 @@ final class CompilateurGabarit {
             }
             """;
 
+    /**
+     * Échappement JSON des chaînes, dans le tampon : formes courtes, autres contrôles, U+2028, U+2029 et substituts
+     * isolés en \\uxxxx ; copie en bloc jusqu'au premier remplacement (debut vaut alors -1), puis caractère par caractère.
+     */
+    private static final String ECHAPPEMENT_JSON_TAMPON = """
+            private static void echapper(java.lang.StringBuilder destination, char caractere) {
+            echapper(destination, java.lang.String.valueOf(caractere));
+            }
+            private static void echapper(java.lang.StringBuilder destination, java.lang.String valeur) {
+            int debut = 0;
+            for (int index = 0; index < valeur.length(); index++) {
+            char caractere = valeur.charAt(index);
+            java.lang.String remplacement = switch (caractere) {
+            case '"' -> "\\\\\\"";
+            case '\\\\' -> "\\\\\\\\";
+            case '\\b' -> "\\\\b";
+            case '\\f' -> "\\\\f";
+            case '\\n' -> "\\\\n";
+            case '\\r' -> "\\\\r";
+            case '\\t' -> "\\\\t";
+            default -> null;
+            };
+            boolean paire = false;
+            if (remplacement == null) {
+            paire = java.lang.Character.isHighSurrogate(caractere) && index + 1 < valeur.length()
+            && java.lang.Character.isLowSurrogate(valeur.charAt(index + 1));
+            if (caractere < 0x20 || caractere == 0x2028 || caractere == 0x2029 || java.lang.Character.isSurrogate(caractere) && !paire) {
+            remplacement = "\\\\u" + java.lang.Integer.toHexString(caractere | 0x10000).substring(1);
+            }
+            }
+            if (remplacement != null) {
+            if (debut >= 0) destination.append(valeur, debut, index);
+            destination.append(remplacement);
+            debut = -1;
+            } else if (debut < 0) {
+            destination.append(caractere);
+            if (paire) destination.append(valeur.charAt(index + 1));
+            }
+            if (paire) index++;
+            }
+            if (debut >= 0) destination.append(valeur, debut, valeur.length());
+            }
+            """;
+
+    /** Échappement JSON en chaîne pour l'assemblage unique des grands documents ; pas de copie si rien n'est remplacé. */
+    private static final String ECHAPPEMENT_JSON_CHAINE = """
+            private static java.lang.String echapper(java.lang.String valeur) {
+            var destination = new java.lang.StringBuilder(valeur.length() + 16);
+            echapper(destination, valeur);
+            return destination.length() == valeur.length() ? valeur : destination.toString();
+            }
+            """;
+
+    /** Hors d'un littéral JSON, un nombre infini ou NaN produirait un document invalide. */
+    private static final String NOMBRE_FINI_JSON = """
+            private static double fini(double valeur) {
+            if (!java.lang.Double.isFinite(valeur)) throw new java.lang.IllegalArgumentException("VERNE-REN-003 : nombre non fini interdit hors d'une chaîne JSON.");
+            return valeur;
+            }
+            private static float fini(float valeur) {
+            if (!java.lang.Float.isFinite(valeur)) throw new java.lang.IllegalArgumentException("VERNE-REN-003 : nombre non fini interdit hors d'une chaîne JSON.");
+            return valeur;
+            }
+            """;
+
     /** Les deux familles de variables locales restent distinctes et évitent tous les paramètres. */
     private String nomLibre(String nom) {
         while (parametres.containsKey(nom)) nom += "_";
@@ -489,7 +587,7 @@ final class CompilateurGabarit {
             expression = "requireNonNull(" + expression + ", \"VERNE-REN-001 : valeur interpolée nulle.\")";
         }
         return new Resolution(expression, !type.getKind().isPrimitive() || type.getKind() == TypeKind.CHAR,
-                type.getKind().isPrimitive());
+                type.getKind().isPrimitive(), type.getKind() == TypeKind.DOUBLE || type.getKind() == TypeKind.FLOAT);
     }
 
     /** Les origines standard permettent à l'outillage de relier une sortie à ses modèles Java. */

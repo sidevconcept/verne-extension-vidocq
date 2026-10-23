@@ -2,7 +2,7 @@ package io.vidocq.verne.compilation;
 
 /** Profil de sortie d'une invocation, choisi par l'option verne.profil.sortie. */
 enum Profil {
-    TEXTE, HTML, XML;
+    TEXTE, HTML, XML, JSON;
 
     /** Valeur exacte de l'option, sensible à la casse ; null pour une valeur absente ou inconnue. */
     static Profil depuis(String option) {
@@ -11,6 +11,7 @@ enum Profil {
             case "texte" -> TEXTE;
             case "html" -> HTML;
             case "xml" -> XML;
+            case "json" -> JSON;
             default -> null;
         };
     }

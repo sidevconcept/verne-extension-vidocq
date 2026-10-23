@@ -118,7 +118,7 @@ final class ApplicationMavenTest {
     }
 
     @Test void transmetLeRefusDunProfilNonPrisEnCharge() throws Exception {
-        verifierRefus(preparerApplication(), "VERNE-CFG-001", "", "-Dverne.profil.sortie=json");
+        verifierRefus(preparerApplication(), "VERNE-CFG-001", "", "-Dverne.profil.sortie=yaml");
     }
 
     @Test void chargeLesDeuxProcesseursParLeProfilMavenClassique() throws Exception {
