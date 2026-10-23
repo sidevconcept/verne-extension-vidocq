@@ -40,7 +40,7 @@ Le fournisseur public sans argument est instancié par le compilateur ; son éta
 == Sources et génération
 
 Le processeur reçoit trois options obligatoires : `verne.racine.gabarits`, `verne.paquet` et `verne.profil.sortie`, dont la valeur est `texte`, `html` ou `xml`.
-Une racine absente, un paquet absent ou invalide, ou un profil absent ou inconnu produit `VERNE-CFG-001`, sans interprétation implicite comme texte brut ni paquet par défaut. Le profil s'applique à tous les gabarits de l'invocation ; il est décrit dans link:#_profils_de_sortie_html_et_xml[les profils de sortie].
+Une racine absente, un paquet absent ou invalide, ou un profil absent ou inconnu produit `VERNE-CFG-001`, sans interprétation implicite comme texte brut ni paquet par défaut. Ce profil est celui des gabarits sans suffixe de profil ; un gabarit peut choisir le sien par son nom, comme décrit dans link:#_profils_de_sortie_html_et_xml[les profils de sortie].
 Les fichiers `.verne` sont parcourus dans un ordre déterministe ; les répertoires symboliques ne sont pas suivis.
 Une ressource réelle hors de la racine est refusée ; les erreurs de lecture ou de génération sont signalées sans chemin machine.
 Le processeur déclare la dernière version source prise en charge par le compilateur Java qui l'exécute ; Java 25 reste la version minimale du projet.
@@ -87,7 +87,8 @@ La limite initiale est un mébioctet, soit 1 048 576 octets par fichier, borne i
 La lecture s'arrête au premier octet au-delà de cette borne.
 Cette limite concerne les octets sources, et non le nombre de caractères ou la taille du document rendu.
 
-Le nom simple du fichier, normalisé en NFC, détermine la classe, en mettant sa première lettre en majuscule : avec `-Averne.paquet=exemple.gabarits`, `bonjour.verne` produit `exemple.gabarits.Bonjour`.
+Le nom simple du fichier, normalisé en NFC et privé de son éventuel suffixe de profil, détermine la classe, en mettant sa première lettre en majuscule : avec `-Averne.paquet=exemple.gabarits`, `bonjour.verne` et `bonjour.html.verne` produisent `exemple.gabarits.Bonjour`.
+Le suffixe de profil est le dernier segment avant `.verne`, séparé par un point : `texte`, `html` ou `xml`, en minuscules. Tout autre suffixe, comme `json` ou `HTML`, produit `VERNE-LIA-001` à `identifiant.verne:1:1`, sans lecture du fichier ; les autres ressources continuent à être vérifiées. Deux fichiers qui ne diffèrent que par leur suffixe produisent la même classe et sont refusés comme collision.
 Un même nom écrit en NFC ou en NFD, selon le système de fichiers ou l'outil qui l'a créé, produit donc la même classe, utilisable depuis des sources Java écrites en NFC.
 Les répertoires ne participent pas encore au nom de classe : deux ressources de même nom simple sont donc refusées, même dans des sous-répertoires différents.
 Le nom doit être un identifiant Java admissible.
@@ -157,7 +158,7 @@ Le contrat n'inclut pas encore une sortie en flux, un plafond de caractères ren
 
 === Profils de sortie HTML et XML
 
-Le profil est choisi pour toute l'invocation par `-Averne.profil.sortie`. Le choix d'un profil par gabarit, le contenu déclaré fiable et le profil JSON restent à livrer : dans ces profils, toute valeur interpolée est échappée, sans exception.
+Chaque gabarit a un profil : celui de son suffixe, comme `page.html.verne`, `flux.xml.verne` ou `note.texte.verne`, sinon le profil par défaut de `-Averne.profil.sortie`. Une même invocation peut donc produire du texte, du HTML et du XML. Un suffixe choisit explicitement un profil ; l'absence de suffixe ne désactive aucune protection, puisqu'elle applique le profil configuré. Le contenu déclaré fiable et le profil JSON restent à livrer : dans les profils HTML et XML, toute valeur interpolée est échappée, sans exception.
 
 ==== Échappement des valeurs
 
@@ -174,7 +175,7 @@ Le profil est choisi pour toute l'invocation par `-Averne.profil.sortie`. Le cho
 |===
 
 L'échappement s'applique aux chaînes et au type `char`. Les autres primitives (`boolean`, `byte`, `short`, `int`, `long`, `float`, `double`) ne peuvent contenir aucun de ces caractères et sont rendues sans transformation. La valeur d'origine n'est jamais modifiée ; une valeur déjà échappée l'est une seconde fois, car Verne ne distingue pas encore un contenu fiable.
-Une valeur sans caractère à échapper est rendue telle quelle, sans copie. L'échappement est une méthode privée de chaque classe générée : aucune bibliothèque n'est requise à l'exécution, aucun état n'est partagé et le rendu reste sûr en concurrence.
+Une valeur sans caractère à échapper n'est pas recopiée avant d'entrer dans le document : les petits documents l'écrivent directement dans leur tampon, les grands l'utilisent telle quelle. L'échappement est une méthode privée de chaque classe générée : aucune bibliothèque n'est requise à l'exécution, aucun état n'est partagé et le rendu reste sûr en concurrence.
 
 En XML, une valeur contenant un caractère interdit par XML 1.0 provoque `IllegalArgumentException` avec `VERNE-REN-002`, sans la valeur dans le message. Sont interdits les contrôles de U+0000 à U+001F autres que tabulation, LF et CR, U+FFFE, U+FFFF et les substituts isolés. Aucun texte n'est alors renvoyé. Le texte d'un gabarit XML est soumis à la même règle à la compilation : un caractère interdit dans le fichier source produit `VERNE-SYN-004` à sa position.
 
@@ -211,8 +212,15 @@ Chaque interpolation est évaluée une seule fois, dans l'ordre du gabarit, apr�
 Le document est ensuite assemblé en une seule opération à partir des fragments statiques et de ces représentations, dans l'ordre du gabarit. La longueur et l'encodage interne de la chaîne finale sont déterminés avant la copie : le texte est copié une seule fois, y compris lorsqu'une valeur hors Latin-1 suit un long texte Latin-1. Cet assemblage utilise uniquement le JDK.
 Les chaînes vides, les diagnostics de nullité, le découpage des constantes et le budget pondéré de génération restent inchangés. Les noms locaux évitent ceux de tous les paramètres. Aucun état partagé, dépendance tierce ou second appel d'accesseur n'est introduit ; chaque appel n'utilise que ses variables locales et reste sûr en concurrence.
 Ce mode n'ajoute pas de limite de rendu : un document dont la longueur dépasse la capacité d'une chaîne Java provoque l'erreur de ressources levée par la JVM.
-Sous le seuil, la stratégie et les sources générées sont inchangées : un tampon local par appel, sans évaluation préalable des valeurs. Ce choix est mesuré : l'assemblage unique ralentit les petits documents.
+Sous le seuil, un tampon dimensionné est utilisé, comme décrit ci-dessous ; l'assemblage unique y ralentirait le rendu.
 Les contrôles d'allocations de vérification utilisent `jdk.management` uniquement dans leur application de test. Sur le JDK 25 de référence, après échauffement, le rendu d'un bloc ASCII de 65 536 caractères doit allouer, par caractère statique, moins de 1,5 octet lorsqu'il est suivi d'une valeur Latin-1, moins de 2,5 octets lorsqu'il est suivi d'une valeur hors Latin-1, et moins de sept octets dans le contrôle historique. Ces budgets ciblés ne sont ni une garantie globale de mémoire ni un seuil de temps d'exécution.
+
+=== Tampon dimensionné des petits documents
+
+Sous 4 000 unités UTF-16 de texte statique, chaque interpolation est aussi évaluée une seule fois, dans l'ordre du gabarit, après le contrôle des paramètres obligatoires, et conservée dans une variable locale. Le tampon local est ensuite alloué une seule fois, avec une capacité égale à la longueur du texte statique, plus la longueur de chaque chaîne interpolée avant échappement, plus 24 par primitive, ce qui couvre la représentation la plus longue d'un `long` ou d'un `double`. La somme est calculée en `long` puis saturée à la capacité entière maximale ; un document trop grand reste soumis aux erreurs de ressources de la JVM.
+Avec les profils HTML et XML, chaque valeur est échappée directement dans ce tampon, par plages de caractères, sans chaîne intermédiaire. Un document dont l'échappement dépasse la capacité prévue agrandit le tampon, sans autre effet. En XML, un caractère interdit lève `VERNE-REN-002` pendant l'écriture : le tampon local est abandonné et aucun texte n'est renvoyé.
+L'ordre d'évaluation, les contrôles de nullité, l'échappement et le texte produit sont inchangés ; seules la forme des sources générées et les allocations changent. Aucun état partagé n'est introduit et le rendu reste sûr en concurrence.
+Sur le JDK 25 de référence, après échauffement, le rendu d'une fiche d'environ 700 caractères Latin-1 doit allouer moins de 2,5 octets par caractère du document en profil texte. En profil HTML, avec environ 10 % de caractères à échapper dans les valeurs, il doit allouer moins de 4,5 octets par caractère du document produit.
 
 === Nombre de paramètres déclarés
 
@@ -430,10 +438,32 @@ Les 51 cas de `ProfilsSortieTest` couvrent T-SOR-01 (même valeur en texte brut 
 Avant implémentation, les 50 nouveaux cas échouaient tous par `VERNE-CFG-001`, le profil étant refusé ; le contrôle des profils inconnus réussissait déjà. Le refus d'un profil `html` dans l'application Maven devient celui d'un profil `json`. Le module de vérification lit `java.xml`, seulement pour l'oracle XML des tests.
 `./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 236 tests, zéro échec, erreur ou test ignoré.
 
+== Tampon dimensionné et échappement direct : vérification
+
+Les deux contrôles d'allocations de `PetitsDocumentsTest` ont d'abord échoué pour la cause attendue : 3 128 octets par rendu pour une limite de 1 660 en texte, et 6 779 pour une limite de 3 870 en HTML, du fait des agrandissements successifs du tampon et des chaînes échappées intermédiaires. Le contrôle de l'ordre d'évaluation réussissait déjà et protège ce comportement. Après implémentation, les trois tests réussissent ; au budget maximal de génération, la méthode de rendu mesure environ 40,4 Kio, sous la limite contrôlée de 60 000 octets.
+Une première forme d'échappement par plages a été mesurée puis écartée : elle gagnait jusqu'à 29 % à 10 % de caractères spéciaux mais régressait de 6 à 15 % à 50 %. La forme retenue copie en bloc le texte qui précède le premier remplacement, puis écrit caractère par caractère.
+Mesure avant et après, dans l'ordre référence, candidate, candidate, référence, avec trois densités de caractères spéciaux (0, 10 et 50 %) :
+
+[cols="2,1,1,1",options="header"]
+|===
+|Document |Temps, sans échappement |Temps, avec échappement |Allocations
+|Fiche HTML, 7 valeurs |−35 % |−3 à −15 % |−52 à −56 %
+|Tableau HTML, 100 valeurs |−8 % |−12 à −20 % |−50 à −60 %
+|Facture XML, 7 valeurs |−37 % |−8 à −14 % |−49 à −54 %
+|Page de 64 Kio |inchangé |inchangé |inchangé
+|===
+
+Le poste est passé du secteur à la batterie pendant ces campagnes ; les passes de référence restent concordantes. `./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 239 tests, zéro échec, erreur ou test ignoré.
+
+== Profil par gabarit : vérification
+
+Les cinq tests de `ProfilParGabaritTest` couvrent une compilation mêlant `page.html.verne`, `flux.xml.verne`, `note.texte.verne` et un gabarit sans suffixe rendu avec le profil par défaut, le choix explicite du texte malgré un défaut HTML, les contextes propres au profil de chaque gabarit, le refus des suffixes inconnus `json` et `HTML` sans lecture du fichier ni arrêt des autres, et la collision de deux gabarits qui ne diffèrent que par leur profil. Avant implémentation, quatre tests échouaient parce que tout nom contenant un point était refusé ; le cinquième ne réussissait que pour cette même raison et a été précisé pour exiger le diagnostic de collision.
+`./mvnw -ntp clean verify` réussit sur Mac avec Java 25 : 244 tests, zéro échec, erreur ou test ignoré.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 194 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique et profils HTML et XML ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 202 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné et profil par gabarit ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -443,7 +473,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 236 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 244 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -473,7 +503,9 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`VisibiliteModulesTest` |6 |0 |0 |0
 |`RobustesseCompilationTest` |5 |0 |0 |0
 |`ProfilsSortieTest` |51 |0 |0 |0
-|Total |236 |0 |0 |0
+|`PetitsDocumentsTest` |3 |0 |0 |0
+|`ProfilParGabaritTest` |5 |0 |0 |0
+|Total |244 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

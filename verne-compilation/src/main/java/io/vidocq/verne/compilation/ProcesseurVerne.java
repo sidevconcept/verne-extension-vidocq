@@ -38,7 +38,7 @@ public final class ProcesseurVerne extends AbstractProcessor {
     private static final int NOMBRE_MAXIMAL_GABARITS = 1_024;
     private static final int NOMBRE_MAXIMAL_DIAGNOSTICS = 64;
 
-    private record GabaritEnAttente(String classe, String texte, String identifiant, String diagnostic) {}
+    private record GabaritEnAttente(String classe, String texte, String identifiant, Profil profil, String diagnostic) {}
 
     /** Constructeur public exigé par le chargement des processeurs du compilateur Java. */
     public ProcesseurVerne() {}
@@ -75,7 +75,7 @@ public final class ProcesseurVerne extends AbstractProcessor {
                 enAttente.clear();
                 for (GabaritEnAttente gabarit : aReprendre) {
                     if (diagnosticsSatures) break;
-                    compilerTexte(gabarit.classe(), gabarit.texte(), gabarit.identifiant());
+                    compilerTexte(gabarit.classe(), gabarit.texte(), gabarit.identifiant(), gabarit.profil());
                 }
                 return false;
             }
@@ -122,6 +122,16 @@ public final class ProcesseurVerne extends AbstractProcessor {
                 }
                 String base = Normalizer.normalize(fichier.getFileName().toString(), Normalizer.Form.NFC);
                 base = base.substring(0, base.length() - ".verne".length());
+                Profil profilGabarit = profil;
+                int point = base.lastIndexOf('.');
+                if (point >= 0) {
+                    profilGabarit = Profil.depuis(base.substring(point + 1));
+                    if (profilGabarit == null) {
+                        erreur("VERNE-LIA-001", identifiant + ":1:1 : suffixe de profil inconnu ; attendu texte, html ou xml.");
+                        continue;
+                    }
+                    base = base.substring(0, point);
+                }
                 if (!SourceVersion.isIdentifier(base) || SourceVersion.isKeyword(base)) {
                     erreur("VERNE-LIA-001", identifiant + ":1:1 : nom de gabarit incompatible avec une classe Java.");
                     continue;
@@ -147,7 +157,7 @@ public final class ProcesseurVerne extends AbstractProcessor {
                 }
                 try {
                     String texte = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(octets)).toString();
-                    compilerTexte(classe, texte, identifiant);
+                    compilerTexte(classe, texte, identifiant, profilGabarit);
                 } catch (CharacterCodingException exception) {
                     erreur("VERNE-SYN-003", identifiant + ":1:1 : source UTF-8 malformée.");
                 }
@@ -158,12 +168,12 @@ public final class ProcesseurVerne extends AbstractProcessor {
         return false;
     }
 
-    /** Chaque ressource dispose de son analyseur ; un échec de création Java n'arrête pas les suivantes. */
-    private void compilerTexte(String classe, String texte, String identifiant) {
+    /** Chaque ressource dispose de son analyseur et de son profil ; un échec de création Java n'arrête pas les suivantes. */
+    private void compilerTexte(String classe, String texte, String identifiant, Profil profilGabarit) {
         try {
-            String diagnostic = new CompilateurGabarit(processingEnv, this::signalerErreur, paquet, visibilite, profil)
+            String diagnostic = new CompilateurGabarit(processingEnv, this::signalerErreur, paquet, visibilite, profilGabarit)
                     .compiler(classe, texte, identifiant);
-            if (diagnostic != null) enAttente.add(new GabaritEnAttente(classe, texte, identifiant, diagnostic));
+            if (diagnostic != null) enAttente.add(new GabaritEnAttente(classe, texte, identifiant, profilGabarit, diagnostic));
         } catch (IOException exception) {
             erreur("VERNE-IO-001", identifiant + ":1:1 : impossible de générer la source Java.");
         }
