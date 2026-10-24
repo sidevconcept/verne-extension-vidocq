@@ -542,3 +542,109 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.
 
 Le paquet exporté `io.vidocq.verne.invalidation` fournit désormais le link:invalidation-gabarits.adoc[calcul du plan de recompilation] aux outils de construction. Il ne réalise aucune opération de fichier et n’est pas une dépendance des applications de rendu.
+
+== Diagnostics rattachés aux fichiers de gabarit (proposé)
+
+Cette section est une proposition de VERNE-002 (ticket nº 27), soumise à D-002.
+Elle ne décrit aucune capacité livrée et ne modifie les contrats précédents qu'après décision explicite et réalisation de VERNE-004.
+
+=== Observations et portée
+
+Sur la base `6c6825883176d237e4ece2f8115e91506af357b1`, `signalerErreur` transmet un message sans élément à `Messager`.
+Avec javac 25.0.1, un collecteur de diagnostics retourne une source nulle et les positions `-1`, même si le texte contient `bonjour.verne:2:1`.
+Maven 3.9.16 avec maven-compiler-plugin 3.14.1 affiche ce texte sans position structurée ; son résumé peut le répéter.
+Ces répétitions de présentation ne sont pas des émissions supplémentaires de Verne.
+
+L'API standard https://docs.oracle.com/en/java/javase/25/docs/api/java.compiler/javax/annotation/processing/Messager.html[Messager] accepte un élément Java, une annotation ou sa valeur comme indication de position, mais aucun fichier arbitraire avec ligne et colonne.
+Un élément Java d'origine pointerait le modèle Java, pas le gabarit ; il n'existe pas nécessairement pour un gabarit textuel.
+Le préfixe proposé ci-dessous reste donc du texte : aucun lien cliquable, marqueur dans le panneau des problèmes ou soulignement du gabarit n'est garanti par le processeur seul.
+Un tel rattachement structuré demanderait une intégration propre à l'outil, à délimiter avant réalisation ; aucune API interne de javac ni dépendance d'exécution n'est proposée.
+Le remappage du Java généré (T-DIA-02) reste hors périmètre.
+
+=== Format et choix de chemin soumis à D-002
+
+Recommandation : conserver par défaut le format livré et l'interdiction des chemins absolus.
+Une option proposée `verne.diagnostics.chemins`, absente ou égale à `relatifs`, conserve exactement :
+
+[source,text]
+----
+VERNE-SYN-001 : bonjour.verne:2:1 : interpolation ou déclaration non fermée.
+----
+
+La valeur explicite `absolus` active un affichage destiné au poste de développement :
+
+[source,text]
+----
+/projet/src/main/verne/bonjour.verne:2:1 : VERNE-SYN-001 : interpolation ou déclaration non fermée.
+----
+
+Le chemin est le chemin logique absolu normalisé du fichier sous la racine configurée, sans résolution de la cible du lien dans le message.
+Il désigne la ressource effectivement sélectionnée, et non une reconstruction depuis le seul nom de classe.
+Ce mode expose volontairement le chemin de la racine dans les journaux : il constitue une exception explicite à l'interdiction actuelle, à accepter par D-002.
+Pour les erreurs de sécurité, de lecture, d'encodage, de configuration, de nom, de génération et de limite, conserver le format relatif ou global existant, sans chemin absolu ni extrait.
+Seules les erreurs d'analyse positionnées d'une source déjà autorisée et décodée peuvent employer le mode absolu.
+Les chemins Windows utilisent leurs séparateurs natifs ; les espaces sont conservés, sans guillemets ajoutés.
+Pour éviter les lignes de console forgées, un chemin contenant un caractère de contrôle ou de format Unicode est rendu avec chaque caractère concerné remplacé par `\u{HEX}` (hexadécimal majuscule sans zéro initial superflu) et n'est pas promis cliquable.
+Les antislashs du chemin restent des séparateurs ; le texte échappé n'est jamais une donnée à réinterpréter ou à ouvrir automatiquement.
+Les limites des détecteurs de liens pour espaces, deux-points, Unicode et chemins Windows doivent être qualifiées séparément.
+
+Les valeurs inconnues ou vides d'une option produisent `VERNE-CFG-001` sans réafficher la valeur reçue, avant lecture des gabarits.
+Les options absentes utilisent les valeurs par défaut ; aucune valeur Java nulle n'est traitée comme un texte à afficher.
+Les diagnostics globaux restent `CODE : message français`, sans position inventée.
+Les diagnostics ayant déjà une position conventionnelle `1:1` la conservent ; elle n'indique pas une faute de syntaxe précise.
+Les avertissements conservent leur gravité et leur format existants ; les erreurs de rendu restent inchangées.
+
+=== Position et extrait facultatif
+
+Les lignes et colonnes commencent à un. LF, CR et CRLF terminent une ligne ; CRLF n'en compte qu'une.
+La colonne compte les points de code Unicode du texte original décodé, avant retrait des commentaires, sans normalisation Unicode : une tabulation compte pour un, un emoji supplémentaire pour un, une lettre suivie d'un accent combinant pour deux.
+La position reste celle du délimiteur ouvrant fautif ; elle n'est ni un nombre d'unités UTF-16 ni un nombre de graphèmes ou de cellules de terminal.
+Pour `tabulation + 🚀 + e + accent combinant + {inconnu`, l'accolade est à la colonne 5, tandis que son indice UTF-16, augmenté de un, vaut 6.
+Un adaptateur d'éditeur doit convertir la position selon sa propre convention à partir de la même source ; transmettre directement la colonne en points de code peut décaler la sélection.
+T-DIA-01 conserve ainsi sa convention actuelle. Aucune longueur de soulignement n'est inventée.
+
+Une seconde option proposée, `verne.diagnostics.extrait`, absente ou égale à `false`, conserve l'absence de contenu source.
+La valeur `true` ajoute deux lignes dans le même message, uniquement pour les erreurs d'analyse autorisées ci-dessus :
+
+[source,text]
+----
+VERNE-SYN-001 : bonjour.verne:2:1 : interpolation ou déclaration non fermée.
+  source : {inconnu
+  repère : ^
+----
+
+L'extrait provient exclusivement du tampon déjà décodé du gabarit, jamais d'une nouvelle lecture, d'une valeur de modèle, d'un fichier externe refusé ou d'une exception brute.
+Il expose néanmoins le texte statique de cette ligne, qui peut être confidentiel : D-002 doit aussi accepter cette exception aux clauses actuelles excluant la donnée source.
+L'activation est indépendante du mode de chemin ; `false` demeure recommandé pour les journaux partagés.
+
+La fenêtre contient au plus 120 points de code de la ligne source, sans sa fin de ligne.
+Pour une position d'indice zéro `p` dans une ligne de longueur `n`, son début est `max(0, p - 40)` et sa fin exclusive `min(n, début + 120)` ; une position de fin de ligne peut placer le repère après le dernier caractère.
+Ajouter `...` à chaque côté tronqué.
+Dans cette fenêtre, conserver les caractères ASCII imprimables sauf l'antislash, doublé ; représenter tout autre point de code par `\u{HEX}`.
+Cette représentation volontairement ASCII évite les séquences de contrôle, les tabulations variables et les ambiguïtés de largeur des emoji et des accents.
+Le repère est un unique `^`, précédé d'autant d'espaces que la longueur du préfixe affiché avant la position, y compris l'éventuel `...` ; les préfixes `  source : ` et `  repère : ` ont la même largeur.
+Exemple pour la ligne Unicode ci-dessus :
+
+[source,text]
+----
+  source : \u{9}\u{1F680}e\u{301}{inconnu
+  repère :                       ^
+----
+
+La colonne annoncée reste 5 : la longueur de la représentation échappée n'est pas une nouvelle colonne source.
+Le texte d'erreur reste français, avec code stable ; les préfixes propres à javac ou Maven ne sont pas maîtrisés par Verne.
+
+=== Budgets, ressources et vérification attendue
+
+Chaque erreur, préfixe et éventuel extrait compris, correspond à un seul appel à `Messager` et consomme une seule unité du budget existant.
+Après 64 erreurs détaillées, la 65e reste le seul `VERNE-LIM-007`, global, sans fichier ni extrait ; ne pas préparer d'extrait pour une erreur supprimée par saturation.
+Conserver l'ordre déterministe, l'arrêt du fichier fautif, le traitement différé des types et l'arrêt des ressources suivant la saturation.
+Aucune écriture de rapport, nouvelle lecture de fichier, connexion, réflexion métier ou ressource persistante n'est ajoutée.
+Le formatage utilise l'état de l'invocation, sans compteur ni tampon statique partagé ; les compilations concurrentes restent isolées.
+Les sources doivent rester stables pendant la compilation ; aucune garantie supplémentaire contre leur remplacement concurrent n'est apportée.
+L'extrait borné limite sa propre taille, pas celle des chemins ou du message complet ; aucune promesse de performance mesurée n'en découle.
+
+Avant implémentation, VERNE-004 devra écrire et observer en échec les contrôles du nouveau format : valeurs par défaut inchangées, options invalides, LF/CR/CRLF, commentaires multilignes, emoji, accents combinants, tabulations, fenêtre tronquée, antislash et contrôles Unicode, refus de lien externe, erreur sans source, tours différés, saturation à 64/65 erreurs et isolation concurrente.
+Il faudra ensuite vérifier leur réussite et la suite complète, sans compter une erreur d'outillage comme phase rouge.
+Les essais IDE devront distinguer console, navigation après clic et marqueur de problème, en vérifiant le fichier et la position réellement ouverts.
+Les versions et réglages du compilateur, de l'IDE et de ses extensions devront accompagner chaque résultat ; une observation javac ne vaut pas qualification d'Eclipse JDT.
