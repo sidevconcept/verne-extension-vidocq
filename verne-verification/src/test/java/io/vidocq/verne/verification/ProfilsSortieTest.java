@@ -132,7 +132,7 @@ class ProfilsSortieTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"json", "HTML", ""})
+    @ValueSource(strings = {"yaml", "HTML", ""})
     void refuseUnProfilInconnu(String profil) throws Exception {
         var compilation = compiler(profil, DECLARATION + "{v}", BancCompilation.application("\"témoin\""));
         assertFalse(compilation.reussie());

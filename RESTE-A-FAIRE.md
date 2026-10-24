@@ -20,9 +20,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Les corrections de la revue de code sont intégrées par la PR nº 19, et la version alignée sur Vidocq `0.4.0-SNAPSHOT` par la PR nº 20 : paquet généré obligatoire, visibilité des modules, chaînes annotées, erreurs de parcours et de `Filer`, interruption des tours, noms NFC, version source, compilation Maven des tests et hygiène de construction. **181 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Le rendu des grands documents en assemblage unique est intégré par la PR nº 21 : **183 tests réussissent sur Mac**.
 - Les profils de sortie HTML et XML sont intégrés par la PR nº 22 : **236 tests réussissent sur Mac**.
-- Le tampon dimensionné et l'échappement direct des petits documents sont commités localement sur `fonctionnalite/tampon-dimensionne` : **239 tests réussissent sur Mac**.
-- Le choix du profil par gabarit est prêt localement sur `fonctionnalite/profil-par-gabarit` : **244 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 202 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Le tampon dimensionné et le choix du profil par gabarit sont intégrés par la PR nº 23 : **244 tests réussissent sur Mac**.
+- Le profil JSON est prêt localement sur `fonctionnalite/profil-json` : **259 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 217 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -53,6 +53,7 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - [ ] Raccorder l’inventaire réel des fichiers et la collecte des empreintes au calcul ; vérifier les sorties, appliquer le plan et persister l’état après succès. Le nettoyage automatique reste actif.
 - [ ] Qualifier l’intégration aux IDE.
 - [ ] Rattacher les erreurs du Java généré aux identifiants et positions des gabarits.
+- [ ] Pendant la construction, présenter chaque erreur de compilation d'un fichier `.verne` sur son fichier réel, avec ligne et colonne exploitables par Maven et les IDE (lien cliquable, soulignement à la position), et un extrait de la ligne fautive avec un repère sous la colonne. Aujourd'hui la position n'apparaît que dans le texte du message (`bonjour.verne:2:1`), relative à la racine, sans rattachement au fichier.
 - [ ] Compléter la qualification du budget de génération et des limites restantes de javac.
 - [ ] Compléter les règles de nommage portable, les racines multiples et les collisions entre fournisseurs.
 
@@ -76,7 +77,8 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 - [x] Livrer les profils HTML et XML : échappement des valeurs, refus des contextes non pris en charge et des caractères interdits en XML.
 - [x] Choisir le profil par gabarit, par suffixe de nom, avec un profil par défaut configuré.
-- [ ] Ajouter le profil JSON, les types de média et les encodages.
+- [x] Ajouter le profil JSON : échappement des chaînes dans les littéraux, refus des chaînes hors littéral et des nombres non finis.
+- [ ] Définir les types de média et les encodages de sortie.
 - [ ] Ajouter la validation des URL dynamiques, aujourd'hui refusées en HTML.
 - [ ] Définir les types de contenus déclarés fiables et les encodeurs personnalisés.
 - [ ] Ajouter les sections personnalisées avec validation à la construction.

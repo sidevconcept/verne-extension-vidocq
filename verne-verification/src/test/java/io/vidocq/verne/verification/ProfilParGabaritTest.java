@@ -44,11 +44,11 @@ class ProfilParGabaritTest {
 
     @Test void refuseUnSuffixeDeProfilInconnuSansArreterLesAutres() throws Exception {
         var compilation = compiler(Map.of(
-                "donnees.json.verne", "{inconnu",
+                "donnees.yaml.verne", "{inconnu",
                 "majuscules.HTML.verne", "texte",
                 "bonjour.html.verne", "Bonjour"), BancCompilation.application("\"témoin\""), "texte");
         assertFalse(compilation.reussie());
-        assertTrue(compilation.diagnostics().contains("VERNE-LIA-001 : donnees.json.verne:1:1 : suffixe de profil inconnu"), compilation.diagnostics());
+        assertTrue(compilation.diagnostics().contains("VERNE-LIA-001 : donnees.yaml.verne:1:1 : suffixe de profil inconnu"), compilation.diagnostics());
         assertTrue(compilation.diagnostics().contains("VERNE-LIA-001 : majuscules.HTML.verne:1:1 : suffixe de profil inconnu"), compilation.diagnostics());
         assertFalse(compilation.diagnostics().contains("VERNE-SYN-001"), "Le fichier au suffixe inconnu n'est pas lu.");
         assertTrue(Files.exists(compilation.sourcesGenerees().resolve("exemple/gabarits/Bonjour.java")));
