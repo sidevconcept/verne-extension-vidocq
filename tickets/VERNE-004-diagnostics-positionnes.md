@@ -4,18 +4,18 @@
 - Nature : capacité
 - État : À préparer — bloqué par VERNE-002 et D-002
 - Priorité et raison : haute ; suite directe de VERNE-002
-- Source faisant autorité : selon D0
+- Source faisant autorité : https://github.com/sidevconcept/verne-extension-vidocq/issues/29
 - Responsable : `agent-b` (Codex)
 - Relecteur : `agent-a` (Claude)
 - Mise à jour : 24 octobre 2026, Europe/Paris ; `agent-a`
 - Dépôt et cible d'intégration : `verne-extension-vidocq` ; `main`
 - Base de travail : à fixer après intégration de VERNE-002
 - Branche du ticket : `fonctionnalite/diagnostics-positionnes`
-- Bloqué par : VERNE-002 ; D-002
+- Bloqué par : VERNE-002 (#27) ; D-002
 - Débloque : rattachement des erreurs du Java généré (T-DIA-02, ticket à créer)
-- Travaux simultanés compatibles : VERNE-003 (zones distinctes de `CompilateurGabarit.java`)
+- Travaux simultanés compatibles : VERNE-003 (#28) (zones distinctes de `CompilateurGabarit.java`)
 - Zones ou contrats partagés : `ProcesseurVerne.java` (`erreur`, `signalerErreur`) ; émission des erreurs dans `CompilateurGabarit.java` ; tous les tests qui lisent le texte des diagnostics (`diagnostics().contains("VERNE-… : bonjour.verne:1:…")`)
-- Autorisations : travail local autorisé ; publication et fusion selon D0
+- Autorisations : travail local autorisé ; publication et fusion sur demande explicite de l'utilisateur (D0, 24 octobre 2026)
 
 ## Besoin et contexte
 - Objectif : implémenter le contrat proposé par VERNE-002 et validé par D-002.
@@ -76,7 +76,7 @@
 - Résumé du changement : —
 - Critères satisfaits : —
 - Travail restant : tout
-- Blocages et limites : VERNE-002 ; D-002
+- Blocages et limites : VERNE-002 (#27) ; D-002
 - Prochaine action : après D-002, reporter le contrat validé
 - Reprise attribuée à : —
 - Revue demandée : exactitude des colonnes ; tests adaptés sans perte de précision

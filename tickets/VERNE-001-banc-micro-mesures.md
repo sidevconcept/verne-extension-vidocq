@@ -2,20 +2,20 @@
 
 ## Pilotage
 - Nature : capacité (outillage de vérification)
-- État : À préparer — en attente de D0 (`tickets/README.md`)
+- État : Prêt
 - Priorité et raison : haute ; VERNE-003 et toute optimisation future exigent une mesure avant/après que le relecteur peut rejouer. Les mesures du 22-23 octobre 2026 ont été faites avec un banc hors dépôt, dans un espace temporaire de session inaccessible à `agent-b`.
-- Source faisant autorité : selon D0
+- Source faisant autorité : https://github.com/sidevconcept/verne-extension-vidocq/issues/26
 - Responsable : `agent-a` (Claude)
 - Relecteur : `agent-b` (Codex)
 - Mise à jour : 24 octobre 2026, Europe/Paris ; `agent-a`
 - Dépôt et cible d'intégration : `verne-extension-vidocq` ; `main`
 - Base de travail : `6c6825883176d237e4ece2f8115e91506af357b1`
 - Branche du ticket : `fonctionnalite/banc-micro-mesures`
-- Bloqué par : D0
-- Débloque : VERNE-003
-- Travaux simultanés compatibles : VERNE-002 (aucun fichier de code commun)
-- Zones ou contrats partagés : `pom.xml` racine (ajout d'un module, seul ticket à le modifier en vague 1) ; `mesures-performance.adoc` ; mentions du nombre de tests (voir `tickets/README.md`)
-- Autorisations : travail local autorisé ; publication et fusion selon D0
+- Bloqué par : aucun
+- Débloque : VERNE-003 (#28)
+- Travaux simultanés compatibles : VERNE-002 (#27) (aucun fichier de code commun)
+- Zones ou contrats partagés : `pom.xml` racine (ajout d'un module, seul ticket à le modifier en vague 1) ; `mesures-performance.adoc` ; mentions du nombre de tests (voir le ticket de pilotage #32)
+- Autorisations : travail local autorisé ; publication et fusion sur demande explicite de l'utilisateur (D0, 24 octobre 2026)
 
 ## Besoin et contexte
 - Objectif : mesurer le rendu des classes générées par Verne contre un témoin Java écrit à la main, depuis le dépôt, avec une commande documentée.
@@ -25,7 +25,7 @@
 - Dans le périmètre : corpus texte, HTML, XML et JSON (fiche de 7 valeurs, 100 interpolations, grand document de 64 Kio, facture XML) ; densités de caractères à échapper 0, 10 et 50 % tirées d'une graine fixe ; témoin Java ; oracle ; commande JMH ; documentation.
 - Hors périmètre : comparaison avec un moteur externe (reste dans le banc indépendant hors dépôt) ; mesures d'intégration HTTP ; corpus M-03 à M-09 de `mesures-performance.adoc` qui dépendent de capacités absentes (conditions, boucles, inclusions, flux).
 - Hypothèses à vérifier : `annotationProcessorPaths` de maven-compiler-plugin 3.14.1 résout l'artefact `verne-compilation` du réacteur sans installation préalable ; sinon, compiler les gabarits du banc par l'API javax.tools comme `BancCompilation`.
-- Questions bloquantes : aucune au-delà de D0.
+- Questions bloquantes : aucune.
 
 ## Références et contrat
 - Instructions applicables : `AGENTS.md` ; `docs/fr/protocole-tickets-agents.md`
@@ -78,8 +78,8 @@
 - Résumé du changement : —
 - Critères satisfaits : —
 - Travail restant : tout
-- Blocages et limites : D0
-- Prochaine action : après D0, documenter le banc dans `mesures-performance.adoc`
+- Blocages et limites : aucun
+- Prochaine action : documenter le banc dans `mesures-performance.adoc`
 - Reprise attribuée à : —
 - Revue demandée : portée des dépendances ; déterminisme du corpus ; l'oracle détecte-t-il un écart d'échappement réel ?
 

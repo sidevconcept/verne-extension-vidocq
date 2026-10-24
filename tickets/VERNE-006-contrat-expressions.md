@@ -4,7 +4,7 @@
 - Nature : documentation
 - État : À préparer — décisions de syntaxe attendues de l'utilisateur
 - Priorité et raison : moyenne ; premier pas de `RESTE-A-FAIRE.md` §4. Conditions, boucles et valeurs de remplacement reposent sur les expressions ; leur contrat doit précéder tout code.
-- Source faisant autorité : selon D0
+- Source faisant autorité : https://github.com/sidevconcept/verne-extension-vidocq/issues/31
 - Responsable : `agent-a` (Claude)
 - Relecteur : `agent-b` (Codex)
 - Mise à jour : 24 octobre 2026, Europe/Paris ; `agent-a`
@@ -13,9 +13,9 @@
 - Branche du ticket : `documentation/contrat-expressions`
 - Bloqué par : décisions D-006a à D-006d
 - Débloque : implémentation des expressions (F-06), puis conditions (F-08) et absence explicite (F-07)
-- Travaux simultanés compatibles : VERNE-005
+- Travaux simultanés compatibles : VERNE-005 (#30)
 - Zones ou contrats partagés : `compilateur-minimal.adoc`, « Grammaire effectivement acceptée » (lecture seule) ; nouvelle page sous `docs/fr/modules/ROOT/pages/`
-- Autorisations : travail local autorisé ; publication et fusion selon D0
+- Autorisations : travail local autorisé ; publication et fusion sur demande explicite de l'utilisateur (D0, 24 octobre 2026)
 
 ## Besoin et contexte
 - Objectif : documenter la grammaire, la précédence et le typage des expressions, avec les cas de test T-EXP-01 à 06 détaillés, sans implémentation.

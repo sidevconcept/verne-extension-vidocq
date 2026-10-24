@@ -4,18 +4,18 @@
 - Nature : capacité (performance)
 - État : À préparer — bloqué par VERNE-001
 - Priorité et raison : moyenne ; à 50 % de caractères à échapper, la fiche JSON est mesurée plus lente qu'une implémentation par table (page du plan, mesure M-09, 23 octobre 2026). L'aiguillage `switch` par caractère des échappeurs générés est la cause supposée.
-- Source faisant autorité : selon D0
+- Source faisant autorité : https://github.com/sidevconcept/verne-extension-vidocq/issues/28
 - Responsable : `agent-a` (Claude)
 - Relecteur : `agent-b` (Codex)
 - Mise à jour : 24 octobre 2026, Europe/Paris ; `agent-a`
 - Dépôt et cible d'intégration : `verne-extension-vidocq` ; `main`
 - Base de travail : à fixer après intégration de VERNE-001
 - Branche du ticket : `fonctionnalite/echappeurs-par-table`
-- Bloqué par : VERNE-001
+- Bloqué par : VERNE-001 (#26)
 - Débloque : aucun
-- Travaux simultanés compatibles : VERNE-004 (zones distinctes de `CompilateurGabarit.java`)
-- Zones ou contrats partagés : `CompilateurGabarit.java`, constantes `ECHAPPEMENT_*` uniquement ; VERNE-004 modifie l'émission des erreurs dans le même fichier. Ordre indifférent ; le second intégré se rebase et rejoue la suite complète.
-- Autorisations : travail local autorisé ; publication et fusion selon D0
+- Travaux simultanés compatibles : VERNE-004 (#29) (zones distinctes de `CompilateurGabarit.java`)
+- Zones ou contrats partagés : `CompilateurGabarit.java`, constantes `ECHAPPEMENT_*` uniquement ; VERNE-004 (#29) modifie l'émission des erreurs dans le même fichier. Ordre indifférent ; le second intégré se rebase et rejoue la suite complète.
+- Autorisations : travail local autorisé ; publication et fusion sur demande explicite de l'utilisateur (D0, 24 octobre 2026)
 
 ## Besoin et contexte
 - Objectif : remplacer l'aiguillage par caractère des échappeurs générés par une table de remplacement constante pour les caractères ASCII, si la mesure le justifie.
@@ -76,8 +76,8 @@
 - Résumé du changement : —
 - Critères satisfaits : —
 - Travail restant : tout
-- Blocages et limites : VERNE-001
-- Prochaine action : après intégration de VERNE-001, écrire le test exhaustif C1
+- Blocages et limites : VERNE-001 (#26)
+- Prochaine action : après intégration de VERNE-001 (#26), écrire le test exhaustif C1
 - Reprise attribuée à : —
 - Revue demandée : équivalence exacte des sorties ; lecture statistique des mesures
 

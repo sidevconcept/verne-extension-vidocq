@@ -2,20 +2,20 @@
 
 ## Pilotage
 - Nature : investigation
-- État : À préparer — en attente de D0 (`tickets/README.md`)
+- État : Prêt
 - Priorité et raison : haute ; demandée par l'utilisateur le 23 octobre 2026 (`RESTE-A-FAIRE.md` §3). Une erreur de gabarit est aujourd'hui difficile à localiser pendant la construction.
-- Source faisant autorité : selon D0
+- Source faisant autorité : https://github.com/sidevconcept/verne-extension-vidocq/issues/27
 - Responsable : `agent-b` (Codex)
 - Relecteur : `agent-a` (Claude)
 - Mise à jour : 24 octobre 2026, Europe/Paris ; `agent-a`
 - Dépôt et cible d'intégration : `verne-extension-vidocq` ; `main`
 - Base de travail : `6c6825883176d237e4ece2f8115e91506af357b1`
 - Branche du ticket : `etude/diagnostics-positionnes`
-- Bloqué par : D0
-- Débloque : VERNE-004
-- Travaux simultanés compatibles : VERNE-001 (aucun fichier commun)
+- Bloqué par : aucun
+- Débloque : VERNE-004 (#29)
+- Travaux simultanés compatibles : VERNE-001 (#26) (aucun fichier commun)
 - Zones ou contrats partagés : `compilateur-minimal.adoc` (nouvelle section seulement) ; un prototype éventuel de `ProcesseurVerne` reste sur la branche d'étude et n'est pas intégré
-- Autorisations : travail local autorisé ; publication et fusion selon D0
+- Autorisations : travail local autorisé ; publication et fusion sur demande explicite de l'utilisateur (D0, 24 octobre 2026)
 
 ## Besoin et contexte
 - Objectif : établir comment afficher chaque erreur `.verne` sur son fichier réel, avec ligne et colonne exploitables par Maven et les IDE, et proposer le contrat correspondant.
@@ -75,8 +75,8 @@
 - Résumé du changement : —
 - Critères satisfaits : —
 - Travail restant : tout
-- Blocages et limites : D0
-- Prochaine action : après D0, reproduire l'affichage actuel dans `exemples/application-maven`
+- Blocages et limites : aucun
+- Prochaine action : reproduire l'affichage actuel dans `exemples/application-maven`
 - Reprise attribuée à : —
 - Revue demandée : la proposition est-elle implémentable par `Messager` seul ? respecte-t-elle la saturation et l'absence de données sensibles ?
 
@@ -94,4 +94,4 @@
 - Révision intégrée et cible : —
 - Vérifications après intégration : —
 - Critères clôturés : —
-- Suivis distincts : VERNE-004
+- Suivis distincts : VERNE-004 (#29)

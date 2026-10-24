@@ -2,20 +2,20 @@
 
 ## Pilotage
 - Nature : investigation et outillage
-- État : À préparer — en attente de D0 et D-005
+- État : À préparer — en attente de D-005
 - Priorité et raison : moyenne ; seuls les 42 tests initiaux ont été exécutés sur Windows, aucun sur Linux (`RESTE-A-FAIRE.md`, « État acquis » et §10). Les liens symboliques, l'encodage et le nommage dépendent du système.
-- Source faisant autorité : selon D0
+- Source faisant autorité : https://github.com/sidevconcept/verne-extension-vidocq/issues/30
 - Responsable : `agent-b` (Codex)
 - Relecteur : `agent-a` (Claude)
 - Mise à jour : 24 octobre 2026, Europe/Paris ; `agent-a`
 - Dépôt et cible d'intégration : `verne-extension-vidocq` ; `main`
 - Base de travail : à fixer au démarrage
 - Branche du ticket : `qualification/linux-windows`
-- Bloqué par : D0 ; D-005
+- Bloqué par : D-005
 - Débloque : tickets de correction éventuels, un par cause
-- Travaux simultanés compatibles : VERNE-006 (documentation seule)
+- Travaux simultanés compatibles : VERNE-006 (#31) (documentation seule)
 - Zones ou contrats partagés : `.github/workflows/` (nouveau) si D-005 retient l'intégration continue de la forge
-- Autorisations : travail local autorisé ; l'exécution sur la forge suppose une publication, selon D0 et D-005
+- Autorisations : travail local autorisé ; publication et fusion sur demande explicite de l'utilisateur (D0) ; l'exécution sur la forge dépend de D-005
 
 ## Besoin et contexte
 - Objectif : exécuter `./mvnw test` (Linux) et `.\mvnw.cmd test` (Windows) avec Java 25 et consigner chaque échec avec sa cause.
@@ -75,7 +75,7 @@
 - Résumé du changement : —
 - Critères satisfaits : —
 - Travail restant : tout
-- Blocages et limites : D0 ; D-005
+- Blocages et limites : D-005
 - Prochaine action : obtenir D-005
 - Reprise attribuée à : —
 - Revue demandée : aucune vérification masquée ; causes correctement attribuées
