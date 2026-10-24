@@ -1,0 +1,36 @@
+{@io.vidocq.verne.mesures.Ligne d}<table>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td><td title="{d.reference}">{d.reference}</td><td>{d.total}</td></tr>
+<tr><td>{d.nom}</td></tr>
+</table>

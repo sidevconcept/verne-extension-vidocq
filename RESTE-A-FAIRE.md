@@ -21,8 +21,9 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Le rendu des grands documents en assemblage unique est intégré par la PR nº 21 : **183 tests réussissent sur Mac**.
 - Les profils de sortie HTML et XML sont intégrés par la PR nº 22 : **236 tests réussissent sur Mac**.
 - Le tampon dimensionné et le choix du profil par gabarit sont intégrés par la PR nº 23 : **244 tests réussissent sur Mac**.
-- Le profil JSON est prêt localement sur `fonctionnalite/profil-json` : **259 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 217 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Le profil JSON est intégré par la PR nº 24 : **259 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Le banc de micro-mesures versionné (ticket VERNE-001) ajoute le module `verne-mesures` et 34 tests d'oracle : **293 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 251 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -108,6 +109,7 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 - [ ] Exécuter la suite complète sur Windows et Linux, notamment les cas de liens symboliques, d'encodage et de nommage.
 - [ ] Compléter les vérifications de concurrence, d'isolation, de résilience et de ressources.
+- [x] Versionner le banc de micro-mesures du rendu préparé, avec oracle d'égalité au témoin Java : module `verne-mesures`.
 - [ ] Étendre les campagnes de performances aux nouvelles capacités, avec sorties équivalentes et résultats bruts conservés.
 - [ ] Vérifier les archives, leur reproductibilité et l'absence des outils de compilation, de test et de mesure dans le livrable d'exécution. L'horodatage fixe rend déjà l'archive du compilateur identique entre deux constructions sur Mac.
 - [ ] Compléter les exemples, contrats, diagnostics, limites et instructions de migration.

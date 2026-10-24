@@ -172,7 +172,7 @@ Copier le bloc suivant dans la source commune choisie. Conserver les identifiant
 
 Respecter Java 25, les modules Java explicites, l'absence de dépendances tierces à l'exécution, l'absence de réflexion métier et de balayage du chemin des classes. Les gabarits sont vérifiés et compilés avant déploiement. Les textes maîtrisés par le projet restent en français.
 
-Avant de modifier le contrat de vérification, lire `docs/fr/modules/ROOT/pages/premiers-tests.adoc`. Ce document décrit une phase historique : ne pas confondre ses résultats avec ceux de la révision courante. Les consignes actuelles citent 259 tests ; relever les résultats réellement exécutés et expliquer tout écart, sans figer ce nombre après l'ajout de tests.
+Avant de modifier le contrat de vérification, lire `docs/fr/modules/ROOT/pages/premiers-tests.adoc`. Ce document décrit une phase historique : ne pas confondre ses résultats avec ceux de la révision courante. Les consignes actuelles citent 293 tests ; relever les résultats réellement exécutés et expliquer tout écart, sans figer ce nombre après l'ajout de tests.
 
 Depuis la racine du dépôt, utiliser `./mvnw --version` puis `./mvnw test` sous Unix, ou `.\mvnw.cmd --version` puis `.\mvnw.cmd test` sous Windows. Le lanceur fixe Maven 3.9.16. Indiquer explicitement si l'environnement ne permet pas une vérification. Un échec d'outillage ne prouve pas la phase rouge attendue du comportement métier.
 

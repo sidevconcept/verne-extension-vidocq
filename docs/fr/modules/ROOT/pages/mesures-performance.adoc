@@ -2,7 +2,7 @@
 :lang: fr
 :toc:
 
-État : protocole proposé avant implémentation. Aucun résultat mesuré et aucun gain revendiqué.
+État : protocole proposé ; sa première tranche, le banc de micro-mesures du module `verne-mesures`, est décrite dans <<banc-versionne>>. Aucun seuil de blocage n'est fixé et aucun gain n'est revendiqué par ce document.
 
 == Questions à mesurer
 
@@ -60,6 +60,47 @@ Une mesure de démarrage emploie un processus neuf par échantillon et ne béné
 Enregistrer temps par opération, opérations par seconde, octets alloués par opération et activité du ramasse-miettes.
 Le profilage détaillé s'exécute séparément du résultat principal pour rendre son surcoût visible.
 Une mesure à un fil ne permet pas de déduire le comportement concurrent ; un essai distinct fixe explicitement le nombre de rendus simultanés.
+
+[[banc-versionne]]
+=== Banc versionné
+
+Le module `verne-mesures` contient la première tranche du banc : rendu préparé de gabarits compilés par Verne, comparé à un témoin Java écrit à la main qui produit les mêmes caractères avec les mêmes transformations de sécurité.
+
+Corpus :: Cinq cas, chacun avec et sans échappement.
++
+[cols="1,1,3",options="header"]
+|===
+|Cas |Profil échappé |Charge
+|`fiche` |HTML |Fiche de sept valeurs dans des éléments et des valeurs d'attribut entre guillemets, dont un résumé de 400 caractères
+|`dense100` |HTML |Cent interpolations courtes réparties sur 34 lignes de tableau
+|`grand` |HTML |Document statique de plus de 64 Kio et une valeur de 1 024 caractères, rendu par assemblage unique
+|`facture` |XML |Facture de sept valeurs dans des éléments et des attributs
+|`ficheJson` |JSON |Fiche de sept valeurs dans des littéraux de chaîne
+|===
++
+La variante sans échappement compile la même source sous le profil `texte` ; son témoin n'échappe rien.
+Le corpus couvre la ligne M-06 et, pour les interpolations typées de type chaîne, la ligne M-02 du corpus ci-dessus.
+
+Données :: Huit jeux par cas et par densité, rendus à tour de rôle. Chaque caractère d'une valeur est un caractère spécial avec la probabilité de la densité, 0, 10 ou 50 %, sinon une lettre minuscule, accentuée ou une espace. Les caractères spéciaux sont `&`, `<`, `>`, `"` et `'` en HTML et XML ; guillemet, antislash, saut de ligne, tabulation et U+0001 en JSON. La graine dépend seulement du cas et de la densité : deux générations produisent les mêmes textes.
+
+Oracle :: Avant toute mesure, chaque rendu de Verne est comparé caractère par caractère au témoin, pour les huit jeux. Un écart arrête la mesure et nomme le cas, la densité et la variante. `./mvnw test` exécute cet oracle sur tout le corpus ; il n'exécute aucune mesure JMH.
+
+Mesure :: JMH 1.37 mesure le temps moyen par rendu, en nanosecondes, et les allocations par le profileur du ramasse-miettes. Les paramètres par défaut sont ceux du point de départ ci-dessus : 3 processus, 5 échauffements et 10 mesures d'une seconde, tas fixe de 1 Gio.
++
+Depuis la racine du dépôt :
++
+[source,bash]
+----
+./mvnw -pl verne-mesures -am -Pmesurer process-test-classes
+----
++
+Les résultats sont écrits au format JSON dans `verne-mesures/target/resultats-mesures.json`, avec le profileur `gc` toujours actif. La propriété `mesures.arguments` remplace les arguments transmis à JMH, par exemple `-Dmesures.arguments="Rendu -p cas=ficheJson -p densite=50"`.
+
+Dépendances :: JMH et son processeur d'annotations sont en portée test du module `verne-mesures`, qui n'est ni publié ni livré. Les dépendances de `verne-compilation` sont inchangées. Le banc ne compare Verne qu'au témoin et à ses propres révisions.
+
+Identifiants externes :: La page de suivi du plan de mesures emploie sa propre numérotation : sa mesure M-02 correspond aux cas HTML de ce banc, sa mesure M-03 au cas `facture` et sa mesure M-09 au cas `ficheJson`. Ces identifiants ne désignent pas les lignes du corpus ci-dessus.
+
+Vérification :: Avec un témoin XML volontairement faussé (`&#39;` au lieu de `&apos;`), l'oracle a d'abord échoué sur les seuls cas `facture` échappés à 10 et 50 %, en nommant la combinaison et la position du premier écart ; les densités nulles, sans apostrophe, réussissaient. Témoin rétabli, les 34 tests de `OracleMesuresTest` réussissent : 30 combinaisons de cas, densité et variante, la détection d'un écart, le déterminisme des données, l'exercice réel de l'échappement et la variété des jeux. Une mesure filtrée sur `ficheJson` à 50 % a produit le fichier de résultats avec 3 processus, 5 échauffements et 10 mesures. `verne-compilation` ne gagne aucune dépendance et `verne-mesures` ne produit aucune archive.
 
 == Mesures d'intégration
 

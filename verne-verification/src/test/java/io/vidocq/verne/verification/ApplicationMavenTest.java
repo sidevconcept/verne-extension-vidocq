@@ -56,6 +56,7 @@ final class ApplicationMavenTest {
         copier(projet.resolve("verne-compilation/pom.xml"), copie.resolve("verne-compilation/pom.xml"));
         copier(projet.resolve("verne-compilation/src"), copie.resolve("verne-compilation/src"));
         copier(projet.resolve("verne-verification/pom.xml"), copie.resolve("verne-verification/pom.xml"));
+        copier(projet.resolve("verne-mesures/pom.xml"), copie.resolve("verne-mesures/pom.xml"));
         var installation = construire(copie.resolve("pom.xml"), "-pl", "verne-compilation", "-am", "install");
         assertEquals(0, installation.codeSortie(), installation.journal());
         assertTrue(Files.isRegularFile(depot.resolve(
