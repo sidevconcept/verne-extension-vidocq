@@ -1,0 +1,1 @@
+{@io.vidocq.verne.mesures.Fiche f}\{"reference": "{f.reference}", "titre": "{f.titre}", "auteur": "{f.auteur}", "resume": "{f.resume}", "motsCles": ["{f.motCle1}", "{f.motCle2}", "{f.motCle3}"]}

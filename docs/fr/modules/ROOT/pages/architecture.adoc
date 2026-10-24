@@ -27,6 +27,7 @@ Un raccourci d'implémentation ne peut supprimer une validation, un test demand�
 |`verne-compilation` |Analyse, représentation intermédiaire typée, validation, génération Java et correspondances source |Cœur et API standard du compilateur Java ; absente du déploiement
 |Adaptation de construction Verne |Déclaration des entrées, traitement des ressources, compilation propre et incrémentale |Compilateur ; API Maven uniquement pendant la construction
 |`verne-verification` |Projets de test, données générées et mesures |Dépendances de test isolées ; aucune propagation vers le moteur
+|`verne-mesures` |Banc de micro-mesures du rendu préparé et oracle au témoin |JMH en portée test ; module ni publié ni livré
 |Extension Verne dans Vidocq |CDI, configuration, enregistrement et adaptation REST |Cœur, interface d'extension Vidocq, API nécessaires à l'intégration
 |Compagnon de développement |Surveillance, recompilation et diagnostics de développement |Outils de compilation ; exclu des distributions de production
 |===

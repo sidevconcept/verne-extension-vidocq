@@ -1,0 +1,1 @@
+{@io.vidocq.verne.mesures.Fiche f}<facture ref="{f.reference}"><client nom="{f.auteur}">{f.titre}</client><resume>{f.resume}</resume><motcles><mot>{f.motCle1}</mot><mot>{f.motCle2}</mot><mot>{f.motCle3}</mot></motcles></facture>

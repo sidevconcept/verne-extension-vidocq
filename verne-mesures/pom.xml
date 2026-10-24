@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent><groupId>io.vidocq.verne</groupId><artifactId>verne</artifactId><version>0.4.0-SNAPSHOT</version></parent>
+    <artifactId>verne-mesures</artifactId>
+    <name>Verne — Mesures</name>
+    <description>Banc de micro-mesures du rendu préparé, avec oracle d'égalité au témoin Java ; ni publié ni livré</description>
+    <properties>
+        <jmh.version>1.37</jmh.version>
+        <!-- Module de vérification : aucune archive installée ni publiée. -->
+        <maven.install.skip>true</maven.install.skip>
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <mesures.arguments>Rendu</mesures.arguments>
+    </properties>
+    <dependencies>
+        <!-- Ordonne le réacteur : le processeur est construit avant les gabarits du banc. -->
+        <dependency><groupId>io.vidocq.verne</groupId><artifactId>verne-compilation</artifactId><version>${project.version}</version><scope>test</scope></dependency>
+        <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.openjdk.jmh</groupId><artifactId>jmh-core</artifactId><version>${jmh.version}</version><scope>test</scope></dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <!-- Un gabarit modifié seul ne déclenche pas de recompilation : repartir de sorties propres. -->
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-clean-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>retirer-les-sorties-perimees</id>
+                        <phase>initialize</phase>
+                        <goals><goal>clean</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <configuration>
+                            <proc>full</proc>
+                            <annotationProcessorPaths>
+                                <path><groupId>io.vidocq.verne</groupId><artifactId>verne-compilation</artifactId><version>${project.version}</version></path>
+                                <path><groupId>org.openjdk.jmh</groupId><artifactId>jmh-generator-annprocess</artifactId><version>${jmh.version}</version></path>
+                            </annotationProcessorPaths>
+                            <compilerArgs>
+                                <arg>-Averne.racine.gabarits=${project.basedir}/src/test/verne</arg>
+                                <arg>-Averne.paquet=io.vidocq.verne.mesures.gabarits</arg>
+                                <arg>-Averne.profil.sortie=texte</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId>
+                <configuration><skipIfEmpty>true</skipIfEmpty></configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <!-- Mesures JMH à la demande : ./mvnw -pl verne-mesures -am -Pmesurer process-test-classes -->
+            <id>mesurer</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>mesurer</id>
+                                <phase>process-test-classes</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/java</executable>
+                                    <classpathScope>test</classpathScope>
+                                    <commandlineArgs>-classpath %classpath org.openjdk.jmh.Main ${mesures.arguments} -prof gc -rf json -rff ${project.build.directory}/resultats-mesures.json</commandlineArgs>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
