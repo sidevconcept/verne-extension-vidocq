@@ -1,0 +1,6 @@
+{@io.vidocq.verne.mesures.Fiche f}<article class="fiche" data-ref="{f.reference}">
+<h1>{f.titre}</h1>
+<p class="auteur" title="{f.auteur}">Par {f.auteur}</p>
+<p>{f.resume}</p>
+<ul><li>{f.motCle1}</li><li>{f.motCle2}</li><li>{f.motCle3}</li></ul>
+</article>

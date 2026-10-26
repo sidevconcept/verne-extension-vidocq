@@ -43,6 +43,7 @@ Les règles précises, erreurs et limites sont décrites dans link:docs/fr/modul
 |Module |Rôle
 |`verne-compilation` |Processeur de compilation, analyse des gabarits, vérification des types et génération Java ; dépend uniquement des API standard du JDK.
 |`verne-verification` |Banc de compilation de vraies applications modulaires, exécution du rendu et tests de diagnostics, limites et portabilité.
+|`verne-mesures` |Banc de micro-mesures du rendu préparé, comparé à un témoin Java écrit à la main, avec oracle d'égalité exécuté par les tests ; ni publié ni livré. Voir le link:docs/fr/modules/ROOT/pages/mesures-performance.adoc#banc-versionne[banc versionné].
 |===
 
 Les classes générées appartiennent à l'application ; aucun JAR Verne n'est nécessaire pour les exécuter.
@@ -111,8 +112,8 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 == État du projet
 
 *Version de développement : `0.4.0-SNAPSHOT`*, alignée sur celle de l'écosystème Vidocq. Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *259 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 217 tests supplémentaires restent à qualifier sur Windows et Linux.
+La dernière vérification complète sur Mac réussit avec *298 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 256 tests supplémentaires restent à qualifier sur Windows et Linux.
 
 Les conditions, boucles, inclusions, contenus déclarés fiables, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.

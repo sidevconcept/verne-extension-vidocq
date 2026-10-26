@@ -12,7 +12,7 @@
     <licenses>
         <license><name>EPL-2.0 OU EUPL-1.2 OU GPL-2.0-or-later</name><distribution>repo</distribution></license>
     </licenses>
-    <modules><module>verne-compilation</module><module>verne-verification</module></modules>
+    <modules><module>verne-compilation</module><module>verne-verification</module><module>verne-mesures</module></modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
