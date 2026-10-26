@@ -21,8 +21,7 @@ public class Rendu {
     private int index;
 
     @Setup(Level.Trial) public void preparer() {
-        rendu = implementation.equals("verne") ? Corpus.verne(cas, echappement) : Corpus.temoin(cas, echappement);
-        Corpus.verifier(cas, densite, echappement, rendu);
+        rendu = Corpus.preparer(cas, densite, echappement, implementation, Corpus.verne(cas, echappement));
         donnees = Corpus.donnees(cas, densite);
     }
 

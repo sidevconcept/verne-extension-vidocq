@@ -53,12 +53,12 @@ final class Corpus {
                         + "</p>\n<p>" + e.apply(f.resume()) + "</p>\n<ul><li>" + e.apply(f.motCle1()) + "</li><li>"
                         + e.apply(f.motCle2()) + "</li><li>" + e.apply(f.motCle3()) + "</li></ul>\n</article>\n"; };
             case "dense100" -> o -> { var d = (Ligne) o; var sb = new StringBuilder("<table>\n");
-                for (int i = 0; i < 33; i++) {
+                for (int i = 0; i < 25; i++) {
                     String r = e.apply(d.reference());
                     sb.append("<tr><td>").append(e.apply(d.nom())).append("</td><td title=\"").append(r).append("\">")
                             .append(r).append("</td><td>").append(e.apply(d.total())).append("</td></tr>\n");
                 }
-                return sb.append("<tr><td>").append(e.apply(d.nom())).append("</td></tr>\n</table>\n").toString(); };
+                return sb.append("</table>\n").toString(); };
             case "grand" -> o -> "<div>" + BLOC + "<p>" + e.apply(((Fiche) o).resume()) + "</p></div>\n";
             case "facture" -> o -> { var f = (Fiche) o;
                 return "<facture ref=\"" + e.apply(f.reference()) + "\"><client nom=\"" + e.apply(f.auteur()) + "\">"
@@ -83,6 +83,13 @@ final class Corpus {
             case "ficheJson" -> echappe ? o -> FicheJson.rendre((Fiche) o) : o -> FicheJsonTexte.rendre((Fiche) o);
             default -> throw new IllegalArgumentException(cas);
         };
+    }
+
+    /** Rendu chronométré de l'implémentation choisie ; Verne est comparé au témoin quelle que soit cette implémentation. */
+    static Function<Object, String> preparer(String cas, int densite, boolean echappe, String implementation,
+                                             Function<Object, String> verne) {
+        verifier(cas, densite, echappe, verne);
+        return implementation.equals("verne") ? verne : temoin(cas, echappe);
     }
 
     /** Oracle : égalité au témoin pour chaque jeu, avant toute mesure. */

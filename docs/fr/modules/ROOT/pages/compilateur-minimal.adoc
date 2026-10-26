@@ -503,7 +503,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 293 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 298 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -536,8 +536,8 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`PetitsDocumentsTest` |3 |0 |0 |0
 |`ProfilParGabaritTest` |5 |0 |0 |0
 |`ProfilJsonTest` |15 |0 |0 |0
-|`OracleMesuresTest` (module `verne-mesures`) |34 |0 |0 |0
-|Total |293 |0 |0 |0
+|`OracleMesuresTest` (module `verne-mesures`) |39 |0 |0 |0
+|Total |298 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

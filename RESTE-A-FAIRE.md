@@ -22,8 +22,8 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Les profils de sortie HTML et XML sont intégrés par la PR nº 22 : **236 tests réussissent sur Mac**.
 - Le tampon dimensionné et le choix du profil par gabarit sont intégrés par la PR nº 23 : **244 tests réussissent sur Mac**.
 - Le profil JSON est intégré par la PR nº 24 : **259 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Le banc de micro-mesures versionné (ticket VERNE-001) ajoute le module `verne-mesures` et 34 tests d'oracle : **293 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 251 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Le banc de micro-mesures versionné (ticket VERNE-001) ajoute le module `verne-mesures` et 39 tests d'oracle : **298 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 256 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
