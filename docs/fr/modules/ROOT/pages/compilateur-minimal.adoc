@@ -563,7 +563,8 @@ Le remappage du Java généré (T-DIA-02) reste hors périmètre.
 
 === Format et choix de chemin soumis à D-002
 
-Recommandation : conserver par défaut le format livré et l'interdiction des chemins absolus.
+Recommandation conditionnelle soumise à D-002 : conserver par défaut le format livré et l'interdiction des chemins absolus.
+Aucun clic dans un IDE n'a été observé lors de cette étude. Le bénéfice de navigation du préfixe absolu reste une hypothèse à qualifier, pas une contrepartie démontrée à l'exposition du chemin machine.
 Une option proposée `verne.diagnostics.chemins`, absente ou égale à `relatifs`, conserve exactement :
 
 [source,text]
@@ -578,11 +579,36 @@ La valeur explicite `absolus` active un affichage destiné au poste de développ
 /projet/src/main/verne/bonjour.verne:2:1 : VERNE-SYN-001 : interpolation ou déclaration non fermée.
 ----
 
-Le chemin est le chemin logique absolu normalisé du fichier sous la racine configurée, sans résolution de la cible du lien dans le message.
-Il désigne la ressource effectivement sélectionnée, et non une reconstruction depuis le seul nom de classe.
+Le chemin affiché est celui du fichier sélectionné par l'inventaire sous la racine effective obtenue par `Path.of(racineDeclaree).toRealPath()`, comme dans le processeur actuel.
+Une racine relative est résolue par le système de fichiers Java contre le répertoire de travail du processus compilateur ; ce répertoire n'est pas présumé être celui du projet Maven ou de l'IDE.
+Ne pas appliquer `normalize()` à la racine déclarée avant `toRealPath()` : avec un lien symbolique suivi de `..`, la simplification lexicale peut changer le répertoire désigné.
+Le chemin affiché correspond à la racine effective absolue, suivie du chemin relatif conservé par l'inventaire ; il n'est pas reconstruit depuis le nom de classe.
+La cible d'un lien utilisé comme racine est donc visible dans ce mode, tandis que le nom d'un lien de fichier admissible reste celui de l'inventaire : ne pas remplacer ce dernier par sa cible réelle dans le message.
+Le contrôle existant de la cible réelle du fichier reste préalable à la lecture ; un lien refusé vers l'extérieur ne reçoit jamais ce préfixe absolu ni un extrait.
+Par exemple, si `/essai/liens/lien` vise `/essai/cible/enfant`, la racine déclarée `/essai/liens/lien/../gabarits` désigne `/essai/cible/gabarits`, pas `/essai/liens/gabarits`. Le préfixe utilise donc `/essai/cible/gabarits/bonjour.verne`.
+Ces règles supposent toujours les entrées stables pendant la compilation ; elles ne garantissent pas qu'un fichier reste inchangé jusqu'à un clic ultérieur.
 Ce mode expose volontairement le chemin de la racine dans les journaux : il constitue une exception explicite à l'interdiction actuelle, à accepter par D-002.
-Pour les erreurs de sécurité, de lecture, d'encodage, de configuration, de nom, de génération et de limite, conserver le format relatif ou global existant, sans chemin absolu ni extrait.
-Seules les erreurs d'analyse positionnées d'une source déjà autorisée et décodée peuvent employer le mode absolu.
+L'éligibilité au chemin absolu et à l'extrait dépend d'une position réelle dans une source autorisée et décodée, pas de la famille du code.
+La liste suivante est fermée pour cette proposition ; tout code nouveau exige une décision de contrat avant de devenir éligible.
+L'éligibilité permet l'affichage enrichi seulement lorsque l'option correspondante est activée ; elle ne modifie ni gravité ni budget.
+
+[cols="2,1,4",options="header"]
+|===
+|Codes |Éligibles |Position et justification
+|`VERNE-SYN-001`, `VERNE-SYN-002`, `VERNE-SYN-004` |Oui |Position originale du délimiteur, de l'échappement ou du caractère XML interdit ; source autorisée et décodée
+|`VERNE-TYP-001`, `VERNE-TYP-002`, `VERNE-TYP-003`, `VERNE-TYP-004` |Oui |Déclaration ou interpolation fautive ; inclut le refus de type inconnu encore présent au tour terminal
+|`VERNE-SEC-002` |Oui |Refus de contexte HTML, XML ou JSON à sa position source ; ne se confond pas avec le refus de fichier externe
+|`VERNE-LIM-003`, `VERNE-LIM-004`, `VERNE-LIM-005` |Oui |Interpolation, déclaration ou navigation qui franchit la limite ; position réelle conservée
+|`VERNE-IO-001`, `VERNE-LIA-001`, `VERNE-SEC-001`, `VERNE-SYN-003`, `VERNE-LIM-001`, `VERNE-LIM-006` |Non |Position conventionnelle `1:1` ou diagnostic global ; ni préfixe absolu ni extrait, même lorsqu'un tampon source est disponible
+|`VERNE-LIM-008` |Non |Le dépassement du budget global du gabarit utilise l'offset 0 (`1:1`) par convention ; il n'attribue pas la faute au premier caractère
+|`VERNE-CFG-001`, `VERNE-LIM-002`, `VERNE-LIM-007` |Non |Diagnostics globaux, sans position inventée
+|`VERNE-TYP-005` |Non |Avertissement global sur les gabarits en attente, format existant inchangé
+|`VERNE-REN-001`, `VERNE-REN-002`, `VERNE-REN-003` |Non |Erreurs de rendu, hors du diagnostic de compilation étudié
+|===
+
+Un diagnostic éligible réellement situé au premier caractère peut lui aussi avoir la position `1:1` : les seuls nombres ne suffisent donc pas à déterminer son éligibilité.
+Pour `VERNE-TYP-003` différé, conserver la position et le tampon d'origine du gabarit jusqu'à son émission terminale ; aucune erreur provisoire, nouvelle lecture ni substitution du contenu d'un tour ultérieur n'est permise.
+La même table gouverne les deux options ; les diagnostics exclus conservent leur format relatif ou global, sans contenu source.
 Les chemins Windows utilisent leurs séparateurs natifs ; les espaces sont conservés, sans guillemets ajoutés.
 Pour éviter les lignes de console forgées, un chemin contenant un caractère de contrôle ou de format Unicode est rendu avec chaque caractère concerné remplacé par `\u{HEX}` (hexadécimal majuscule sans zéro initial superflu) et n'est pas promis cliquable.
 Les antislashs du chemin restent des séparateurs ; le texte échappé n'est jamais une donnée à réinterpréter ou à ouvrir automatiquement.
@@ -598,13 +624,13 @@ Les avertissements conservent leur gravité et leur format existants ; les erreu
 
 Les lignes et colonnes commencent à un. LF, CR et CRLF terminent une ligne ; CRLF n'en compte qu'une.
 La colonne compte les points de code Unicode du texte original décodé, avant retrait des commentaires, sans normalisation Unicode : une tabulation compte pour un, un emoji supplémentaire pour un, une lettre suivie d'un accent combinant pour deux.
-La position reste celle du délimiteur ouvrant fautif ; elle n'est ni un nombre d'unités UTF-16 ni un nombre de graphèmes ou de cellules de terminal.
+La position reste celle de l'émetteur existant : délimiteur ouvrant, début d'échappement ou caractère XML interdit selon le diagnostic. La colonne n'est ni un nombre d'unités UTF-16 ni un nombre de graphèmes ou de cellules de terminal.
 Pour `tabulation + 🚀 + e + accent combinant + {inconnu`, l'accolade est à la colonne 5, tandis que son indice UTF-16, augmenté de un, vaut 6.
 Un adaptateur d'éditeur doit convertir la position selon sa propre convention à partir de la même source ; transmettre directement la colonne en points de code peut décaler la sélection.
 T-DIA-01 conserve ainsi sa convention actuelle. Aucune longueur de soulignement n'est inventée.
 
 Une seconde option proposée, `verne.diagnostics.extrait`, absente ou égale à `false`, conserve l'absence de contenu source.
-La valeur `true` ajoute deux lignes dans le même message, uniquement pour les erreurs d'analyse autorisées ci-dessus :
+La valeur `true` ajoute deux lignes dans le même message, uniquement pour les codes éligibles de la table ci-dessus :
 
 [source,text]
 ----
@@ -622,6 +648,9 @@ Pour une position d'indice zéro `p` dans une ligne de longueur `n`, son début 
 Ajouter `...` à chaque côté tronqué.
 Dans cette fenêtre, conserver les caractères ASCII imprimables sauf l'antislash, doublé ; représenter tout autre point de code par `\u{HEX}`.
 Cette représentation volontairement ASCII évite les séquences de contrôle, les tabulations variables et les ambiguïtés de largeur des emoji et des accents.
+Elle diminue aussi la lisibilité du français : `Bonjour Léa {nom` devient `Bonjour L\u{E9}a {nom`.
+Ce compromis est conservé dans la proposition pour rendre le repère calculable sans table de largeur propre au terminal ni traitement distinct des caractères composés et décomposés.
+L'extrait reste une aide de localisation facultative, et non une reproduction typographique de la source ; une variante Unicode plus lisible demanderait sa propre convention d'alignement et sa qualification.
 Le repère est un unique `^`, précédé d'autant d'espaces que la longueur du préfixe affiché avant la position, y compris l'éventuel `...` ; les préfixes `  source : ` et `  repère : ` ont la même largeur.
 Exemple pour la ligne Unicode ci-dessus :
 
