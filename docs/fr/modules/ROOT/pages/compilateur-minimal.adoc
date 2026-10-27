@@ -564,7 +564,12 @@ Le remappage du Java généré (T-DIA-02) reste hors périmètre.
 === Format et choix de chemin soumis à D-002
 
 Recommandation conditionnelle soumise à D-002 : conserver par défaut le format livré et l'interdiction des chemins absolus.
-Aucun clic dans un IDE n'a été observé lors de cette étude. Le bénéfice de navigation du préfixe absolu reste une hypothèse à qualifier, pas une contrepartie démontrée à l'exposition du chemin machine.
+Le 27 octobre 2026, l'utilisateur a observé dans la console Run d'IntelliJ IDEA 2026.2.1 sous macOS, lors d'une exécution Maven intégrée, que le diagnostic relatif livré n'est pas lié.
+Dans cette même console, une ligne absolue imitée par `exec:exec` et `echo` sous la forme `[ERROR] chemin:2:1 : VERNE-SYN-001 : ...` n'est pas liée non plus.
+En revanche, `[ERROR] chemin:[2,1] VERNE-SYN-001 : ...` devient cliquable et ouvre le gabarit à la ligne 2.
+Cette observation de l'utilisateur est consignée dans le ticket nº 27 ; elle n'a pas été rejouée par l'auteur. Elle qualifie un détecteur de liens sur une ligne imitée, pas l'émission future du processeur ni tous les modes de construction IntelliJ.
+L'ancien préfixe absolu `chemin:ligne:colonne` est donc abandonné dans cette proposition au profit du candidat ci-dessous.
+L'interprétation de la colonne, l'effet de l'absence de `[ERROR]`, les autres consoles et les autres IDE restent à qualifier.
 Une option proposée `verne.diagnostics.chemins`, absente ou égale à `relatifs`, conserve exactement :
 
 [source,text]
@@ -572,12 +577,22 @@ Une option proposée `verne.diagnostics.chemins`, absente ou égale à `relatifs
 VERNE-SYN-001 : bonjour.verne:2:1 : interpolation ou déclaration non fermée.
 ----
 
-La valeur explicite `absolus` active un affichage destiné au poste de développement :
+La valeur explicite `absolus` propose désormais le format de navigation suivant, destiné en premier lieu à la chaîne Maven / console Run IntelliJ observée :
 
 [source,text]
 ----
-/projet/src/main/verne/bonjour.verne:2:1 : VERNE-SYN-001 : interpolation ou déclaration non fermée.
+/projet/src/main/verne/bonjour.verne:[2,1] VERNE-SYN-001 : interpolation ou déclaration non fermée.
 ----
+
+Le message remis à `Messager` commence par `chemin:[ligne,colonneNavigation] CODE : message`, sans espace avant `[` et sans deux-points après `]`.
+Verne n'ajoute pas lui-même `[ERROR]` : c'est l'enveloppe Maven observée, extérieure au contrat du message. La ligne candidate en console Maven est donc `[ERROR] chemin:[ligne,colonneNavigation] CODE : message`.
+Ne pas émettre en parallèle une seconde erreur avec un autre format : un seul diagnostic consomme le budget existant.
+Le format sans cette enveloppe, notamment avec le préfixe propre à javac, n'a pas été observé cliquable ; aucune détection automatique de l'IDE ni garantie universelle n'est proposée.
+
+L'arbre de construction de l'essai réel ne contient que l'erreur Java induite dans `Application.java` et annonce « 1 error » ; le diagnostic Verne est absent.
+Le soulignement du chemin dans la console indique un lien, pas un soulignement de la faute dans l'éditeur.
+La ligne imitée cliquable ne prouve ni création d'un nœud dans l'arbre ni marqueur dans le gabarit. Un format textuel ne remplace pas les métadonnées source manquantes de `Messager`.
+D-002 doit donc distinguer une navigation depuis la console (option A) d'une exigence de diagnostic structuré dans l'arbre et l'éditeur (option C, adaptateur à cadrer).
 
 Le chemin affiché est celui du fichier sélectionné par l'inventaire sous la racine effective obtenue par `Path.of(racineDeclaree).toRealPath()`, comme dans le processeur actuel.
 Une racine relative est résolue par le système de fichiers Java contre le répertoire de travail du processus compilateur ; ce répertoire n'est pas présumé être celui du projet Maven ou de l'IDE.
@@ -626,8 +641,14 @@ Les lignes et colonnes commencent à un. LF, CR et CRLF terminent une ligne ; CR
 La colonne compte les points de code Unicode du texte original décodé, avant retrait des commentaires, sans normalisation Unicode : une tabulation compte pour un, un emoji supplémentaire pour un, une lettre suivie d'un accent combinant pour deux.
 La position reste celle de l'émetteur existant : délimiteur ouvrant, début d'échappement ou caractère XML interdit selon le diagnostic. La colonne n'est ni un nombre d'unités UTF-16 ni un nombre de graphèmes ou de cellules de terminal.
 Pour `tabulation + 🚀 + e + accent combinant + {inconnu`, l'accolade est à la colonne 5, tandis que son indice UTF-16, augmenté de un, vaut 6.
-Un adaptateur d'éditeur doit convertir la position selon sa propre convention à partir de la même source ; transmettre directement la colonne en points de code peut décaler la sélection.
-T-DIA-01 conserve ainsi sa convention actuelle. Aucune longueur de soulignement n'est inventée.
+Cette convention reste celle de la position logique Verne, du format relatif par défaut et du calcul de la fenêtre d'extrait (T-DIA-01).
+La colonne de navigation du nouveau préfixe entre crochets est une convention de transport distincte proposée : unités UTF-16, base un, depuis le début de la ligne originale jusqu'à la position fautive, sans normalisation ni expansion des tabulations.
+Avec le tampon Java et des offsets UTF-16, `colonneNavigation = offsetFaute - offsetDebutLigne + 1`, tandis que `colonneVerne = texte.codePointCount(offsetDebutLigne, offsetFaute) + 1`.
+Une tabulation compte une unité, un emoji supplémentaire deux et une lettre suivie d'un accent combinant deux. CRLF reste une seule fin de ligne et ne fait pas partie de la colonne.
+Pour la ligne Unicode ci-dessus en ligne 3, le candidat absolu est `chemin:[3,6] CODE : message` ; le format relatif conserve `identifiant:3:5`. Le repère d'extrait vise le même caractère original, indépendamment de ces deux nombres.
+L'essai utilisateur à la colonne 1 ne distingue pas UTF-16 et points de code : le choix de transport UTF-16 est une hypothèse de raccordement proposée, pas une convention IntelliJ observée.
+Avant toute promesse de navigation exacte, qualifier le clic après tabulation, emoji et accent combinant dans la même console, comparer les colonnes 5 et 6 et relever la position réellement ouverte. Si l'outil attend une autre unité, réviser ce contrat avant livraison ; ne pas présenter le candidat comme validé ni convertir selon une détection implicite de l'IDE.
+Aucune longueur de soulignement n'est inventée.
 
 Une seconde option proposée, `verne.diagnostics.extrait`, absente ou égale à `false`, conserve l'absence de contenu source.
 La valeur `true` ajoute deux lignes dans le même message, uniquement pour les codes éligibles de la table ci-dessus :
@@ -660,7 +681,7 @@ Exemple pour la ligne Unicode ci-dessus :
   repère :                       ^
 ----
 
-La colonne annoncée reste 5 : la longueur de la représentation échappée n'est pas une nouvelle colonne source.
+La colonne logique Verne reste 5 et la colonne de navigation proposée vaut 6 : la longueur de la représentation échappée n'est aucune de ces deux colonnes source.
 Le texte d'erreur reste français, avec code stable ; les préfixes propres à javac ou Maven ne sont pas maîtrisés par Verne.
 
 === Budgets, ressources et vérification attendue
@@ -675,5 +696,5 @@ L'extrait borné limite sa propre taille, pas celle des chemins ou du message co
 
 Avant implémentation, VERNE-004 devra écrire et observer en échec les contrôles du nouveau format : valeurs par défaut inchangées, options invalides, LF/CR/CRLF, commentaires multilignes, emoji, accents combinants, tabulations, fenêtre tronquée, antislash et contrôles Unicode, refus de lien externe, erreur sans source, tours différés, saturation à 64/65 erreurs et isolation concurrente.
 Il faudra ensuite vérifier leur réussite et la suite complète, sans compter une erreur d'outillage comme phase rouge.
-Les essais IDE devront distinguer console, navigation après clic et marqueur de problème, en vérifiant le fichier et la position réellement ouverts.
+Les essais IDE devront distinguer console, navigation après clic, nœud de l'arbre de construction et marqueur dans l'éditeur, en vérifiant le fichier et la position réellement ouverts. Rejouer la forme entre crochets avec un vrai message émis par le processeur et avec l'enveloppe Maven, pas seulement par echo ; conserver les résultats distincts.
 Les versions et réglages du compilateur, de l'IDE et de ses extensions devront accompagner chaque résultat ; une observation javac ne vaut pas qualification d'Eclipse JDT.
