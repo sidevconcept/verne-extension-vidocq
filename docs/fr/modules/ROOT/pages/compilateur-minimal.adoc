@@ -495,20 +495,34 @@ Avant implémentation, les quinze cas échouaient : profil `json` refusé par `V
 VERNE-003 remplace l'aiguillage par caractère des échappeurs générés par une table constante, sans changer les sorties. `EchappementExhaustifTest` compare chaque profil HTML, XML et JSON, en petit et en grand document, à un témoin écrit d'après ce contrat, pour 261 unités : U+0000 à U+00FF, U+2028, U+2029, substituts isolés haut et bas, et emoji. Chaque unité figure deux fois dans la valeur, avant et après le premier remplacement ; en XML, contenu et attribut sont vérifiés, et les caractères interdits doivent produire `VERNE-REN-002`.
 Le test réussit sur la base, et y détecte un `&#39;` faussé en `&#039;`. Après le remplacement, il échoue pour la cause attendue lorsqu'une entrée de table est faussée (tabulation JSON écrite `\u0009` au lieu de `\t`), puis réussit avec la table correcte.
 
-Mesures du banc versionné, rendu Verne avec échappement, trois processus de 10 mesures après 5 d'échauffement, dans l'ordre référence, candidate, référence, candidate ; écart moyen et intervalle de confiance à 99 % (Welch) sur les 60 échantillons de chaque côté :
+Mesures du banc versionné, rendu Verne avec échappement, trois processus de 10 mesures après 5 d'échauffement, dans l'ordre référence, candidate, référence, candidate. L'unité statistique est le processus : chaque processus est résumé par la moyenne de ses 10 mesures, et l'écart des moyennes est accompagné d'un intervalle de confiance à 99 % de Welch sur les six moyennes de processus de chaque côté, rapporté à la moyenne de référence. Un intervalle entièrement négatif établit un gain, entièrement positif une perte ; sinon l'écart est non concluant :
 
 [cols="2,1,1,1",options="header"]
 |===
 |Document |0 % de caractères spéciaux |10 % |50 %
-|Fiche HTML, 7 valeurs |−16 % [−22 ; −10] |−14 % [−15 ; −12] |−12 % [−14 ; −11]
-|Tableau HTML, 100 valeurs |−2 % [−4 ; −0,2] |+2 % [−6 ; +11], non significatif |−8 % [−9 ; −6]
-|Page de 64 Kio |voir ci-dessous |+2 % [−0,2 ; +4], non significatif |−2 % [−4 ; −0,5]
-|Facture XML, 7 valeurs |−1 % [−3 ; +2], non significatif |−9 % [−10 ; −8] |−6 % [−8 ; −5]
-|Fiche JSON, 7 valeurs |−24 % [−28 ; −21] |−9 % [−10 ; −7] |−25 % [−27 ; −23]
+|Fiche HTML, 7 valeurs |−16 % [−29 ; −4] |−14 % [−18 ; −9] |−12 % [−16 ; −8]
+|Tableau HTML, 100 valeurs |−2 % [−5 ; +2], non concluant |+3 % [−38 ; +43], non concluant |−8 % [−11 ; −4]
+|Page de 64 Kio |voir ci-dessous |+2 % [−7 ; +11], non concluant |−2 % [−6 ; +1], non concluant
+|Facture XML, 7 valeurs |−1 % [−11 ; +9], non concluant |−9 % [−13 ; −4] |−6 % [−10 ; −3]
+|Fiche JSON, 7 valeurs |−24 % [−39 ; −9] |−9 % [−11 ; −6] |−25 % [−33 ; −18]
 |===
 
-Pour la page de 64 Kio à 0 %, la campagne complète a mesuré +8 % [+6 ; +11] ; une campagne ciblée de quatre passes alternées ne l'a pas reproduit : +1,3 % [−0,0 ; +2,7], non significatif. Sans échappement, où les échappeurs ne sont pas appelés, les deux versions y sont identiques. Ce document est dominé par la copie de 64 Kio ; l'écart initial est attribué au bruit de la campagne, sans preuve plus forte. Les allocations par rendu sont inchangées dans tous les cas.
-La table HTML occupe 63 références, les tables XML deux fois 63 et la table JSON 93, avec les 27 séquences `\uxxxx` des contrôles sans forme courte : une fois par classe générée et par profil, de l'ordre de 0,3 à 1,6 Kio selon une estimation non mesurée, au lieu d'une chaîne allouée à chaque contrôle échappé. L'inlining par le compilateur à la volée n'a pas été observé directement.
+Ces intervalles reposent sur 5 à 10 degrés de liberté : ils sont larges, et ne valent que pour ce poste, cette JVM et ces campagnes. Les itérations d'un même processus ne sont pas indépendantes ; les traiter comme 60 échantillons donnerait des intervalles trop étroits et qualifierait à tort de gains les écarts du tableau HTML à 0 % et de la page de 64 Kio à 50 %. La variation entre campagnes, la charge et l'état thermique du poste ne sont pas modélisés.
+
+La page de 64 Kio à 0 % reste *non concluante*, et la condition « pas de dégradation à 0 % » n'est pas établie pour ce document. Trois campagnes, toutes conservées, chacune en ordre alterné :
+
+[cols="3,1,1,2",options="header"]
+|===
+|Campagne |Processus par côté |Écart |IC 99 % (processus)
+|Complète, sur secteur |6 |+8,4 % |[+0,5 ; +16,3], perte
+|Ciblée, sur secteur |6 |+1,3 % |[−1,6 ; +4,3], non concluant
+|Troisième, sur batterie, ordre ABBA, 4 passes de 5 processus |20 |+0,8 % |[−0,5 ; +2,2], non concluant
+|===
+
+Les campagnes sont hétérogènes (Q de Cochran 12,6 pour 2 degrés de liberté) : la perte de la première n'a été reproduite par aucune des deux suivantes, sans que sa cause soit connue. Combinées avec une variance entre campagnes (DerSimonian-Laird), elles donnent +2,7 % [−1,0 ; +6,5] ; combinées sans cette variance, que l'hétérogénéité rend inadaptée, +1,3 % [+0,1 ; +2,4]. Une perte de l'ordre de 1 à 2 % n'est donc pas exclue. Sans échappement, où les échappeurs ne sont pas appelés, les deux versions donnent 1 937 et 1 952 ns contre 1 913 et 1 948 ns ; ce contrôle ne démontre pas la cause d'un écart avec échappement. L'acceptation de cette réserve relève de l'arbitrage de l'utilisateur.
+
+Allocations par rendu (`gc.alloc.rate.norm`, moyenne des processus, identique d'un processus à l'autre) : inchangées dans 12 combinaisons sur 15. La fiche JSON passe de 3 607 à 2 563 octets par rendu à 10 % et de 8 270 à 2 918 octets à 50 % : la référence construisait une chaîne `\uxxxx` à chaque contrôle échappé, et le corpus JSON contient U+0001 ; la table la précalcule. La facture XML à 0 % passe de 1 344 à 1 320 octets, écart non expliqué ; une différence d'analyse d'échappement par le compilateur à la volée est une hypothèse non vérifiée.
+Mémoire conservée, distincte des allocations par rendu : chaque classe générée garde ses tables pour toute sa durée de vie. Mesurées par `Instrumentation.getObjectSize` sur macOS aarch64, Java 25, références compressées et chaînes compactes, hors littéraux partagés et métadonnées de classe, les tables occupent 272 octets en HTML, 544 en XML (deux tables) et 1 688 en JSON, tableau de 93 références et 27 séquences `\uxxxx` calculées comprises. L'hypothèse de moins de 1 Kio par profil et par classe est donc réfutée pour JSON sur cette configuration ; le coût croît avec le nombre de classes JSON chargées, en contrepartie des allocations évitées à chaque rendu. L'inlining par le compilateur à la volée n'a pas été observé directement.
 
 == Limites de validation
 
