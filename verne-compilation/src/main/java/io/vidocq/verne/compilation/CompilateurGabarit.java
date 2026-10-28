@@ -260,8 +260,23 @@ final class CompilateurGabarit {
         return emplacements;
     }
 
+    /**
+     * Table HTML partagée par les deux formes : remplacement indexé par le caractère, null s'il est conservé.
+     * Immuable après l'initialisation de la classe, donc lue sans synchronisation par des rendus concurrents.
+     */
+    private static final String TABLE_HTML = """
+            private static final java.lang.String[] ECHAPPEMENTS = new java.lang.String[63];
+            static {
+            ECHAPPEMENTS['&'] = "&amp;";
+            ECHAPPEMENTS['<'] = "&lt;";
+            ECHAPPEMENTS['>'] = "&gt;";
+            ECHAPPEMENTS['"'] = "&quot;";
+            ECHAPPEMENTS['\\''] = "&#39;";
+            }
+            """;
+
     /** Échappement HTML généré dans chaque classe : aucune copie sans caractère à remplacer. */
-    private static final String ECHAPPEMENT_HTML = """
+    private static final String ECHAPPEMENT_HTML = TABLE_HTML + """
             private static java.lang.String echapper(char caractere) {
             return echapper(java.lang.String.valueOf(caractere));
             }
@@ -269,14 +284,7 @@ final class CompilateurGabarit {
             java.lang.StringBuilder resultat = null;
             for (int index = 0; index < valeur.length(); index++) {
             char caractere = valeur.charAt(index);
-            java.lang.String remplacement = switch (caractere) {
-            case '&' -> "&amp;";
-            case '<' -> "&lt;";
-            case '>' -> "&gt;";
-            case '"' -> "&quot;";
-            case '\\'' -> "&#39;";
-            default -> null;
-            };
+            java.lang.String remplacement = caractere < 63 ? ECHAPPEMENTS[caractere] : null;
             if (remplacement == null) {
             if (resultat != null) resultat.append(caractere);
             } else {
@@ -292,7 +300,7 @@ final class CompilateurGabarit {
      * Échappement HTML des petits documents, dans le tampon : copie en bloc jusqu'au premier remplacement
      * (debut vaut alors -1), puis caractère par caractère, ce qui reste efficace aux fortes densités.
      */
-    private static final String ECHAPPEMENT_HTML_TAMPON = """
+    private static final String ECHAPPEMENT_HTML_TAMPON = TABLE_HTML + """
             private static void echapper(java.lang.StringBuilder destination, char caractere) {
             echapper(destination, java.lang.String.valueOf(caractere));
             }
@@ -300,14 +308,7 @@ final class CompilateurGabarit {
             int debut = 0;
             for (int index = 0; index < valeur.length(); index++) {
             char caractere = valeur.charAt(index);
-            java.lang.String remplacement = switch (caractere) {
-            case '&' -> "&amp;";
-            case '<' -> "&lt;";
-            case '>' -> "&gt;";
-            case '"' -> "&quot;";
-            case '\\'' -> "&#39;";
-            default -> null;
-            };
+            java.lang.String remplacement = caractere < 63 ? ECHAPPEMENTS[caractere] : null;
             if (remplacement != null) {
             if (debut >= 0) destination.append(valeur, debut, index);
             destination.append(remplacement);
@@ -321,39 +322,57 @@ final class CompilateurGabarit {
             """;
 
     /**
+     * Tables XML du contenu et des attributs ; les contrôles interdits restent nuls et sont refusés après la table.
+     * Les caractères inférieurs à U+D800 et non remplacés n'exigent aucun autre contrôle.
+     */
+    private static final String TABLES_XML = """
+            private static final java.lang.String[] ECHAPPEMENTS_CONTENU = new java.lang.String[63];
+            private static final java.lang.String[] ECHAPPEMENTS_ATTRIBUT = new java.lang.String[63];
+            static {
+            for (java.lang.String[] table : new java.lang.String[][] {ECHAPPEMENTS_CONTENU, ECHAPPEMENTS_ATTRIBUT}) {
+            table['&'] = "&amp;";
+            table['<'] = "&lt;";
+            table['>'] = "&gt;";
+            table['"'] = "&quot;";
+            table['\\''] = "&apos;";
+            table['\\r'] = "&#13;";
+            }
+            ECHAPPEMENTS_ATTRIBUT['\\n'] = "&#10;";
+            ECHAPPEMENTS_ATTRIBUT['\\t'] = "&#9;";
+            }
+            """;
+
+    /**
      * Échappement XML des petits documents, dans le tampon : copie en bloc jusqu'au premier remplacement
      * (debut vaut alors -1), puis caractère par caractère ; un caractère interdit abandonne le rendu.
      */
-    private static final String ECHAPPEMENT_XML_TAMPON = """
+    private static final String ECHAPPEMENT_XML_TAMPON = TABLES_XML + """
             private static void echapper(java.lang.StringBuilder destination, char caractere, boolean attribut) {
             echapper(destination, java.lang.String.valueOf(caractere), attribut);
             }
             private static void echapper(java.lang.StringBuilder destination, java.lang.String valeur, boolean attribut) {
+            java.lang.String[] table = attribut ? ECHAPPEMENTS_ATTRIBUT : ECHAPPEMENTS_CONTENU;
             int debut = 0;
             for (int index = 0; index < valeur.length(); index++) {
             char caractere = valeur.charAt(index);
-            java.lang.String remplacement = switch (caractere) {
-            case '&' -> "&amp;";
-            case '<' -> "&lt;";
-            case '>' -> "&gt;";
-            case '"' -> "&quot;";
-            case '\\'' -> "&apos;";
-            case '\\r' -> "&#13;";
-            case '\\n' -> attribut ? "&#10;" : null;
-            case '\\t' -> attribut ? "&#9;" : null;
-            default -> null;
-            };
+            java.lang.String remplacement = caractere < 63 ? table[caractere] : null;
             if (remplacement != null) {
             if (debut >= 0) destination.append(valeur, debut, index);
             destination.append(remplacement);
             debut = -1;
             continue;
             }
-            boolean paire = java.lang.Character.isHighSurrogate(caractere) && index + 1 < valeur.length()
-            && java.lang.Character.isLowSurrogate(valeur.charAt(index + 1));
-            if (caractere < 0x20 && caractere != '\\n' && caractere != '\\t' || caractere == 0xFFFE || caractere == 0xFFFF
-            || java.lang.Character.isSurrogate(caractere) && !paire) {
+            boolean paire = false;
+            if (caractere < 0x20) {
+            if (caractere != '\\n' && caractere != '\\t') {
             throw new java.lang.IllegalArgumentException("VERNE-REN-002 : caractère interdit par XML 1.0 dans une valeur interpolée.");
+            }
+            } else if (caractere >= 0xD800) {
+            paire = java.lang.Character.isHighSurrogate(caractere) && index + 1 < valeur.length()
+            && java.lang.Character.isLowSurrogate(valeur.charAt(index + 1));
+            if (caractere == 0xFFFE || caractere == 0xFFFF || java.lang.Character.isSurrogate(caractere) && !paire) {
+            throw new java.lang.IllegalArgumentException("VERNE-REN-002 : caractère interdit par XML 1.0 dans une valeur interpolée.");
+            }
             }
             if (debut < 0) destination.append(caractere);
             if (paire) {
@@ -366,35 +385,32 @@ final class CompilateurGabarit {
             """;
 
     /** Échappement XML généré : contenu ou attribut, refus des caractères interdits par XML 1.0. */
-    private static final String ECHAPPEMENT_XML = """
+    private static final String ECHAPPEMENT_XML = TABLES_XML + """
             private static java.lang.String echapper(char caractere, boolean attribut) {
             return echapper(java.lang.String.valueOf(caractere), attribut);
             }
             private static java.lang.String echapper(java.lang.String valeur, boolean attribut) {
+            java.lang.String[] table = attribut ? ECHAPPEMENTS_ATTRIBUT : ECHAPPEMENTS_CONTENU;
             java.lang.StringBuilder resultat = null;
             for (int index = 0; index < valeur.length(); index++) {
             char caractere = valeur.charAt(index);
-            java.lang.String remplacement = switch (caractere) {
-            case '&' -> "&amp;";
-            case '<' -> "&lt;";
-            case '>' -> "&gt;";
-            case '"' -> "&quot;";
-            case '\\'' -> "&apos;";
-            case '\\r' -> "&#13;";
-            case '\\n' -> attribut ? "&#10;" : null;
-            case '\\t' -> attribut ? "&#9;" : null;
-            default -> null;
-            };
+            java.lang.String remplacement = caractere < 63 ? table[caractere] : null;
             if (remplacement != null) {
             if (resultat == null) resultat = new java.lang.StringBuilder(valeur.length() + 16).append(valeur, 0, index);
             resultat.append(remplacement);
             continue;
             }
-            boolean paire = java.lang.Character.isHighSurrogate(caractere) && index + 1 < valeur.length()
-            && java.lang.Character.isLowSurrogate(valeur.charAt(index + 1));
-            if (caractere < 0x20 && caractere != '\\n' && caractere != '\\t' || caractere == 0xFFFE || caractere == 0xFFFF
-            || java.lang.Character.isSurrogate(caractere) && !paire) {
+            boolean paire = false;
+            if (caractere < 0x20) {
+            if (caractere != '\\n' && caractere != '\\t') {
             throw new java.lang.IllegalArgumentException("VERNE-REN-002 : caractère interdit par XML 1.0 dans une valeur interpolée.");
+            }
+            } else if (caractere >= 0xD800) {
+            paire = java.lang.Character.isHighSurrogate(caractere) && index + 1 < valeur.length()
+            && java.lang.Character.isLowSurrogate(valeur.charAt(index + 1));
+            if (caractere == 0xFFFE || caractere == 0xFFFF || java.lang.Character.isSurrogate(caractere) && !paire) {
+            throw new java.lang.IllegalArgumentException("VERNE-REN-002 : caractère interdit par XML 1.0 dans une valeur interpolée.");
+            }
             }
             if (resultat != null) resultat.append(caractere);
             if (paire) {
@@ -407,10 +423,24 @@ final class CompilateurGabarit {
             """;
 
     /**
-     * Échappement JSON des chaînes, dans le tampon : formes courtes, autres contrôles, U+2028, U+2029 et substituts
-     * isolés en \\uxxxx ; copie en bloc jusqu'au premier remplacement (debut vaut alors -1), puis caractère par caractère.
+     * Échappement JSON des chaînes, dans le tampon : table des contrôles (formes courtes, sinon \\uxxxx), du guillemet
+     * et de l'antislash ; U+2028, U+2029 et substituts isolés en \\uxxxx, seuls contrôlés au-delà de la table.
+     * Copie en bloc jusqu'au premier remplacement (debut vaut alors -1), puis caractère par caractère.
      */
     private static final String ECHAPPEMENT_JSON_TAMPON = """
+            private static final java.lang.String[] ECHAPPEMENTS = new java.lang.String[93];
+            static {
+            for (int caractere = 0; caractere < 0x20; caractere++) {
+            ECHAPPEMENTS[caractere] = "\\\\u" + java.lang.Integer.toHexString(caractere | 0x10000).substring(1);
+            }
+            ECHAPPEMENTS['"'] = "\\\\\\"";
+            ECHAPPEMENTS['\\\\'] = "\\\\\\\\";
+            ECHAPPEMENTS['\\b'] = "\\\\b";
+            ECHAPPEMENTS['\\f'] = "\\\\f";
+            ECHAPPEMENTS['\\n'] = "\\\\n";
+            ECHAPPEMENTS['\\r'] = "\\\\r";
+            ECHAPPEMENTS['\\t'] = "\\\\t";
+            }
             private static void echapper(java.lang.StringBuilder destination, char caractere) {
             echapper(destination, java.lang.String.valueOf(caractere));
             }
@@ -418,21 +448,12 @@ final class CompilateurGabarit {
             int debut = 0;
             for (int index = 0; index < valeur.length(); index++) {
             char caractere = valeur.charAt(index);
-            java.lang.String remplacement = switch (caractere) {
-            case '"' -> "\\\\\\"";
-            case '\\\\' -> "\\\\\\\\";
-            case '\\b' -> "\\\\b";
-            case '\\f' -> "\\\\f";
-            case '\\n' -> "\\\\n";
-            case '\\r' -> "\\\\r";
-            case '\\t' -> "\\\\t";
-            default -> null;
-            };
+            java.lang.String remplacement = caractere < 93 ? ECHAPPEMENTS[caractere] : null;
             boolean paire = false;
-            if (remplacement == null) {
+            if (caractere >= 0x2028) {
             paire = java.lang.Character.isHighSurrogate(caractere) && index + 1 < valeur.length()
             && java.lang.Character.isLowSurrogate(valeur.charAt(index + 1));
-            if (caractere < 0x20 || caractere == 0x2028 || caractere == 0x2029 || java.lang.Character.isSurrogate(caractere) && !paire) {
+            if (caractere == 0x2028 || caractere == 0x2029 || java.lang.Character.isSurrogate(caractere) && !paire) {
             remplacement = "\\\\u" + java.lang.Integer.toHexString(caractere | 0x10000).substring(1);
             }
             }
