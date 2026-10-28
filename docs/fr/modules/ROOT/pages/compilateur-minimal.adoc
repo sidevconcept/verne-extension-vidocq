@@ -545,8 +545,11 @@ Le paquet exporté `io.vidocq.verne.invalidation` fournit désormais le link:inv
 
 == Diagnostics rattachés aux fichiers de gabarit (proposé)
 
-Cette section est une proposition de VERNE-002 (ticket nº 27), soumise à D-002.
-Elle ne décrit aucune capacité livrée et ne modifie les contrats précédents qu'après décision explicite et réalisation de VERNE-004.
+Cette section consigne la décision D-002 de l'utilisateur du 28 octobre 2026 et conserve les pistes étudiées pour une évolution future.
+Décision applicable : le format relatif livré est conservé ; l'absence de chemin absolu n'est pas gênante pour l'utilisateur. Le chemin absolu cliquable `chemin:[ligne,colonne]` est reporté et ne bloque pas l'avancement.
+Aucune exception à l'interdiction des chemins absolus n'est accordée. La colonne logique Verne reste en points de code, tabulation comptée pour un.
+Les options, extraits et règles de navigation décrits comme futurs ci-dessous ne sont ni livrés ni autorisés à l'implémentation par cette décision. Aucun changement de confidentialité du contenu source n'est déduit de D-002.
+VERNE-004 (nº 29) est à recadrer sur cette conservation : pas d'option absolue, pas de changement de syntaxe relative, pas de conversion de colonne javac ni de promesse de clic ou de diagnostic structuré. Aucun développement n'est commencé ; un éventuel besoin résiduel doit être défini avant de déclarer ce ticket prêt.
 
 === Observations et portée
 
@@ -561,23 +564,27 @@ Le préfixe proposé ci-dessous reste donc du texte : aucun lien cliquable, marq
 Un tel rattachement structuré demanderait une intégration propre à l'outil, à délimiter avant réalisation ; aucune API interne de javac ni dépendance d'exécution n'est proposée.
 Le remappage du Java généré (T-DIA-02) reste hors périmètre.
 
-=== Format et choix de chemin soumis à D-002
+=== Format conservé par D-002 et pistes reportées
 
-Recommandation conditionnelle soumise à D-002 : conserver par défaut le format livré et l'interdiction des chemins absolus.
+D-002 retient le format relatif existant et l'interdiction des chemins absolus, sans ajouter d'option de configuration.
 Le 27 octobre 2026, l'utilisateur a observé dans la console Run d'IntelliJ IDEA 2026.2.1 sous macOS, lors d'une exécution Maven intégrée, que le diagnostic relatif livré n'est pas lié.
 Dans cette même console, une ligne absolue imitée par `exec:exec` et `echo` sous la forme `[ERROR] chemin:2:1 : VERNE-SYN-001 : ...` n'est pas liée non plus.
 En revanche, `[ERROR] chemin:[2,1] VERNE-SYN-001 : ...` devient cliquable et ouvre le gabarit à la ligne 2.
 Cette observation de l'utilisateur est consignée dans le ticket nº 27 ; elle n'a pas été rejouée par l'auteur. Elle qualifie un détecteur de liens sur une ligne imitée, pas l'émission future du processeur ni tous les modes de construction IntelliJ.
 L'ancien préfixe absolu `chemin:ligne:colonne` est donc abandonné dans cette proposition au profit du candidat ci-dessous.
-L'interprétation de la colonne, l'effet de l'absence de `[ERROR]`, les autres consoles et les autres IDE restent à qualifier.
-Une option proposée `verne.diagnostics.chemins`, absente ou égale à `relatifs`, conserve exactement :
+Le 28 octobre 2026, l'utilisateur observe dans le terminal intégré zsh de VS Code que les deux formes absolues imitées sont liées, tandis que le relatif ne l'est pas ; la version n'a pas été relevée lors de cet essai et la position effectivement ouverte n'a pas été consignée.
+Dans le terminal zsh d'IntelliJ IDEA 2026.2.1, seul l'absolu entre crochets est lié, comme dans la console Run. Le panneau Problèmes de VS Code, les marqueurs dans les gabarits et les autres modes de construction restent non qualifiés.
+Le format entre crochets est ainsi le seul lié dans les trois consoles observées ; cela n'établit ni l'interprétation de la colonne par leurs détecteurs ni le comportement du futur processeur.
+Le format conservé, sans nouvelle option, est exactement :
 
 [source,text]
 ----
 VERNE-SYN-001 : bonjour.verne:2:1 : interpolation ou déclaration non fermée.
 ----
 
-La valeur explicite `absolus` propose désormais le format de navigation suivant, destiné en premier lieu à la chaîne Maven / console Run IntelliJ observée :
+==== Évolution future : chemin absolu cliquable, hors nº 29
+
+L'option étudiée `verne.diagnostics.chemins=absolus` et sa valeur `relatifs` ne sont pas ajoutées. Pour une future demande distincte, le candidat de navigation conservé dans l'étude est :
 
 [source,text]
 ----
@@ -592,7 +599,7 @@ Le format sans cette enveloppe, notamment avec le préfixe propre à javac, n'a 
 L'arbre de construction de l'essai réel ne contient que l'erreur Java induite dans `Application.java` et annonce « 1 error » ; le diagnostic Verne est absent.
 Le soulignement du chemin dans la console indique un lien, pas un soulignement de la faute dans l'éditeur.
 La ligne imitée cliquable ne prouve ni création d'un nœud dans l'arbre ni marqueur dans le gabarit. Un format textuel ne remplace pas les métadonnées source manquantes de `Messager`.
-D-002 doit donc distinguer une navigation depuis la console (option A) d'une exigence de diagnostic structuré dans l'arbre et l'éditeur (option C, adaptateur à cadrer).
+D-002 reporte cette navigation ; l’hypothèse R9 sur la création d’un nœud par analyse du vrai texte Maven est mise de côté. Elle n’est ni confirmée ni réfutée ici et ne bloque pas le format conservé.
 
 Le chemin affiché est celui du fichier sélectionné par l'inventaire sous la racine effective obtenue par `Path.of(racineDeclaree).toRealPath()`, comme dans le processeur actuel.
 Une racine relative est résolue par le système de fichiers Java contre le répertoire de travail du processus compilateur ; ce répertoire n'est pas présumé être celui du projet Maven ou de l'IDE.
@@ -602,7 +609,7 @@ La cible d'un lien utilisé comme racine est donc visible dans ce mode, tandis q
 Le contrôle existant de la cible réelle du fichier reste préalable à la lecture ; un lien refusé vers l'extérieur ne reçoit jamais ce préfixe absolu ni un extrait.
 Par exemple, si `/essai/liens/lien` vise `/essai/cible/enfant`, la racine déclarée `/essai/liens/lien/../gabarits` désigne `/essai/cible/gabarits`, pas `/essai/liens/gabarits`. Le préfixe utilise donc `/essai/cible/gabarits/bonjour.verne`.
 Ces règles supposent toujours les entrées stables pendant la compilation ; elles ne garantissent pas qu'un fichier reste inchangé jusqu'à un clic ultérieur.
-Ce mode expose volontairement le chemin de la racine dans les journaux : il constitue une exception explicite à l'interdiction actuelle, à accepter par D-002.
+Ce mode expose volontairement le chemin de la racine dans les journaux : il nécessiterait une nouvelle autorisation explicite, que D-002 n'accorde pas.
 L'éligibilité au chemin absolu et à l'extrait dépend d'une position réelle dans une source autorisée et décodée, pas de la famille du code.
 La liste suivante est fermée pour cette proposition ; tout code nouveau exige une décision de contrat avant de devenir éligible.
 L'éligibilité permet l'affichage enrichi seulement lorsque l'option correspondante est activée ; elle ne modifie ni gravité ni budget.
@@ -635,22 +642,26 @@ Les diagnostics globaux restent `CODE : message français`, sans position invent
 Les diagnostics ayant déjà une position conventionnelle `1:1` la conservent ; elle n'indique pas une faute de syntaxe précise.
 Les avertissements conservent leur gravité et leur format existants ; les erreurs de rendu restent inchangées.
 
-=== Position et extrait facultatif
+=== Position conservée et conventions futures
 
 Les lignes et colonnes commencent à un. LF, CR et CRLF terminent une ligne ; CRLF n'en compte qu'une.
 La colonne compte les points de code Unicode du texte original décodé, avant retrait des commentaires, sans normalisation Unicode : une tabulation compte pour un, un emoji supplémentaire pour un, une lettre suivie d'un accent combinant pour deux.
 La position reste celle de l'émetteur existant : délimiteur ouvrant, début d'échappement ou caractère XML interdit selon le diagnostic. La colonne n'est ni un nombre d'unités UTF-16 ni un nombre de graphèmes ou de cellules de terminal.
 Pour `tabulation + 🚀 + e + accent combinant + {inconnu`, l'accolade est à la colonne 5, tandis que son indice UTF-16, augmenté de un, vaut 6.
 Cette convention reste celle de la position logique Verne, du format relatif par défaut et du calcul de la fenêtre d'extrait (T-DIA-01).
-La colonne de navigation du nouveau préfixe entre crochets est une convention de transport distincte proposée : unités UTF-16, base un, depuis le début de la ligne originale jusqu'à la position fautive, sans normalisation ni expansion des tabulations.
-Avec le tampon Java et des offsets UTF-16, `colonneNavigation = offsetFaute - offsetDebutLigne + 1`, tandis que `colonneVerne = texte.codePointCount(offsetDebutLigne, offsetFaute) + 1`.
-Une tabulation compte une unité, un emoji supplémentaire deux et une lettre suivie d'un accent combinant deux. CRLF reste une seule fin de ligne et ne fait pas partie de la colonne.
-Pour la ligne Unicode ci-dessus en ligne 3, le candidat absolu est `chemin:[3,6] CODE : message` ; le format relatif conserve `identifiant:3:5`. Le repère d'extrait vise le même caractère original, indépendamment de ces deux nombres.
-L'essai utilisateur à la colonne 1 ne distingue pas UTF-16 et points de code : le choix de transport UTF-16 est une hypothèse de raccordement proposée, pas une convention IntelliJ observée.
-Avant toute promesse de navigation exacte, qualifier le clic après tabulation, emoji et accent combinant dans la même console, comparer les colonnes 5 et 6 et relever la position réellement ouverte. Si l'outil attend une autre unité, réviser ce contrat avant livraison ; ne pas présenter le candidat comme validé ni convertir selon une détection implicite de l'IDE.
+Pour l'évolution future seulement, la colonne du préfixe entre crochets suivrait le producteur imité : javac compte les unités UTF-16 et développe les tabulations à des arrêts de 8, base un. Cette convention a été mesurée par agent-a avec javac 25 et maven-compiler-plugin 3.14.1 ; elle n'est pas une qualification du détecteur de liens d'IntelliJ.
+Calcul exact depuis le début de la ligne, avant la faute : initialiser un compteur `c` à zéro ; pour chaque unité UTF-16 autre qu'une tabulation, ajouter un ; pour une tabulation, poser `c = 8 * (c / 8 + 1)` avec division entière ; renvoyer `c + 1`.
+Ainsi, une tabulation porte la colonne au prochain arrêt `8k + 1` strictement supérieur. Les fins de ligne sont exclues ; CRLF désigne une seule fin de ligne. Ni normalisation Unicode ni comptage en graphèmes ne sont appliqués.
+La différence brute `offsetFaute - offsetDebutLigne + 1` n'est pas la colonne javac lorsqu'une tabulation précède la faute. La colonne logique conservée reste `texte.codePointCount(offsetDebutLigne, offsetFaute) + 1`.
+Pour `tabulation + {inconnu`, les colonnes Verne / UTF-16 brut / javac valent 2 / 2 / 9. Pour `tabulation + x + {inconnu`, elles valent 3 / 3 / 10 : ce cas doit aussi être qualifié, pour ne pas tester seulement le caractère immédiatement après la tabulation.
+Pour `tabulation + 🚀 + e + accent combinant + {inconnu` en ligne 3, elles valent 5 / 6 / 13. Le candidat futur serait `chemin:[3,13] CODE : message` ; le format relatif conservé reste `identifiant:3:5` et l'extrait éventuel vise le même caractère original.
+Avant une future promesse de navigation exacte, vérifier le vrai message dans chaque outil, après tabulation suivie d'un caractère, emoji et accent combinant ; relever la position ouverte et les éventuels nœuds ou marqueurs. L'essai utilisateur en colonne 1 ne départage pas ces conventions.
+Cette conversion n'est pas à implémenter dans le nº 29. Elle accompagne uniquement le format absolu reporté.
 Aucune longueur de soulignement n'est inventée.
 
-Une seconde option proposée, `verne.diagnostics.extrait`, absente ou égale à `false`, conserve l'absence de contenu source.
+==== Extrait facultatif : piste non autorisée par D-002
+
+L'option étudiée `verne.diagnostics.extrait` reste une proposition distincte, non décidée par D-002 et non incluse automatiquement dans le nº 29. Sans décision supplémentaire, aucun extrait n'est ajouté. L'absence de l'option, ou la valeur `false` dans cette piste future, conserve l'absence de contenu source.
 La valeur `true` ajoute deux lignes dans le même message, uniquement pour les codes éligibles de la table ci-dessus :
 
 [source,text]
@@ -661,7 +672,7 @@ VERNE-SYN-001 : bonjour.verne:2:1 : interpolation ou déclaration non fermée.
 ----
 
 L'extrait provient exclusivement du tampon déjà décodé du gabarit, jamais d'une nouvelle lecture, d'une valeur de modèle, d'un fichier externe refusé ou d'une exception brute.
-Il expose néanmoins le texte statique de cette ligne, qui peut être confidentiel : D-002 doit aussi accepter cette exception aux clauses actuelles excluant la donnée source.
+Il expose néanmoins le texte statique de cette ligne, qui peut être confidentiel : une autorisation distincte serait nécessaire pour cette exception aux clauses actuelles excluant la donnée source ; elle n'est pas accordée par D-002.
 L'activation est indépendante du mode de chemin ; `false` demeure recommandé pour les journaux partagés.
 
 La fenêtre contient au plus 120 points de code de la ligne source, sans sa fin de ligne.
@@ -681,10 +692,10 @@ Exemple pour la ligne Unicode ci-dessus :
   repère :                       ^
 ----
 
-La colonne logique Verne reste 5 et la colonne de navigation proposée vaut 6 : la longueur de la représentation échappée n'est aucune de ces deux colonnes source.
+La colonne logique Verne reste 5 et la colonne javac de navigation future vaut 13 : la longueur de la représentation échappée n'est aucune de ces deux colonnes source.
 Le texte d'erreur reste français, avec code stable ; les préfixes propres à javac ou Maven ne sont pas maîtrisés par Verne.
 
-=== Budgets, ressources et vérification attendue
+=== Budgets conservés et vérifications de l’évolution future
 
 Chaque erreur, préfixe et éventuel extrait compris, correspond à un seul appel à `Messager` et consomme une seule unité du budget existant.
 Après 64 erreurs détaillées, la 65e reste le seul `VERNE-LIM-007`, global, sans fichier ni extrait ; ne pas préparer d'extrait pour une erreur supprimée par saturation.
@@ -694,7 +705,7 @@ Le formatage utilise l'état de l'invocation, sans compteur ni tampon statique p
 Les sources doivent rester stables pendant la compilation ; aucune garantie supplémentaire contre leur remplacement concurrent n'est apportée.
 L'extrait borné limite sa propre taille, pas celle des chemins ou du message complet ; aucune promesse de performance mesurée n'en découle.
 
-Avant implémentation, VERNE-004 devra écrire et observer en échec les contrôles du nouveau format : valeurs par défaut inchangées, options invalides, LF/CR/CRLF, commentaires multilignes, emoji, accents combinants, tabulations, fenêtre tronquée, antislash et contrôles Unicode, refus de lien externe, erreur sans source, tours différés, saturation à 64/65 erreurs et isolation concurrente.
+Lorsqu'une évolution du format sera explicitement autorisée dans un périmètre distinct du nº 29 recadré, écrire et observer en échec les contrôles du nouveau format : valeurs par défaut inchangées, options invalides, LF/CR/CRLF, commentaires multilignes, emoji, accents combinants, tabulations, fenêtre tronquée, antislash et contrôles Unicode, refus de lien externe, erreur sans source, tours différés, saturation à 64/65 erreurs et isolation concurrente.
 Il faudra ensuite vérifier leur réussite et la suite complète, sans compter une erreur d'outillage comme phase rouge.
 Les essais IDE devront distinguer console, navigation après clic, nœud de l'arbre de construction et marqueur dans l'éditeur, en vérifiant le fichier et la position réellement ouverts. Rejouer la forme entre crochets avec un vrai message émis par le processeur et avec l'enveloppe Maven, pas seulement par echo ; conserver les résultats distincts.
 Les versions et réglages du compilateur, de l'IDE et de ses extensions devront accompagner chaque résultat ; une observation javac ne vaut pas qualification d'Eclipse JDT.
