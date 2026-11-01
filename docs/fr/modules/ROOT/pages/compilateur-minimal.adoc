@@ -509,7 +509,7 @@ Mesures du banc versionné, rendu Verne avec échappement, trois processus de 10
 
 Ces intervalles reposent sur 5 à 10 degrés de liberté : ils sont larges, et ne valent que pour ce poste, cette JVM et ces campagnes. Les itérations d'un même processus ne sont pas indépendantes ; les traiter comme 60 échantillons donnerait des intervalles trop étroits et qualifierait à tort de gains les écarts du tableau HTML à 0 % et de la page de 64 Kio à 50 %. La variation entre campagnes, la charge et l'état thermique du poste ne sont pas modélisés.
 
-La page de 64 Kio à 0 % reste *non concluante*, et la condition « pas de dégradation à 0 % » n'est pas établie pour ce document. Trois campagnes, toutes conservées, chacune en ordre alterné :
+Pour la page de 64 Kio à 0 %, le critère initial, « pas de dégradation au-delà de l'intervalle de confiance », n'a pas pu être établi. Trois campagnes, toutes conservées, chacune en ordre alterné :
 
 [cols="3,1,1,2",options="header"]
 |===
@@ -519,7 +519,25 @@ La page de 64 Kio à 0 % reste *non concluante*, et la condition « pas de dégr
 |Troisième, sur batterie, ordre ABBA, 4 passes de 5 processus |20 |+0,8 % |[−0,5 ; +2,2], non concluant
 |===
 
-Les campagnes sont hétérogènes (Q de Cochran 12,6 pour 2 degrés de liberté) : la perte de la première n'a été reproduite par aucune des deux suivantes, sans que sa cause soit connue. Combinées avec une variance entre campagnes (DerSimonian-Laird), elles donnent +2,7 % [−1,0 ; +6,5] ; combinées sans cette variance, que l'hétérogénéité rend inadaptée, +1,3 % [+0,1 ; +2,4]. Une perte de l'ordre de 1 à 2 % n'est donc pas exclue. Sans échappement, où les échappeurs ne sont pas appelés, les deux versions donnent 1 937 et 1 952 ns contre 1 913 et 1 948 ns ; ce contrôle ne démontre pas la cause d'un écart avec échappement. L'acceptation de cette réserve relève de l'arbitrage de l'utilisateur.
+Les campagnes sont hétérogènes (Q de Cochran 12,6 pour 2 degrés de liberté) : la perte de la première n'a été reproduite par aucune des deux suivantes, sans que sa cause soit connue. Combinées avec une variance entre campagnes (DerSimonian-Laird), elles donnent +2,7 % [−1,0 ; +6,5] ; combinées sans cette variance, que l'hétérogénéité rend inadaptée, +1,3 % [+0,1 ; +2,4]. Une perte de l'ordre de 1 à 2 % n'est donc pas exclue. Sans échappement, où les échappeurs ne sont pas appelés, les deux versions donnent 1 937 et 1 952 ns contre 1 913 et 1 948 ns ; ce contrôle ne démontre pas la cause d'un écart avec échappement.
+
+=== Critère révisé et campagne décisive
+
+Le critère initial ne pouvait pas conclure en faveur de la candidate : il ne la déclarait conforme que si aucune perte n'était détectée, et une campagne non concluante ne prouve pas l'absence de perte (voir la section « Unité statistique, équivalence et campagnes » de xref:mesures-performance.adoc[Mesures de performance]). Sur arbitrage de l'utilisateur du 1er novembre 2026 (décision D-003 du ticket), le critère à 0 % devient un critère d'équivalence : pour chaque cas, la borne haute de l'intervalle de confiance à 99 % doit rester inférieure à +3 %. Cette marge est de l'ordre de la variation observée d'une campagne à l'autre. Le critère à 50 %, un gain mesuré et chiffré, est inchangé.
+
+La marge, la campagne et la règle de lecture ont été déclarées dans le ticket avant l'exécution : cinq cas à 0 %, Mac sur secteur vérifié avant et après, cinq processus par passe dans l'ordre référence, candidate, candidate, référence répété deux fois, soit 20 processus par côté et par cas, même analyse par processus. Aucune répétition n'était prévue pour obtenir un meilleur résultat.
+
+[cols="2,1,1,1,2",options="header"]
+|===
+|Document, 0 % |Référence |Candidate |Écart |IC 99 % (20 processus par côté)
+|Fiche HTML, 7 valeurs |152 ns |133 ns |−13,0 % |[−13,5 ; −12,5], gain
+|Tableau HTML, 100 valeurs |782 ns |792 ns |+1,3 % |[+0,3 ; +2,3], perte inférieure à la marge
+|Page de 64 Kio |2 084 ns |2 099 ns |+0,7 % |[−0,4 ; +1,8], non concluant, sous la marge
+|Facture XML, 7 valeurs |181 ns |163 ns |−9,5 % |[−13,5 ; −5,5], gain
+|Fiche JSON, 7 valeurs |160 ns |123 ns |−22,8 % |[−23,9 ; −21,6], gain
+|===
+
+Les cinq bornes hautes sont inférieures à +3 % : le critère révisé est satisfait pour chaque cas à 0 %. Le tableau HTML de 100 valeurs montre toutefois une perte petite mais établie, de +1,3 % : elle est acceptée par la marge, pas niée. La page de 64 Kio confirme les deux campagnes précédentes, et la perte de +8,4 % de la première campagne reste inexpliquée et conservée. La règle déclarée énumérait aussi « perte reproduite » lorsque la borne basse dépasse zéro ; pour le tableau HTML, les deux lectures se recouvrent, et c'est le critère C3 révisé, fondé sur la borne haute, qui décide. Ces résultats ne valent que pour ce poste, macOS aarch64 avec Java 25.0.1, sur secteur.
 
 Allocations par rendu (`gc.alloc.rate.norm`, moyenne des processus, identique d'un processus à l'autre) : inchangées dans 12 combinaisons sur 15. La fiche JSON passe de 3 607 à 2 563 octets par rendu à 10 % et de 8 270 à 2 918 octets à 50 % : la référence construisait une chaîne `\uxxxx` à chaque contrôle échappé, et le corpus JSON contient U+0001 ; la table la précalcule. La facture XML à 0 % passe de 1 344 à 1 320 octets, écart non expliqué ; une différence d'analyse d'échappement par le compilateur à la volée est une hypothèse non vérifiée.
 Mémoire conservée, distincte des allocations par rendu : chaque classe générée garde ses tables pour toute sa durée de vie. Mesurées par `Instrumentation.getObjectSize` sur macOS aarch64, Java 25, références compressées et chaînes compactes, hors littéraux partagés et métadonnées de classe, les tables occupent 272 octets en HTML, 544 en XML (deux tables) et 1 688 en JSON, tableau de 93 références et 27 séquences `\uxxxx` calculées comprises. L'hypothèse de moins de 1 Kio par profil et par classe est donc réfutée pour JSON sur cette configuration ; le coût croît avec le nombre de classes JSON chargées, en contrepartie des allocations évitées à chaque rendu. L'inlining par le compilateur à la volée n'a pas été observé directement.

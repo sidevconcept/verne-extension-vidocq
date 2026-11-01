@@ -142,6 +142,17 @@ Ils seront fixés par métrique après plusieurs campagnes stables, avec trois �
 Une mesure bruitée est répétée dans de meilleures conditions ; elle n'est ni une réussite automatique ni une preuve de régression.
 Les budgets absolus, en temps, mémoire et taille d'artefact, sont consignés avant la qualification de la première version.
 
+=== Unité statistique, équivalence et campagnes
+
+Une campagne JMH lance plusieurs processus, chacun mesuré par plusieurs itérations. Les itérations d'un même processus partagent la même compilation à la volée et le même état mémoire : elles ne sont pas indépendantes. L'unité statistique est donc le processus, résumé par la moyenne de ses itérations. L'écart candidate / référence est accompagné d'un intervalle de confiance à 99 % de Welch sur ces moyennes, avec les degrés de liberté de Satterthwaite et le quantile de Student, rapporté à la moyenne de référence. Traiter les itérations comme indépendantes rétrécit les intervalles et fait passer du bruit pour un gain ou une perte.
+
+Un intervalle entièrement négatif établit une baisse, entièrement positif une hausse ; un intervalle qui contient zéro est non concluant.
+Un écart non concluant ne prouve pas l'absence d'écart : il signifie seulement que la campagne ne sait pas trancher.
+Pour affirmer qu'une révision ne dégrade pas un cas, le critère doit fixer une marge d'équivalence : la borne haute de l'intervalle doit rester sous cette marge.
+La marge, la campagne et la règle de lecture sont déclarées avant l'exécution, dans le ticket concerné, et la marge est arbitrée par l'utilisateur. Choisir une marge après avoir vu les données reviendrait à ajuster le critère au résultat. Ces marges propres à un ticket ne remplacent pas les seuils de blocage du projet, fixés après étalonnage.
+
+Plusieurs campagnes du même cas peuvent différer davantage que leurs intervalles ne le prévoient : alimentation, charge du poste, état thermique ou décisions du compilateur à la volée changent d'une campagne à l'autre. Cette hétérogénéité est rapportée, par exemple par le Q de Cochran. Une combinaison des campagnes reste indicative lorsqu'elles sont peu nombreuses ou obtenues dans des conditions différentes. Toutes les campagnes sont conservées ; une campagne défavorable n'est ni écartée ni remplacée par une répétition plus favorable. L'alimentation, secteur ou batterie, est consignée avec chaque campagne.
+
 == Conditions de publication d'un résultat
 
 . Les oracles du corpus passent avant chronométrage.
