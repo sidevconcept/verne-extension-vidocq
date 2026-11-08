@@ -1,0 +1,42 @@
+# Exécute la suite complète de Verne sur Linux, Windows et macOS (VERNE-005, D-005).
+name: Vérification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  suite:
+    name: Suite complète (${{ matrix.systeme }})
+    strategy:
+      fail-fast: false
+      matrix:
+        systeme: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.systeme }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Tests sous Unix
+        if: runner.os != 'Windows'
+        run: ./mvnw -B -ntp clean test
+      - name: Tests sous Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\mvnw.cmd -B -ntp clean test
+      - name: Rapports de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapports-${{ matrix.systeme }}
+          path: '**/target/surefire-reports/'
+          if-no-files-found: warn
