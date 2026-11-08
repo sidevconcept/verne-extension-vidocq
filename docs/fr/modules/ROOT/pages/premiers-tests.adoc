@@ -66,7 +66,7 @@ Le flux `.github/workflows/verification.yml` exécute la suite complète sur la 
 * sécurité : jetons limités à la lecture du dépôt, aucun secret ;
 * limites : sous Windows, la création de liens symboliques dépend des privilèges du compte d'exécution de la forge ; un test qui ne peut pas créer de lien échoue en erreur, il n'est jamais ignoré ;
 * chemins courts : le répertoire temporaire de la forge Windows porte un nom court (`RUNNER~1`) ; les constructions Maven imbriquées de `ApplicationMavenTest` partent de son chemin réel, faute de quoi Maven ne retrouve pas le module choisi par `-pl` ;
-* premier résultat (`ffb7104`) : 459 tests sur chaque système, zéro échec et zéro erreur ; un test ignoré sous Windows (`RobustesseCompilationTest`, permissions POSIX).
+* premier résultat (`ffb7104`, Temurin 25.0.5) : 459 tests sur chaque système, zéro échec et zéro erreur ; un test ignoré sous Windows (`RobustesseCompilationTest`, permissions POSIX).
 
 == Contrat de compilation fixé par les tests
 
