@@ -26,7 +26,7 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Les échappeurs HTML, XML et JSON par table constante (ticket VERNE-003) conservent exactement les sorties, vérifiées sur 261 unités par profil, et accélèrent le rendu échappé jusqu'à 25 %, sans perte au-delà de la marge de +3 % décidée par l'utilisateur sur les documents sans caractère spécial : **304 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Les conditions booléennes avec branche alternative et les boucles sur tableaux et collections (ticket VERNE-008) ajoutent 64 tests : **368 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Les expressions typées des interpolations et des conditions (ticket VERNE-009) ajoutent 91 tests : **459 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 417 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Depuis le ticket VERNE-005, l'intégration continue de la forge exécute la suite complète sur Linux, Windows et macOS : 459 tests, zéro échec et zéro erreur sur chacun ; le seul test ignoré, sous Windows, exige des permissions POSIX.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -111,7 +111,7 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 ## 10. Qualifier la livraison
 
-- [ ] Exécuter la suite complète sur Windows et Linux, notamment les cas de liens symboliques, d'encodage et de nommage.
+- [x] Exécuter la suite complète sur Windows et Linux, notamment les cas de liens symboliques, d'encodage et de nommage : intégration continue de la forge sur les trois systèmes (ticket VERNE-005).
 - [ ] Compléter les vérifications de concurrence, d'isolation, de résilience et de ressources.
 - [x] Versionner le banc de micro-mesures du rendu préparé, avec oracle d'égalité au témoin Java : module `verne-mesures`.
 - [ ] Étendre les campagnes de performances aux nouvelles capacités, avec sorties équivalentes et résultats bruts conservés.

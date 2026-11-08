@@ -115,7 +115,7 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 
 *Version de développement : `0.4.0-SNAPSHOT`*, alignée sur celle de l'écosystème Vidocq. Le sous-ensemble texte est implémenté.
 La dernière vérification complète sur Mac réussit avec *459 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 417 tests supplémentaires restent à qualifier sur Windows et Linux.
+Depuis le ticket VERNE-005, l'intégration continue de la forge exécute la suite complète sur Linux, Windows et macOS : 459 tests, zéro échec et zéro erreur sur chacun ; le seul test ignoré, sous Windows, exige des permissions POSIX.
 
 Les choix multiples, métadonnées d'itération, accès indexés, inclusions, contenus déclarés fiables, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.

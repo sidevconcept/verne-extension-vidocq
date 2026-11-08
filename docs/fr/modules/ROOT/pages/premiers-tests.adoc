@@ -64,7 +64,9 @@ Le flux `.github/workflows/verification.yml` exécute la suite complète sur la 
 * outillage : JDK Temurin 25 installé par la forge ; Maven 3.9.16 fixé par le lanceur du dépôt ; commande `./mvnw -B -ntp clean test` sous Linux et macOS, `.\mvnw.cmd -B -ntp clean test` sous Windows ;
 * résultat : un système est vert si Maven termine sans échec ni erreur ; les rapports `surefire-reports` de chaque module sont conservés comme pièces jointes de l'exécution, y compris en cas d'échec ;
 * sécurité : jetons limités à la lecture du dépôt, aucun secret ;
-* limites : sous Windows, la création de liens symboliques dépend des privilèges du compte d'exécution de la forge ; un test qui ne peut pas créer de lien échoue en erreur, il n'est jamais ignoré.
+* limites : sous Windows, la création de liens symboliques dépend des privilèges du compte d'exécution de la forge ; un test qui ne peut pas créer de lien échoue en erreur, il n'est jamais ignoré ;
+* chemins courts : le répertoire temporaire de la forge Windows porte un nom court (`RUNNER~1`) ; les constructions Maven imbriquées de `ApplicationMavenTest` partent de son chemin réel, faute de quoi Maven ne retrouve pas le module choisi par `-pl` ;
+* premier résultat (`ffb7104`) : 459 tests sur chaque système, zéro échec et zéro erreur ; un test ignoré sous Windows (`RobustesseCompilationTest`, permissions POSIX).
 
 == Contrat de compilation fixé par les tests
 
