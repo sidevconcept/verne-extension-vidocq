@@ -43,6 +43,8 @@ Un cas encore dépendant d'un arbitrage doit être marqué bloqué par ce contra
 
 == Types et expressions
 
+Le link:expressions.adoc[contrat des expressions] détaille T-EXP-01 et T-EXP-03 avec leurs entrées et sorties exactes ; T-EXP-02, 04, 05 et 06 relèvent de contrats ultérieurs.
+
 [cols="1,3,4",options="header"]
 |===
 |Identifiant |Entrée ou action |Résultat attendu
