@@ -1,6 +1,7 @@
 package io.vidocq.verne.compilation;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -13,10 +14,13 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
+import javax.lang.model.type.WildcardType;
 
 /**
  * Analyse et génère un gabarit du sous-ensemble texte, paramètres et composants de records.
@@ -26,6 +30,7 @@ final class CompilateurGabarit {
     private static final int NOMBRE_MAXIMAL_INTERPOLATIONS = 1_024;
     private static final int NOMBRE_MAXIMAL_PARAMETRES = 255;
     private static final int PROFONDEUR_MAXIMALE_NAVIGATION = 32;
+    private static final int PROFONDEUR_MAXIMALE_BLOCS = 32;
     private static final int COUT_MAXIMAL_GENERATION = 60_000;
     private final ProcessingEnvironment environnement;
     private final Consumer<String> rapporterErreur;
@@ -35,12 +40,27 @@ final class CompilateurGabarit {
     private final Map<String, Parametre> parametres = new LinkedHashMap<>();
     private final LinkedHashSet<TypeElement> origines = new LinkedHashSet<>();
     private final List<Partie> parties = new ArrayList<>();
+    /** Variables de boucle visibles pendant la génération, la plus intérieure en tête. */
+    private final ArrayDeque<Variable> locales = new ArrayDeque<>();
     private String texte;
     private String identifiant;
 
     /** Le type symbolique est conservé pour vérifier chaque navigation avant génération. */
     private record Parametre(String nom, TypeMirror type) {}
-    private record Partie(String contenu, boolean interpolation, int position) {}
+    /** Texte, interpolation ou directive de bloc ; contenu porte le chemin d'un bloc, variable le nom d'une boucle. */
+    private record Partie(String contenu, Genre genre, int position, String variable) {
+        boolean interpolation() {
+            return genre == Genre.INTERPOLATION;
+        }
+        boolean bloc() {
+            return genre.compareTo(Genre.SI) >= 0;
+        }
+    }
+    private enum Genre { TEXTE, INTERPOLATION, SI, SINON, FIN_SI, POUR, FIN_POUR }
+    /** Variable de boucle : nom du gabarit, nom Java généré et type de ses éléments. */
+    private record Variable(String nom, String java, TypeMirror type) {}
+    /** Expression Java d'un chemin navigué et son type final. */
+    private record Chemin(String expression, TypeMirror type) {}
     /** Expression Java d'une interpolation ; texte vaut vrai pour une chaîne ou un char, seuls échappés. */
     private record Resolution(String expression, boolean texte, boolean primitif, boolean flottant) {}
 
@@ -80,12 +100,25 @@ final class CompilateurGabarit {
             var valeurs = new ArrayList<String>();
             var elements = new ArrayList<String>();
             var longueurs = new ArrayList<String>();
-            int longueurStatique = parties.stream().filter(partie -> !partie.interpolation())
+            int longueurStatique = parties.stream().filter(partie -> partie.genre() == Genre.TEXTE)
                     .mapToInt(partie -> partie.contenu().length()).sum();
-            boolean grandDocument = longueurStatique >= 4_000;
+            // Avec des blocs, une valeur n'est évaluée que si son chemin d'exécution est suivi : écriture au fil du rendu.
+            boolean auFil = parties.stream().anyMatch(Partie::bloc);
+            boolean grandDocument = !auFil && longueurStatique >= 4_000;
             String resultat = nomLibre("$verneResultat");
+            int elementsBoucles = 0;
             for (Partie partie : parties) {
-                if (partie.interpolation()) {
+                if (partie.bloc()) {
+                    instructions.add(switch (partie.genre()) {
+                        case SI -> "if (" + condition(partie) + ") {\n";
+                        case SINON -> "} else {\n";
+                        case POUR -> boucle(partie, nomLibre("$verneElement" + elementsBoucles++));
+                        default -> {
+                            if (partie.genre() == Genre.FIN_POUR) locales.pop();
+                            yield "}\n";
+                        }
+                    });
+                } else if (partie.interpolation()) {
                     var resolution = resoudre(partie);
                     // Attribut entre guillemets en XML ; littéral de chaîne en JSON.
                     boolean attribut = emplacements.hasNext() && emplacements.next();
@@ -104,7 +137,10 @@ final class CompilateurGabarit {
                     echappement |= aEchapper;
                     String valeur = nomLibre("$verneValeur" + valeurs.size());
                     String suffixe = profil == Profil.XML ? ", " + attribut : "";
-                    if (grandDocument) {
+                    if (auFil) {
+                        instructions.add(aEchapper ? "echapper(" + resultat + ", " + brute + suffixe + ");\n"
+                                : resultat + ".append(" + brute + ");\n");
+                    } else if (grandDocument) {
                         String expression = "valueOf(" + brute + ")";
                         if (aEchapper) expression = "echapper(" + expression + suffixe + ")";
                         valeurs.add("var " + valeur + " = " + expression + ";\n");
@@ -184,9 +220,11 @@ final class CompilateurGabarit {
     private void verifierBudgetGeneration() {
         long cout = 128 + 12L * parametres.size();
         for (Partie partie : parties) {
-            if (partie.interpolation()) {
+            if (partie.interpolation() || partie.genre() == Genre.SI || partie.genre() == Genre.POUR) {
                 cout += 48 + 16L * partie.contenu().chars()
                         .filter(caractere -> caractere == '.').count();
+            } else if (partie.bloc()) {
+                cout += 8;
             } else {
                 for (int debut = 0; debut < partie.contenu().length();
                         debut = finFragment(partie.contenu(), debut)) {
@@ -226,6 +264,12 @@ final class CompilateurGabarit {
         if (profil == Profil.JSON) {
             var json = new ContexteJson();
             for (Partie partie : parties) {
+                if (partie.bloc()) {
+                    if (json.dansChaine()) {
+                        throw refus("VERNE-SEC-003", partie.position(), "directive de bloc dans un littéral de chaîne JSON.");
+                    }
+                    continue;
+                }
                 if (!partie.interpolation()) {
                     json.avancer(partie.contenu());
                     continue;
@@ -241,7 +285,12 @@ final class CompilateurGabarit {
         var contexte = new ContexteBalisage(profil);
         String nomProfil = profil == Profil.XML ? "XML" : "HTML";
         for (Partie partie : parties) {
-            if (partie.interpolation()) {
+            if (partie.bloc()) {
+                // Bornes toutes dans le contenu : chaque chemin d'exécution traverse les mêmes états de contexte.
+                if (!contexte.dansContenu()) {
+                    throw refus("VERNE-SEC-003", partie.position(), "directive de bloc hors du contenu " + nomProfil + ".");
+                }
+            } else if (partie.interpolation()) {
                 String interdit = contexte.refus();
                 if (interdit != null) {
                     throw refus("VERNE-SEC-002", partie.position(),
@@ -502,6 +551,8 @@ final class CompilateurGabarit {
     private void analyser() {
         int nombreInterpolations = 0;
         var fragment = new StringBuilder();
+        var ouverts = new ArrayDeque<Partie>();
+        var alternatives = new ArrayDeque<Boolean>();
         for (int position = 0; position < texte.length();) {
             char caractere = texte.charAt(position);
             if (caractere == '\\') {
@@ -522,18 +573,17 @@ final class CompilateurGabarit {
                     if (fin < 0) throw refus("VERNE-SYN-001", position, "interpolation ou déclaration non fermée.");
                     String contenu = texte.substring(position + 1, fin).trim();
                     if (contenu.startsWith("@")) declarer(contenu.substring(1), position);
-                    else {
+                    else if (contenu.startsWith("#") || contenu.startsWith("/")) {
+                        analyserBloc(contenu, position, ouverts, alternatives);
+                    } else {
                         if (!nomQualifie(contenu)) {
                             throw refus("VERNE-SYN-002", position, "expression ou directive non prise en charge.");
                         }
                         if (++nombreInterpolations > NOMBRE_MAXIMAL_INTERPOLATIONS) {
                             throw refus("VERNE-LIM-003", position, "plus de 1 024 interpolations dans un gabarit.");
                         }
-                        if (contenu.chars().filter(caractereExpression -> caractereExpression == '.').count()
-                                > PROFONDEUR_MAXIMALE_NAVIGATION) {
-                            throw refus("VERNE-LIM-005", position, "plus de 32 accès de record dans une interpolation.");
-                        }
-                        parties.add(new Partie(contenu, true, position));
+                        verifierProfondeur(contenu, position);
+                        parties.add(new Partie(contenu, Genre.INTERPOLATION, position, null));
                     }
                     position = fin + 1;
                 }
@@ -543,12 +593,120 @@ final class CompilateurGabarit {
             }
         }
         vider(fragment);
+        if (!ouverts.isEmpty()) throw refus("VERNE-SYN-005", ouverts.peek().position(), "bloc non fermé.");
+    }
+
+    /** Reconnaît les cinq directives de bloc et vérifie leur imbrication ; les chemins sont résolus à la génération. */
+    private void analyserBloc(String contenu, int position, ArrayDeque<Partie> ouverts, ArrayDeque<Boolean> alternatives) {
+        String[] mots = contenu.substring(1).trim().split("\\s+");
+        String mot = contenu.charAt(0) + mots[0];
+        Partie partie;
+        if (mot.equals("#if") && mots.length == 2 && nomQualifie(mots[1])) {
+            partie = new Partie(mots[1], Genre.SI, position, null);
+        } else if (mot.equals("#for") && mots.length == 4 && nomSimple(mots[1]) && mots[2].equals("in")
+                && nomQualifie(mots[3])) {
+            partie = new Partie(mots[3], Genre.POUR, position, mots[1]);
+        } else if (mots.length == 1 && (mot.equals("#else") || mot.equals("/if") || mot.equals("/for"))) {
+            Genre attendu = mot.equals("/for") ? Genre.POUR : Genre.SI;
+            if (ouverts.isEmpty() || ouverts.peek().genre() != attendu || mot.equals("#else") && alternatives.peek()) {
+                throw refus("VERNE-SYN-005", position, mot.equals("#else") ? "{#else} hors d'une condition ou répété."
+                        : "fermeture sans bloc ouvert correspondant.");
+            }
+            if (mot.equals("#else")) {
+                alternatives.pop();
+                alternatives.push(true);
+                parties.add(new Partie("", Genre.SINON, position, null));
+            } else {
+                ouverts.pop();
+                alternatives.pop();
+                parties.add(new Partie("", attendu == Genre.POUR ? Genre.FIN_POUR : Genre.FIN_SI, position, null));
+            }
+            return;
+        } else {
+            throw refus("VERNE-SYN-002", position, "expression ou directive non prise en charge.");
+        }
+        if (ouverts.size() >= PROFONDEUR_MAXIMALE_BLOCS) {
+            throw refus("VERNE-LIM-009", position, "plus de 32 blocs imbriqués.");
+        }
+        verifierProfondeur(partie.contenu(), position);
+        ouverts.push(partie);
+        alternatives.push(false);
+        parties.add(partie);
+    }
+
+    private void verifierProfondeur(String chemin, int position) {
+        if (chemin.chars().filter(caractere -> caractere == '.').count() > PROFONDEUR_MAXIMALE_NAVIGATION) {
+            throw refus("VERNE-LIM-005", position, "plus de 32 accès de record dans une interpolation.");
+        }
+    }
+
+    /** Condition stricte : boolean, ou Boolean contrôlé non nul ; aucune conversion depuis un autre type. */
+    private String condition(Partie partie) {
+        Chemin chemin = naviguer(partie);
+        if (chemin.type().getKind() == TypeKind.BOOLEAN) return chemin.expression();
+        var booleen = environnement.getElementUtils().getTypeElement("java.lang.Boolean").asType();
+        if (!environnement.getTypeUtils().isSameType(chemin.type(), booleen)) {
+            throw refus("VERNE-TYP-006", partie.position(), "la condition doit être de type boolean ou java.lang.Boolean.");
+        }
+        return "requireNonNull(" + chemin.expression() + ", \"VERNE-REN-001 : condition nulle.\")";
+    }
+
+    /** Ouvre la portée de la variable ; tableau parcouru par indices, Iterable par un unique itérateur. */
+    private String boucle(Partie partie, String java) {
+        if (parametres.containsKey(partie.variable())
+                || locales.stream().anyMatch(variable -> variable.nom().equals(partie.variable()))) {
+            throw refus("VERNE-TYP-002", partie.position(), "nom de variable de boucle déjà utilisé.");
+        }
+        Chemin chemin = naviguer(partie);
+        TypeMirror element = typeElement(chemin.type());
+        if (element == null) {
+            throw refus("VERNE-TYP-007", partie.position(), "la boucle doit parcourir un tableau ou un java.lang.Iterable.");
+        }
+        enregistrerOrigine(element);
+        locales.push(new Variable(partie.variable(), java, element));
+        return "for (var " + java + " : requireNonNull(" + chemin.expression()
+                + ", \"VERNE-REN-001 : collection nulle.\")) {\n";
+    }
+
+    /** Type des éléments d'un tableau ou d'un sous-type d'Iterable ; un joker ou un type brut sans borne donne Object. */
+    private TypeMirror typeElement(TypeMirror type) {
+        if (type instanceof ArrayType tableau) return tableau.getComponentType();
+        var types = environnement.getTypeUtils();
+        var iterable = types.erasure(environnement.getElementUtils().getTypeElement("java.lang.Iterable").asType());
+        var aVisiter = new ArrayDeque<TypeMirror>(List.of(type));
+        while (!aVisiter.isEmpty()) {
+            TypeMirror candidat = aVisiter.pop();
+            if (candidat instanceof DeclaredType declare && types.isSameType(types.erasure(candidat), iterable)) {
+                if (declare.getTypeArguments().isEmpty()) return objet();
+                return borne(declare.getTypeArguments().getFirst());
+            }
+            if (candidat instanceof DeclaredType) aVisiter.addAll(types.directSupertypes(candidat));
+        }
+        return null;
+    }
+
+    /**
+     * Borne supérieure utilisable d'un joker ou d'une variable de type, avec ses arguments génériques ; Object sans
+     * borne supérieure (joker libre ou inférieur). Les autres types sont rendus tels quels.
+     */
+    private TypeMirror borne(TypeMirror type) {
+        if (type instanceof WildcardType joker) {
+            return joker.getExtendsBound() == null ? objet() : borne(joker.getExtendsBound());
+        }
+        if (type instanceof TypeVariable variable && variable.getUpperBound().getKind() == TypeKind.DECLARED) {
+            return variable.getUpperBound();
+        }
+        return type.getKind() == TypeKind.TYPEVAR ? environnement.getTypeUtils().erasure(type) : type;
+    }
+
+    private TypeMirror objet() {
+        return environnement.getElementUtils().getTypeElement("java.lang.Object").asType();
     }
 
     /** Vide le tampon sans modifier les espaces ou fins de ligne qui l'entourent. */
     private void vider(StringBuilder fragment) {
         if (!fragment.isEmpty()) {
-            parties.add(new Partie(fragment.toString(), false, 0));
+            parties.add(new Partie(fragment.toString(), Genre.TEXTE, 0, null));
             fragment.setLength(0);
         }
     }
@@ -574,13 +732,33 @@ final class CompilateurGabarit {
         parametres.put(morceaux[1], new Parametre(morceaux[1], type.asType()));
     }
 
-    /** Résout seulement les composants déclarés des records, puis vérifie le type scalaire final. */
+    /** Vérifie le type scalaire final d'un chemin interpolé. */
     private Resolution resoudre(Partie partie) {
+        Chemin chemin = naviguer(partie);
+        TypeMirror type = chemin.type();
+        String expression = chemin.expression();
+        var chaine = environnement.getElementUtils().getTypeElement("java.lang.String").asType();
+        if (!type.getKind().isPrimitive() && !environnement.getTypeUtils().isSameType(type, chaine)) {
+            throw refus("VERNE-TYP-004", partie.position(), "la valeur interpolée doit être une chaîne ou un scalaire primitif.");
+        }
+        if (!type.getKind().isPrimitive()) {
+            expression = "requireNonNull(" + expression + ", \"VERNE-REN-001 : valeur interpolée nulle.\")";
+        }
+        return new Resolution(expression, !type.getKind().isPrimitive() || type.getKind() == TypeKind.CHAR,
+                type.getKind().isPrimitive(), type.getKind() == TypeKind.DOUBLE || type.getKind() == TypeKind.FLOAT);
+    }
+
+    /** Part d'une variable de boucle visible ou d'un paramètre, puis résout seulement les composants déclarés des records. */
+    private Chemin naviguer(Partie partie) {
         String[] chemin = partie.contenu().split("\\.");
-        Parametre parametre = parametres.get(chemin[0]);
-        if (parametre == null) throw refus("VERNE-TYP-001", partie.position(), "paramètre inconnu.");
-        TypeMirror type = parametre.type();
-        String expression = parametre.nom();
+        var depart = locales.stream().filter(variable -> variable.nom().equals(chemin[0])).findFirst()
+                .orElseGet(() -> {
+                    Parametre parametre = parametres.get(chemin[0]);
+                    return parametre == null ? null : new Variable(parametre.nom(), parametre.nom(), parametre.type());
+                });
+        if (depart == null) throw refus("VERNE-TYP-001", partie.position(), "paramètre inconnu.");
+        TypeMirror type = depart.type();
+        String expression = depart.java();
         for (int index = 1; index < chemin.length; index++) {
             if (type.getKind() == TypeKind.ERROR) throw attendreType(partie.position());
             if (!(type instanceof DeclaredType declare)
@@ -593,22 +771,15 @@ final class CompilateurGabarit {
                     .filter(candidat -> candidat.getSimpleName().contentEquals(nom)).findFirst()
                     .filter(candidat -> candidat.getAccessor().getModifiers().contains(Modifier.PUBLIC))
                     .orElseThrow(() -> refus("VERNE-TYP-001", partie.position(), "propriété inconnue ou inaccessible."));
-            type = ((ExecutableType) environnement.getTypeUtils().asMemberOf(
-                    declare, composant.getAccessor())).getReturnType();
+            // Un composant générique peut donner un joker : sa borne supérieure est le type navigué.
+            type = borne(((ExecutableType) environnement.getTypeUtils().asMemberOf(
+                    declare, composant.getAccessor())).getReturnType());
             enregistrerOrigine(type);
             expression = "requireNonNull(" + expression
                     + ", \"VERNE-REN-001 : objet de navigation nul.\")." + nom + "()";
         }
         if (type.getKind() == TypeKind.ERROR) throw attendreType(partie.position());
-        var chaine = environnement.getElementUtils().getTypeElement("java.lang.String").asType();
-        if (!type.getKind().isPrimitive() && !environnement.getTypeUtils().isSameType(type, chaine)) {
-            throw refus("VERNE-TYP-004", partie.position(), "la valeur interpolée doit être une chaîne ou un scalaire primitif.");
-        }
-        if (!type.getKind().isPrimitive()) {
-            expression = "requireNonNull(" + expression + ", \"VERNE-REN-001 : valeur interpolée nulle.\")";
-        }
-        return new Resolution(expression, !type.getKind().isPrimitive() || type.getKind() == TypeKind.CHAR,
-                type.getKind().isPrimitive(), type.getKind() == TypeKind.DOUBLE || type.getKind() == TypeKind.FLOAT);
+        return new Chemin(expression, type);
     }
 
     /** Les origines standard permettent à l'outillage de relier une sortie à ses modèles Java. */
