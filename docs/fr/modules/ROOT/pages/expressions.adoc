@@ -22,7 +22,7 @@ Il exclut l'accès indexé (`liste[0]`), la navigation optionnelle et les valeur
 |D-006d |Interpolation étendue aux enveloppes de primitives (`Integer`, `Long`, `Boolean`, `Character`, etc.) ; `BigDecimal`, dates, énumérations et autres objets restent refusés jusqu'aux formats et à la localisation. |Utilisateur, 8 novembre 2026
 |D-006e |Dépassement de capacité entier et division entière par zéro : échec du rendu par `VERNE-REN-004`, jamais de résultat tronqué. |Utilisateur, 8 novembre 2026
 |D-006f |Opérateurs écrits avec les symboles de Java (`&&`, `\|\|`, `!`, `==`…), cohérents avec les mots-clés anglais des blocs. |Proposition de l'auteur, confirmée par l'utilisateur le 8 novembre 2026
-|D-006g |`{!` ouvre toujours un commentaire ; une négation en tête d'interpolation s'écrit `{(!x)}`. |Précision de l'auteur pendant l'implémentation (VERNE-009), à confirmer à la relecture
+|D-006g |`{!` ouvre toujours un commentaire ; une négation en tête d'interpolation s'écrit `{(!x)}`. |Précision de l'auteur pendant l'implémentation (VERNE-009), confirmée par l'utilisateur le 8 novembre 2026
 |===
 
 == Grammaire
