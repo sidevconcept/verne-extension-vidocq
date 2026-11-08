@@ -55,6 +55,19 @@ Le rapport de référence est constitué par les XML et textes sous `verne-verif
 Les répertoires `target` sont exclus de Git. Le journal local de la première campagne est `target/verification-initiale.log`.
 Les versions et résultats utiles sont transcrits ci-dessous pour rendre l'état visible sans versionner les rapports volumineux.
 
+== Intégration continue
+
+Le flux `.github/workflows/verification.yml` exécute la suite complète sur la forge GitHub (décision D-005 du ticket VERNE-005) :
+
+* déclencheurs : chaque pull request vers `main`, chaque poussée sur `main` et le lancement manuel ;
+* systèmes : Linux (`ubuntu-latest`), Windows (`windows-latest`) et macOS (`macos-latest`), chacun mené jusqu'au bout même si un autre échoue ;
+* outillage : JDK Temurin 25 installé par la forge ; Maven 3.9.16 fixé par le lanceur du dépôt ; commande `./mvnw -B -ntp clean test` sous Linux et macOS, `.\mvnw.cmd -B -ntp clean test` sous Windows ;
+* résultat : un système est vert si Maven termine sans échec ni erreur ; les rapports `surefire-reports` de chaque module sont conservés comme pièces jointes de l'exécution, y compris en cas d'échec ;
+* sécurité : jetons limités à la lecture du dépôt, aucun secret ;
+* limites : sous Windows, la création de liens symboliques dépend des privilèges du compte d'exécution de la forge ; un test qui ne peut pas créer de lien échoue en erreur, il n'est jamais ignoré ;
+* chemins courts : le répertoire temporaire de la forge Windows porte un nom court (`RUNNER~1`) ; les constructions Maven imbriquées de `ApplicationMavenTest` partent de son chemin réel, faute de quoi Maven ne retrouve pas le module choisi par `-pl` ;
+* premier résultat (`ffb7104`, Temurin 25.0.5) : 459 tests sur chaque système, zéro échec et zéro erreur ; un test ignoré sous Windows (`RobustesseCompilationTest`, permissions POSIX).
+
 == Contrat de compilation fixé par les tests
 
 Le processeur attendu se nomme `io.vidocq.verne.compilation.ProcesseurVerne`.

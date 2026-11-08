@@ -395,7 +395,7 @@ Aucune dépendance tierce ni modification du rendu n'est ajoutée. Les racines m
 Les neuf tests de `RacinesEtLiensGabaritsTest` exercent de vrais liens symboliques et complètent partiellement T-SEC-01 : racine fichier, racine absente, racine symbolique, lien de fichier interne relatif, lien externe, lien cassé, poursuite des diagnostics, répertoire symbolique externe et cycle de répertoires.
 Avant correction, trois tests échouaient : une racine fichier était acceptée, un lien cassé était ignoré, y compris en présence d'un autre gabarit invalide. Les six autres cas passaient déjà.
 Après validation du type de racine et prise en compte des liens cassés, la suite complète passe de 46 à 55 tests réussis sur Mac. Aucun test existant n'est désactivé ni affaibli.
-Les tests exigent un système et un compte autorisant la création de liens symboliques ; ce prérequis reste à qualifier sur Windows et Linux. Ils ne sont pas ignorés silencieusement si leur création échoue.
+Les tests exigent un système et un compte autorisant la création de liens symboliques : ils réussissent sur Linux, sur macOS et sur le Windows de la forge ; sur un poste Windows ordinaire, le mode développeur ou le privilège correspondant est nécessaire. Ils ne sont pas ignorés silencieusement si leur création échoue.
 Aucune mesure de performance ni garantie face à des changements concurrents du système de fichiers n'est déduite de cette tranche.
 
 == Première borne du nombre de gabarits
@@ -602,9 +602,10 @@ La vérification des expressions (ticket VERNE-009) est décrite dans xref:expre
 
 == Limites de validation
 
-Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 417 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné, profil par gabarit profil JSON, échappement par table, conditions et boucles, et expressions ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
-Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
+Historique local : les campagnes antérieures concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 417 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné, profil par gabarit profil JSON, échappement par table, conditions et boucles, et expressions ont d'abord été exécutés sur Mac uniquement ; la suite complète de 459 tests a ensuite réussi sur un poste Windows 11 (PR nº 44).
+Intégration continue (ticket VERNE-005) : depuis la PR nº 45, la forge exécute la suite complète avec Temurin 25.0.5 et Maven 3.9.16 sur Linux amd64, Windows Server 2025 amd64 et macOS aarch64. Première campagne vérifiée : 459 tests sur chaque système, zéro échec et zéro erreur ; un seul test ignoré, sous Windows, `RobustesseCompilationTest.signaleUnSousRepertoireIllisibleSansExceptionNiChemin`, faute de permissions POSIX. Ces exécutions ne qualifient pas tous les cas de portabilité restant à écrire.
+Les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
 
