@@ -18,10 +18,10 @@ Il exclut l'accès indexé (`liste[0]`), la navigation optionnelle et les valeur
 |Identifiant |Décision |Source
 |D-006a |Conversions numériques : élargissement selon la promotion binaire de Java (`int` vers `long` vers `float` vers `double`), jamais de rétrécissement. |Utilisateur, 8 novembre 2026
 |D-006b |Pas de concaténation par opérateur : `+` est réservé aux nombres. Le gabarit juxtapose les interpolations (`{c.prenom} {c.nom}`). Les chaînes restent comparables par `==` et `!=`. |Utilisateur, 8 novembre 2026
-|D-006c |Accès indexés reportés avec les collections et tables associatives (F-09, F-12). |Proposition de l'auteur, non contestée à la rédaction ; à confirmer à la relecture
+|D-006c |Accès indexés reportés avec les collections et tables associatives (F-09, F-12). |Proposition de l'auteur, confirmée par l'utilisateur le 8 novembre 2026
 |D-006d |Interpolation étendue aux enveloppes de primitives (`Integer`, `Long`, `Boolean`, `Character`, etc.) ; `BigDecimal`, dates, énumérations et autres objets restent refusés jusqu'aux formats et à la localisation. |Utilisateur, 8 novembre 2026
 |D-006e |Dépassement de capacité entier et division entière par zéro : échec du rendu par `VERNE-REN-004`, jamais de résultat tronqué. |Utilisateur, 8 novembre 2026
-|D-006f |Opérateurs écrits avec les symboles de Java (`&&`, `\|\|`, `!`, `==`…), cohérents avec les mots-clés anglais des blocs. |Proposition de l'auteur ; à confirmer à la relecture
+|D-006f |Opérateurs écrits avec les symboles de Java (`&&`, `\|\|`, `!`, `==`…), cohérents avec les mots-clés anglais des blocs. |Proposition de l'auteur, confirmée par l'utilisateur le 8 novembre 2026
 |===
 
 == Grammaire
@@ -72,7 +72,7 @@ Du plus prioritaire au moins prioritaire ; les opérateurs d'une même ligne s'a
 === Littéraux
 
 * Un entier sans suffixe est un `int` ; il doit tenir dans `int`, sinon `VERNE-SYN-002`. Le suffixe `L` donne un `long`, qui doit tenir dans `long`. Les zéros de tête, séparateurs `_`, bases autres que décimale et exposants sont refusés. `-2147483648` s'écrit `-2147483648L` ou résulte d'un calcul : le littéral `2147483648` ne tient pas dans `int`.
-* Un décimal est un `double` ; partie entière et partie décimale sont obligatoires (`0.5`, pas `.5` ni `5.`).
+* Un décimal est un `double` ; partie entière et partie décimale sont obligatoires (`0.5`, pas `.5` ni `5.`). Il est converti à la compilation vers le `double` le plus proche, arrondi au plus près comme `Double.parseDouble`. Le littéral est refusé par `VERNE-SYN-002`, à la compilation, si cette conversion donne une infinité, ou donne zéro alors qu'un de ses chiffres n'est pas nul. Un arrondi vers un autre `double` fini non nul est admis : `0.1` vaut le `double` le plus proche de 0,1, et une valeur sous-normale reste admise. Un littéral décimal ne peut donc introduire ni infinité ni `NaN` ; seules les opérations flottantes en produisent.
 * Une chaîne est une `java.lang.String` ; seules les séquences `\"`, `\\`, `\n`, `\t` et `\r` sont admises.
 * Un littéral est une valeur comme une autre : interpolé, il est échappé selon le profil, et il ne peut pas produire de balisage.
 
@@ -114,11 +114,11 @@ Toute autre combinaison produit `VERNE-TYP-008` à la position de la directive, 
 * les chaînes, booléens et caractères ne sont pas ordonnés : `c.nom < "m"` est refusé, l'ordre des chaînes dépendant de la langue ;
 * deux records, ou un record et une chaîne, ne sont pas comparables.
 
-L'égalité de deux chaînes compare leur contenu, jamais leur identité. L'égalité des flottants suit IEEE 754 : `NaN == NaN` est faux, `0.0 == -0.0` est vrai.
+L'égalité de deux chaînes compare leur contenu, jamais leur identité. Elle ne tolère pas `null` : chaque opérande chaîne, comme chaque enveloppe, est contrôlé non nul au moment où il est évalué, et une référence nulle lève `VERNE-REN-001`, que l'autre opérande soit nul ou non. Le résultat d'une égalité n'est donc jamais déduit d'une valeur nulle, conformément à F-07 (erreur par défaut) ; la comparaison explicite à une absence relèvera de la navigation optionnelle. L'égalité des flottants suit IEEE 754 : `NaN == NaN` est faux, `0.0 == -0.0` est vrai.
 
 === Usage du résultat
 
-* Interpolation : le résultat doit être une chaîne, un primitif ou une enveloppe de primitif (D-006d) ; sinon `VERNE-TYP-004`. Une enveloppe nulle lève `VERNE-REN-001`. La représentation textuelle est celle de `String.valueOf`.
+* Interpolation : le résultat doit être une chaîne, un primitif ou une enveloppe de primitif (D-006d) ; sinon `VERNE-TYP-004`. Une chaîne ou une enveloppe nulle lève `VERNE-REN-001`, comme aujourd'hui pour une chaîne : `String.valueOf` ne s'applique qu'à une valeur non nulle et ne produit jamais le texte `null`.
 * Condition `{#if}` : le résultat doit être booléen, sinon `VERNE-TYP-006`. Aucune conversion implicite en booléen.
 * Collection `{#for}` : reste un chemin ; une expression avec opérateur y produit `VERNE-SYN-002`.
 * Profils : une chaîne ou un caractère est échappé comme aujourd'hui ; un résultat numérique ou booléen ne l'est pas. En JSON, un résultat chaîne ou caractère n'est admis que dans un littéral de chaîne, et un flottant non fini hors d'un littéral lève `VERNE-REN-003`, comme pour un chemin.
@@ -127,7 +127,7 @@ L'égalité de deux chaînes compare leur contenu, jamais leur identité. L'éga
 
 * Les opérandes sont évalués de gauche à droite, chacun au plus une fois par occurrence dans l'expression. Un même chemin écrit deux fois est évalué deux fois : `{#if c.total > 0 && c.total < 100}` appelle deux fois l'accesseur `total`.
 * `&&` n'évalue pas son opérande droit si le gauche est faux ; `||` ne l'évalue pas si le gauche est vrai. Un opérande non évalué ne peut lever aucune erreur.
-* Chaque objet de navigation et chaque valeur d'enveloppe est contrôlé non nul au moment de son utilisation (`VERNE-REN-001`).
+* Chaque objet de navigation, chaque enveloppe et chaque chaîne opérande ou interpolée est contrôlé non nul au moment de son évaluation (`VERNE-REN-001`). Un opérande non évalué par court-circuit n'est pas contrôlé.
 * Arithmétique entière (`int`, `long`) : addition, soustraction, multiplication, négation et division détectent le dépassement de capacité, y compris `Integer.MIN_VALUE / -1` ; la division et le reste par zéro sont également détectés. Dans ces cas, le rendu échoue par `ArithmeticException` portant `VERNE-REN-004`, sans valeur métier, et aucune sortie partielle n'est renvoyée (D-006e). La division entière tronque vers zéro et le reste prend le signe du dividende, comme en Java ; ce n'est pas un dépassement.
 * Arithmétique flottante : IEEE 754, sans erreur ; une division par zéro donne une infinité ou `NaN`.
 * Les expressions dont tous les opérandes sont des littéraux sont évaluées au rendu comme les autres ; leur éventuel dépassement est signalé au rendu.
@@ -149,7 +149,7 @@ L'égalité de deux chaînes compare leur contenu, jamais leur identité. L'éga
 |`VERNE-TYP-006` |Condition non booléenne (inchangé, s'applique aux expressions)
 |`VERNE-TYP-008` |Opérande dont la catégorie est incompatible avec l'opérateur (nouveau)
 |`VERNE-LIM-010` |Plus de 64 opérateurs ou de 32 niveaux de parenthèses dans une expression (nouveau)
-|`VERNE-REN-001` |Objet de navigation ou enveloppe nul utilisé pendant l'évaluation (sens étendu)
+|`VERNE-REN-001` |Objet de navigation, enveloppe ou chaîne nul évalué pendant le rendu (sens étendu)
 |`VERNE-REN-004` |Dépassement de capacité entier, division ou reste entier par zéro (nouveau)
 |===
 
@@ -164,7 +164,7 @@ Les diagnostics de compilation pointent le délimiteur ouvrant de la directive, 
 
 == Cas de test
 
-Les cas suivants détaillent T-EXP-01 et T-EXP-03 de link:cas-de-test.adoc[la liste des cas] pour ce contrat. Le modèle est `record Ligne(int quantite, long stock, double prix, Integer remise, boolean active, Boolean livree, String statut, char code, int zero, int minimum, int compteur, java.util.List<String> liste)`, déclaré par `{@exemple.Ligne l}`. L'accesseur `compteur` est redéfini pour compter ses appels dans un compteur de test indépendant.
+Les cas suivants détaillent T-EXP-01 et T-EXP-03 de link:cas-de-test.adoc[la liste des cas] pour ce contrat. Le modèle est `record Ligne(int quantite, long stock, double prix, Integer remise, boolean active, Boolean livree, String statut, String autre, char code, int zero, int minimum, int compteur, java.util.List<String> liste)`, déclaré par `{@exemple.Ligne l}`. L'accesseur `compteur` est redéfini pour compter ses appels dans un compteur de test indépendant.
 
 === T-EXP-01 — Précédence, parenthèses, comparaisons, négation et courts-circuits
 
@@ -192,6 +192,11 @@ Les cas suivants détaillent T-EXP-01 et T-EXP-03 de link:cas-de-test.adoc[la li
 |`{#for a in l.liste && true}` |`VERNE-SYN-002`
 |`{#if l.livree && l.active}` avec `livree = null` |`VERNE-REN-001`
 |`{#if l.active && l.livree}` avec `active = false`, `livree = null` |Branche non rendue, aucune erreur
+|`{#if l.statut == "payé"}` avec `statut = null` |`VERNE-REN-001` au rendu, aucune sortie
+|`{#if "payé" != l.statut}` avec `statut = null` |`VERNE-REN-001` au rendu (opérande droit évalué)
+|`{#if l.statut == l.autre}` avec `statut = null` et `autre = null` |`VERNE-REN-001` au rendu ; deux nuls ne sont pas égaux
+|`{#if l.active && l.statut == "x"}` avec `active = false`, `statut = null` |Branche non rendue, aucune erreur (opérande non évalué)
+|`{l.statut}` avec `statut = null` |`VERNE-REN-001` au rendu, comme dans le contrat livré
 |===
 
 === T-EXP-03 — Politique numérique
@@ -216,6 +221,12 @@ Les cas suivants détaillent T-EXP-01 et T-EXP-03 de link:cas-de-test.adoc[la li
 |`{l.quantite == l.prix}` avec `3` et `3.0` |`true` (promotion en `double`)
 |`{1.5}`, `{.5}`, `{5.}` |`1.5` ; `VERNE-SYN-002` pour les deux autres
 |`{007}`, `{1_000}`, `{0x10}`, `{1e3}` |`VERNE-SYN-002`
+|`{17976931348623157…0.0}` (17976931348623157 suivi de 292 zéros, puis `.0`) |`1.7976931348623157E308` (plus grand `double` fini)
+|`{999…9.0}` (400 chiffres 9, puis `.0`) |`VERNE-SYN-002` à la compilation : la conversion donne une infinité
+|`{0.000…01}` (319 zéros après la virgule, puis `1`) |`1.0E-320` (valeur sous-normale admise)
+|`{0.000…01}` (400 zéros après la virgule, puis `1`) |`VERNE-SYN-002` à la compilation : valeur non nulle arrondie à zéro
+|`{0.000}` |`0.0` (zéro écrit comme tel, admis)
+|`{-999…9.0}` (400 chiffres 9) |`VERNE-SYN-002` : le littéral est refusé avant l'application du `-` unaire
 |===
 
 === Autres cas de la famille
