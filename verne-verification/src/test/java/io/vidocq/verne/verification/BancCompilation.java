@@ -109,6 +109,12 @@ final class BancCompilation {
                 options.add("-Averne.paquet=" + PAQUET);
             }
         }
+        if (options.contains("--processor-module-path")) {
+            if (processeurs != null) {
+                throw new IllegalArgumentException("Un processeur instrumenté exige une compilation dans la JVM du test.");
+            }
+            return compilerHorsProcessus(racine, options, chemins, classes, sourcesGenerees);
+        }
         try (var gestionnaire = compilateur.getStandardFileManager(
                 diagnostics, Locale.FRENCH, StandardCharsets.UTF_8)) {
             var unites = gestionnaire.getJavaFileObjectsFromPaths(chemins);
@@ -121,6 +127,37 @@ final class BancCompilation {
                         .append(diagnostic.getMessage(Locale.FRENCH)).append('\n');
             }
             return new Compilation(reussie, journal.toString(), classes, sourcesGenerees);
+        }
+    }
+
+    /**
+     * Compile dans un processus javac distinct : la couche de modules des processeurs garde ses archives
+     * ouvertes jusqu'à la fin de la JVM, ce qui bloquerait sous Windows le nettoyage du répertoire du test.
+     * Les diagnostics sont la sortie française de javac ; le délai de garde de 15 secondes protège le banc.
+     */
+    private static Compilation compilerHorsProcessus(Path racine, List<String> options, List<Path> chemins,
+                                                     Path classes, Path sourcesGenerees)
+            throws IOException {
+        String executable = System.getProperty("os.name").startsWith("Windows") ? "javac.exe" : "javac";
+        var commande = new ArrayList<>(List.of(Path.of(System.getProperty("java.home"), "bin", executable).toString(),
+                "-J-Duser.language=fr", "-J-Duser.country=FR",
+                "-J-Dstdout.encoding=UTF-8", "-J-Dstderr.encoding=UTF-8"));
+        commande.addAll(options);
+        for (Path chemin : chemins) commande.add(chemin.toString());
+        Path journal = racine.resolve("javac.log");
+        Process processus = new ProcessBuilder(commande).redirectErrorStream(true)
+                .redirectOutput(journal.toFile()).start();
+        try {
+            if (!processus.waitFor(15, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("La commande javac n'a pas terminé en 15 secondes.");
+            }
+            return new Compilation(processus.exitValue() == 0, Files.readString(journal, StandardCharsets.UTF_8),
+                    classes, sourcesGenerees);
+        } catch (InterruptedException interruption) {
+            Thread.currentThread().interrupt();
+            throw new java.io.InterruptedIOException("La compilation javac a été interrompue.");
+        } finally {
+            if (processus.isAlive()) processus.destroyForcibly();
         }
     }
 

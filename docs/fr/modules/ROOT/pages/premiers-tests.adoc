@@ -21,6 +21,7 @@ Le futur moteur reste soumis aux exigences de modularité de l'architecture.
 
 Le lanceur Maven fixe la version 3.9.16. Les versions initiales de JUnit Jupiter, du compilateur Maven et de Surefire sont respectivement 5.13.4, 3.14.1 et 3.5.4.
 Toutes les dépendances JUnit sont limitées aux tests. Le banc emploie le compilateur standard du JDK 25.
+Une compilation qui charge les processeurs par `--processor-module-path` s'exécute dans un processus `javac` distinct, en français et en UTF-8 : la couche de modules que javac crée alors garde ses archives ouvertes jusqu'à la fin de la JVM, ce qui empêcherait sous Windows la suppression des répertoires temporaires. Un processeur instrumenté ne peut donc pas être combiné avec ce chargement.
 Les scripts du lanceur Maven et les textes juridiques sont conservés dans leur forme d'origine ; les ajouts propres à Verne sont en français.
 
 == Exécution reproductible
