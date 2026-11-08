@@ -600,6 +600,19 @@ Au budget maximal, avec 436 boucles naviguant chacune un élément et une condit
 
 La vérification des expressions (ticket VERNE-009) est décrite dans xref:expressions.adoc#_implémentation_et_vérification[le contrat des expressions] : 91 cas de `ExpressionsTest`, phase rouge observée, méthode de rendu de 17 525 octets au budget maximal et 40 sources sans expression identiques à la base.
 
+== Positions des diagnostics : vérification
+
+La qualification des positions (ticket VERNE-004, T-DIA-01) vérifie la règle ci-dessus sur des cas que la suite n'exerçait pas, sans changer le format relatif décidé par D-002. Les six cas de `PositionsDiagnosticsTest` attendent :
+
+* `VERNE-SYN-001 : sous/dossier/page.verne:2:5` pour une interpolation non fermée après CRLF, tabulation, `é` précomposé, emoji et espace, dans un sous-répertoire, sans le chemin absolu de la racine ;
+* colonne 3 après `e` suivi de l'accent combinant U+0301 (deux points de code), colonne 2 après `é` précomposé U+00E9 ;
+* ligne 3, colonne 10 après un commentaire `{! … !}` couvrant trois lignes séparées par CRLF puis LF ;
+* colonne 3 après deux tabulations ;
+* ligne 4 après des fins de ligne LF et CRLF mélangées ;
+* ligne 2, colonne 5 après emoji, caractère combiné et tabulation sur la même ligne.
+
+Le comportement existait : les six cas ont réussi sur la base `68c01d2` sans modification du compilateur, il n'y a donc pas de phase rouge de code. Leur capacité à détecter un écart a été contrôlée en décalant chaque colonne attendue d'une unité : les six cas ont alors échoué, et les diagnostics observés étaient exactement ceux attendus ci-dessus.
+
 == Limites de validation
 
 Historique local : les campagnes antérieures concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
@@ -614,7 +627,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 459 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 465 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -650,8 +663,9 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`EchappementExhaustifTest` |6 |0 |0 |0
 |`ConditionsBouclesTest` |64 |0 |0 |0
 |`ExpressionsTest` |91 |0 |0 |0
+|`PositionsDiagnosticsTest` |6 |0 |0 |0
 |`OracleMesuresTest` (module `verne-mesures`) |39 |0 |0 |0
-|Total |459 |0 |0 |0
+|Total |465 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.
