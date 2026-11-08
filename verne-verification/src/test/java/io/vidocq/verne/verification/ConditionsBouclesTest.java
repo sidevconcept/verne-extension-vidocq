@@ -53,6 +53,12 @@ class ConditionsBouclesTest {
                     }
                     """);
 
+    /** Record générique navigué à travers des jokers bornés supérieurement ou inférieurement. */
+    private static final Map<String, String> MODELE_JOKERS = Map.of(
+            "exemple/Boite.java", "package exemple; public record Boite<T>(T valeur) {}",
+            "exemple/Enveloppe.java", "package exemple; public record Enveloppe(Boite<? extends java.util.List<String>> liste,"
+                    + " Boite<? extends Boolean> drapeau, Boite<? extends String> texte, Boite<? super Boolean> large) {}");
+
     @Test void rendSeulementLaBrancheChoisie() throws Exception {
         String gabarit = DECLARATION + "{#if c.payee}payée{#else}attente{/if}|{#if c.payee}seule{/if}|"
                 + "{#if c.livree}livrée{/if}";
@@ -132,6 +138,32 @@ class ConditionsBouclesTest {
 
     @Test void typeUnElementSansBorneCommeObjet() throws Exception {
         verifierRefus("texte", "{#for x in c.divers}§{x}{/for}", "VERNE-TYP-004");
+    }
+
+    /** R1 de la revue : la borne supérieure d'un joker obtenu par navigation est celle du type utilisé. */
+    @Test void utiliseLaBorneDUnJokerObtenuParNavigation() throws Exception {
+        var sources = new HashMap<>(MODELE_JOKERS);
+        sources.putAll(BancCompilation.application("exemple.gabarits.Bonjour.rendre(new exemple.Enveloppe("
+                + "new exemple.Boite<>(java.util.List.of(\"a\", \"b\")), new exemple.Boite<>(true), new exemple.Boite<>(\"<t>\"),"
+                + " new exemple.Boite<>(true)))"));
+        var compilation = BancCompilation.compiler(repertoire, Map.of("bonjour.verne", "{@exemple.Enveloppe e}"
+                + "{#for v in e.liste.valeur}{v}{/for}{#if e.drapeau.valeur}oui{/if}{e.texte.valeur}"), sources, true,
+                repertoire.resolve("gabarits"), BancCompilation.chargementVerne("-Averne.profil.sortie=html"));
+        assertTrue(compilation.reussie(), compilation.diagnostics());
+        var execution = BancCompilation.executer(compilation);
+        assertAll(() -> assertEquals(0, execution.codeSortie(), execution.erreurs()),
+                () -> assertEquals("aboui&lt;t&gt;", execution.sortie()));
+    }
+
+    /** Un joker inférieur n'a pas de borne booléenne : la condition reste refusée. */
+    @Test void refuseUneConditionDerriereUnJokerInferieur() throws Exception {
+        var sources = new HashMap<>(MODELE_JOKERS);
+        sources.putAll(BancCompilation.application("\"témoin\""));
+        var compilation = BancCompilation.compiler(repertoire, Map.of("bonjour.verne",
+                "{@exemple.Enveloppe e}{#if e.large.valeur}oui{/if}"), sources, true, repertoire.resolve("gabarits"),
+                BancCompilation.chargementVerne("-Averne.profil.sortie=texte"));
+        assertAll(() -> assertFalse(compilation.reussie()),
+                () -> assertTrue(compilation.diagnostics().contains("VERNE-TYP-006 : bonjour.verne:1:23"), compilation.diagnostics()));
     }
 
     @Test void refuseAuRenduUneCollectionNulle() throws Exception {

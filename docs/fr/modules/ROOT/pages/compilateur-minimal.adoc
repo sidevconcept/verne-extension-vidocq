@@ -136,6 +136,7 @@ Les annotations de type, par exemple `@Nullable String` sur un composant de reco
 === Conditions et boucles
 
 Cette tranche (ticket VERNE-008) ajoute deux blocs, sans opérateur : la condition d'un bloc et la collection d'une boucle sont des chemins de la même forme que ceux des interpolations, un paramètre ou une variable de boucle suivi de composants de records publics. La profondeur de navigation est bornée par `VERNE-LIM-005` comme pour une interpolation.
+Lorsqu'un composant d'un record générique donne un joker ou une variable de type, par exemple `Boite<? extends List<String>>`, le chemin prend sa borne supérieure, avec ses arguments génériques ; un joker sans borne supérieure, libre ou `? super T`, donne `java.lang.Object`. Cette règle vaut pour les interpolations, les conditions et les boucles.
 
 [cols="2,4",options="header"]
 |===
@@ -584,16 +585,16 @@ Mémoire conservée, distincte des allocations par rendu : chaque classe génér
 
 == Conditions et boucles : vérification
 
-Les 62 cas de `ConditionsBouclesTest` (ticket VERNE-008) couvrent T-CTL-01 (branche choisie seule, branche non choisie non évaluée malgré une navigation nulle, `Boolean` en paramètre, imbrication), T-CTL-02 (condition chaîne, nombre, record et liste refusée par `VERNE-TYP-006` ; `Boolean` nul au rendu), T-CTL-03 (zéro, une et trois répétitions ; tableaux d'objets, de `int` et de `boolean`, liste, ensemble ordonné, joker borné), les portées de T-CTL-04 et T-CTL-07 (boucles imbriquées, nom réutilisé après fermeture, nom déjà utilisé, variable hors de sa portée), T-CTL-06 partiel (non itérable, collection nulle, élément nul utilisé ou non, itérable à parcours unique, exception de l'itérateur sans sortie partielle), vingt structures invalides, l'échappement HTML et XML dans les blocs avec relecture XML, un document JSON relu, dix directives hors du contenu refusées par `VERNE-SEC-003`, le profil texte, 32 et 33 blocs imbriqués, le budget à 60 000 et 60 008 unités, un grand document et 32 rendus concurrents.
+Les 64 cas de `ConditionsBouclesTest` (ticket VERNE-008) couvrent T-CTL-01 (branche choisie seule, branche non choisie non évaluée malgré une navigation nulle, `Boolean` en paramètre, imbrication), T-CTL-02 (condition chaîne, nombre, record et liste refusée par `VERNE-TYP-006` ; `Boolean` nul au rendu), T-CTL-03 (zéro, une et trois répétitions ; tableaux d'objets, de `int` et de `boolean`, liste, ensemble ordonné, joker borné), les portées de T-CTL-04 et T-CTL-07 (boucles imbriquées, nom réutilisé après fermeture, nom déjà utilisé, variable hors de sa portée), T-CTL-06 partiel (non itérable, collection nulle, élément nul utilisé ou non, itérable à parcours unique, exception de l'itérateur sans sortie partielle), vingt structures invalides, l'échappement HTML et XML dans les blocs avec relecture XML, un document JSON relu, dix directives hors du contenu refusées par `VERNE-SEC-003`, le profil texte, 32 et 33 blocs imbriqués, le budget à 60 000 et 60 008 unités, un grand document et 32 rendus concurrents. Deux cas issus de la revue (R1) vérifient les chemins traversant un record générique par un joker : boucle, condition et interpolation à travers `? extends`, et refus de `VERNE-TYP-006` à travers `? super Boolean`.
 
-La phase rouge a été observée avant l'implémentation : 61 tests exécutés, 53 échecs, tous sur `VERNE-SYN-002` (« expression ou directive non prise en charge »), la cause attendue ; les huit réussites étaient des refus de syntaxe déjà en place. Après implémentation, deux échecs relevaient des tests eux-mêmes : un budget visé mal additionné (60 544 unités au lieu de 59 968) et une vérification d'absence de source faite après une compilation réussie dans le même répertoire. Ils ont été corrigés sans toucher au code de production. Le test du grand document a été ajouté après l'implémentation et n'a pas de phase rouge propre.
+La phase rouge a été observée avant l'implémentation : 61 tests exécutés, 53 échecs, tous sur `VERNE-SYN-002` (« expression ou directive non prise en charge »), la cause attendue ; les huit réussites étaient des refus de syntaxe déjà en place. Après implémentation, deux échecs relevaient des tests eux-mêmes : un budget visé mal additionné (60 544 unités au lieu de 59 968) et une vérification d'absence de source faite après une compilation réussie dans le même répertoire. Ils ont été corrigés sans toucher au code de production. Le test du grand document a été ajouté après l'implémentation et n'a pas de phase rouge propre. Pour R1, la boucle à travers `Boite<? extends List<String>>` a d'abord échoué par `VERNE-TYP-007`, la cause signalée ; le refus à travers `? super Boolean` réussissait déjà et garde la correction de tout élargissement. L'interpolation à travers `Boite<? extends String>`, refusée aussi avant cette tranche, est acceptée par la même correction.
 
 Au budget maximal, avec 436 boucles naviguant chacune un élément et une condition `Boolean`, la méthode de rendu générée mesure 31 614 octets en profil HTML : les pondérations des blocs sont prudentes.
 
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 324 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné, profil par gabarit profil JSON, échappement par table et conditions et boucles ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 326 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné, profil par gabarit profil JSON, échappement par table et conditions et boucles ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -603,7 +604,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 366 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 368 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -637,9 +638,9 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`ProfilParGabaritTest` |5 |0 |0 |0
 |`ProfilJsonTest` |15 |0 |0 |0
 |`EchappementExhaustifTest` |6 |0 |0 |0
-|`ConditionsBouclesTest` |62 |0 |0 |0
+|`ConditionsBouclesTest` |64 |0 |0 |0
 |`OracleMesuresTest` (module `verne-mesures`) |39 |0 |0 |0
-|Total |366 |0 |0 |0
+|Total |368 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

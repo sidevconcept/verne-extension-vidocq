@@ -19,6 +19,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
 
 /**
@@ -672,21 +673,34 @@ final class CompilateurGabarit {
         if (type instanceof ArrayType tableau) return tableau.getComponentType();
         var types = environnement.getTypeUtils();
         var iterable = types.erasure(environnement.getElementUtils().getTypeElement("java.lang.Iterable").asType());
-        var objet = environnement.getElementUtils().getTypeElement("java.lang.Object").asType();
         var aVisiter = new ArrayDeque<TypeMirror>(List.of(type));
         while (!aVisiter.isEmpty()) {
             TypeMirror candidat = aVisiter.pop();
             if (candidat instanceof DeclaredType declare && types.isSameType(types.erasure(candidat), iterable)) {
-                if (declare.getTypeArguments().isEmpty()) return objet;
-                TypeMirror argument = declare.getTypeArguments().getFirst();
-                if (argument instanceof WildcardType joker) {
-                    return joker.getExtendsBound() == null ? objet : joker.getExtendsBound();
-                }
-                return argument.getKind() == TypeKind.TYPEVAR ? types.erasure(argument) : argument;
+                if (declare.getTypeArguments().isEmpty()) return objet();
+                return borne(declare.getTypeArguments().getFirst());
             }
             if (candidat instanceof DeclaredType) aVisiter.addAll(types.directSupertypes(candidat));
         }
         return null;
+    }
+
+    /**
+     * Borne supérieure utilisable d'un joker ou d'une variable de type, avec ses arguments génériques ; Object sans
+     * borne supérieure (joker libre ou inférieur). Les autres types sont rendus tels quels.
+     */
+    private TypeMirror borne(TypeMirror type) {
+        if (type instanceof WildcardType joker) {
+            return joker.getExtendsBound() == null ? objet() : borne(joker.getExtendsBound());
+        }
+        if (type instanceof TypeVariable variable && variable.getUpperBound().getKind() == TypeKind.DECLARED) {
+            return variable.getUpperBound();
+        }
+        return type.getKind() == TypeKind.TYPEVAR ? environnement.getTypeUtils().erasure(type) : type;
+    }
+
+    private TypeMirror objet() {
+        return environnement.getElementUtils().getTypeElement("java.lang.Object").asType();
     }
 
     /** Vide le tampon sans modifier les espaces ou fins de ligne qui l'entourent. */
@@ -757,8 +771,9 @@ final class CompilateurGabarit {
                     .filter(candidat -> candidat.getSimpleName().contentEquals(nom)).findFirst()
                     .filter(candidat -> candidat.getAccessor().getModifiers().contains(Modifier.PUBLIC))
                     .orElseThrow(() -> refus("VERNE-TYP-001", partie.position(), "propriété inconnue ou inaccessible."));
-            type = ((ExecutableType) environnement.getTypeUtils().asMemberOf(
-                    declare, composant.getAccessor())).getReturnType();
+            // Un composant générique peut donner un joker : sa borne supérieure est le type navigué.
+            type = borne(((ExecutableType) environnement.getTypeUtils().asMemberOf(
+                    declare, composant.getAccessor())).getReturnType());
             enregistrerOrigine(type);
             expression = "requireNonNull(" + expression
                     + ", \"VERNE-REN-001 : objet de navigation nul.\")." + nom + "()";
