@@ -111,6 +111,9 @@ Une création ou une écriture de source Java impossible, par exemple un type d�
 |`{nom}` |Interpole une chaîne ou une valeur scalaire primitive connue
 |`{personne.nom}` |Accède directement au composant `nom` d'un record public ; aucun accès réflexif
 |`{personne.adresse.ville}` |Enchaîne les composants de records ; chaque étape est vérifiée statiquement
+|`{#if c.payee}…{/if}` |Rend son contenu si la valeur booléenne est vraie ; voir <<conditions-et-boucles>>
+|`{#if c.payee}…{#else}…{/if}` |Rend la première branche si la valeur est vraie, la seconde sinon
+|`{#for article in c.articles}…{/for}` |Rend son contenu pour chaque élément d'un tableau ou d'un `java.lang.Iterable`, dans l'ordre de parcours
 |`{! commentaire !}` |Retire le commentaire sans supprimer sa ligne
 |`\{` |Produit une accolade ouvrante littérale
 |`\\` |Produit un antislash littéral
@@ -119,15 +122,47 @@ Une création ou une écriture de source Java impossible, par exemple un type d�
 Les espaces entourant le contenu d'une directive sont retirés pour son analyse, pas ceux du document.
 Les fins de ligne du fichier sont rendues telles quelles : un dépôt Git qui normalise les fins de ligne peut donc changer le document selon le poste. Déclarer `*.verne -text`, ou une fin de ligne fixe, dans le `.gitattributes` de l'application rend le rendu indépendant de l'extraction.
 Les déclarations sont collectées dans l'ordre source, qui détermine l'ordre des paramètres de la méthode générée.
-Elles ont une portée globale dans le gabarit : cette tranche n'a pas de blocs ni de portée locale.
+Elles ont une portée globale dans le gabarit, y compris à l'intérieur d'un bloc ; seules les variables de boucle ont une portée locale.
 Chaque nom de paramètre doit être un identifiant Java non réservé, sans caractère ignoré par Java.
 Les noms métier peuvent être accentués ; la validation complète de leurs formes normalisées reste à réaliser.
 
-Les types génériques, tableaux et déclarations de paramètres primitifs ne font pas encore partie de ce contrat.
+Les déclarations de paramètres de types génériques, de tableaux ou primitifs ne font pas encore partie de ce contrat. Un composant de record peut en revanche être un tableau ou une collection générique parcourus par une boucle.
 Un objet public peut être reçu comme paramètre, mais seules les propriétés correspondant aux composants de records sont accessibles.
 Les champs ordinaires, accesseurs de classes ordinaires, méthodes arbitraires et opérations d'introspection ne sont pas exposés.
 Un record ne peut pas être interpolé directement par un appel implicite à `toString` ; sa valeur finale doit être une chaîne ou un scalaire primitif.
 Les annotations de type, par exemple `@Nullable String` sur un composant de record, ne changent pas cette classification : la valeur reste une chaîne et son contrôle de nullité au rendu est conservé.
+
+[[conditions-et-boucles]]
+=== Conditions et boucles
+
+Cette tranche (ticket VERNE-008) ajoute deux blocs, sans opérateur : la condition d'un bloc et la collection d'une boucle sont des chemins de la même forme que ceux des interpolations, un paramètre ou une variable de boucle suivi de composants de records publics. La profondeur de navigation est bornée par `VERNE-LIM-005` comme pour une interpolation.
+
+[cols="2,4",options="header"]
+|===
+|Directive |Règle
+|`{#if chemin}` |Ouvre une condition. La valeur finale doit être de type `boolean` ou `java.lang.Boolean`, sinon `VERNE-TYP-006`. Aucune conversion implicite n'est faite depuis une chaîne, un nombre ou un objet.
+|`{#else}` |Sépare la branche rendue lorsque la condition est fausse ; au plus une fois par condition.
+|`{/if}` |Ferme la condition ouverte la plus récente.
+|`{#for nom in chemin}` |Ouvre une boucle. La valeur finale doit être un tableau, de type primitif ou objet, ou un sous-type de `java.lang.Iterable<E>`, sinon `VERNE-TYP-007`. La variable `nom` reçoit le type des composants du tableau, ou `E` ; un joker `? extends T` donne `T`, et un type brut ou un joker sans borne donne `java.lang.Object`.
+|`{/for}` |Ferme la boucle ouverte la plus récente.
+|===
+
+Les mots-clés `if`, `else`, `for` et `in` sont sensibles à la casse ; les espaces entre leurs éléments sont libres. Toute autre directive commençant par `#` ou `/`, ou une directive de bloc incomplète comme `{#if}` ou `{#for a c.liste}`, produit `VERNE-SYN-002`.
+La structure des blocs est vérifiée pendant l'analyse, avant la résolution des chemins. `VERNE-SYN-005` signale, à la position de la directive fautive, un `{#else}` hors d'une condition ou répété, une fermeture sans bloc ouvert ou ne correspondant pas au dernier bloc ouvert ; un bloc resté ouvert en fin de gabarit est signalé à la position de l'ouverture du bloc ouvert le plus récemment. Au-delà de 32 blocs imbriqués, `VERNE-LIM-009` est signalé à l'ouverture du trente-troisième.
+
+La variable de boucle est visible de son ouverture à sa fermeture, y compris dans les blocs imbriqués, et nulle part ailleurs : une référence hors de cette portée produit `VERNE-TYP-001`. Son nom doit être un identifiant Java non réservé et différent de chaque paramètre déclaré et de chaque variable de boucle englobante, sinon `VERNE-TYP-002`. Une boucle suivante peut réutiliser le même nom.
+Un élément est utilisé comme une valeur de navigation : il peut être interpolé s'il est une chaîne ou un scalaire primitif, ou servir de point de départ à une navigation s'il est un record public accessible.
+
+Au rendu, seule la branche choisie est évaluée : une valeur nulle ou une exception dans l'autre branche n'a aucun effet. Une condition `Boolean` nulle, une collection nulle ou un objet de navigation nul de leur chemin lève `NullPointerException` portant `VERNE-REN-001`. Un élément nul ne provoque une erreur que s'il est interpolé ou navigué.
+Une boucle parcourt le tableau par indices croissants et un `Iterable` par un unique appel à `iterator()`, dans l'ordre de cet itérateur, sans copie préalable. Une exception de l'itérateur ou d'un accesseur interrompt le rendu : aucune sortie partielle n'est renvoyée. La modification concurrente d'une collection pendant le rendu relève de l'appelant, comme pour toute donnée du modèle.
+
+Le texte entre les directives est conservé exactement : une ligne ne contenant qu'une directive laisse sa fin de ligne dans le document.
+
+Avec les profils HTML et XML, une directive de bloc n'est admise que dans le contenu, hors de toute balise, déclaration, commentaire, section CDATA ou instruction de traitement, et hors du contenu d'un élément brut ou échappé (`script`, `style`, `textarea`, `title`…). Avec le profil JSON, elle n'est admise qu'en dehors d'un littéral de chaîne. Ailleurs, elle produit `VERNE-SEC-003` à sa position. Toutes les directives d'un même bloc se trouvent donc dans le même état de contexte, et chaque interpolation est classée selon le même contexte quel que soit le chemin suivi au rendu. Les valeurs rendues dans un bloc sont échappées selon le profil, comme ailleurs. Le profil texte admet les directives partout.
+Verne ne vérifie pas la structure produite : par exemple, séparer les éléments d'un tableau JSON par des virgules suppose les métadonnées d'itération, hors de cette tranche.
+
+Un gabarit contenant au moins un bloc est généré avec un tampon local unique, alloué à la longueur du texte statique ; chaque valeur est évaluée au moment où elle est rendue, puis écrite et échappée directement dans le tampon. Il n'utilise ni l'assemblage unique des grands documents ni le dimensionnement par les valeurs. La génération des gabarits sans bloc est inchangée.
+Les variables générées sont locales à l'appel et évitent les noms de paramètres ; le rendu reste sans état partagé et sûr en concurrence.
 
 === Visibilité entre modules
 
@@ -135,7 +170,7 @@ Lorsque l'application est un module nommé, chaque type déclaré et chaque reco
 La lecture comprend `java.base`, les modules requis par le descripteur et, de proche en proche, leurs dépendances `requires transitive`. Un type déclaré dans un paquet non exporté, exporté seulement vers d'autres modules ou appartenant à un module non lu produit `VERNE-TYP-003` à la position de la déclaration. Une navigation vers un record inaccessible produit `VERNE-TYP-001` à la position de l'interpolation, comme pour un record non public. Ces refus interviennent avant création de la source Java, au lieu d'une erreur javac dans le code généré.
 Dans le module sans nom, seuls les paquets exportés sans restriction des modules nommés sont accessibles ; les types du chemin des classes le restent. Cette vérification utilise uniquement le modèle symbolique de javac.
 
-Les sections, conditions, boucles, opérateurs, remplacements, inclusions et formats autres que texte sont explicitement hors de cette tranche.
+Les opérateurs, choix multiples, métadonnées d'itération, remplacements et inclusions sont explicitement hors de cette tranche.
 Leur syntaxe ne doit pas être rendue silencieusement comme si elle était prise en charge.
 
 == Contrat des classes générées
@@ -266,7 +301,7 @@ Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux 
 
 === Budget de génération de la méthode de rendu
 
-Chaque gabarit accepte un coût pondéré de génération d'au plus 60 000 unités, borne incluse. Le coût est fixé pour le générateur actuel : 128 unités fixes, 12 par paramètre déclaré, 12 par fragment de texte émis (au plus 4 000 unités UTF-16, sans couper une paire de substituts), 48 par occurrence d'interpolation et 16 par accès de record dans ces occurrences. Les commentaires et déclarations ne produisent aucun fragment ; un commentaire séparant deux textes empêche leur fusion dans le générateur actuel et leurs fragments sont comptés séparément.
+Chaque gabarit accepte un coût pondéré de génération d'au plus 60 000 unités, borne incluse. Le coût est fixé pour le générateur actuel : 128 unités fixes, 12 par paramètre déclaré, 12 par fragment de texte émis (au plus 4 000 unités UTF-16, sans couper une paire de substituts), 48 par occurrence d'interpolation, 48 par ouverture de bloc `{#if}` ou `{#for}`, 8 par `{#else}` et par fermeture, et 16 par accès de record dans les interpolations et les ouvertures de blocs. Les commentaires et déclarations ne produisent aucun fragment ; un commentaire séparant deux textes empêche leur fusion dans le générateur actuel et leurs fragments sont comptés séparément.
 Ce budget prudent encadre le cumul d'opérations dans une méthode, au-delà des bornes indépendantes d'interpolations et de profondeur. Il s'agit d'unités conventionnelles, et non d'une mesure exacte des octets de bytecode ou d'une garantie sur toutes les limites de javac et de la JVM. Les pondérations devront être réexaminées avant toute modification de la forme du code généré.
 Après analyse syntaxique et déclarations, le dépassement produit `VERNE-LIM-008` à `identifiant.verne:1:1`, avant résolution des expressions et ouverture de la source Java du fichier. Le message ne contient ni expression, ni valeur source, ni chemin machine. Les autres fichiers continuent à être vérifiés dans les budgets existants ; les sources déjà produites ne sont pas retirées et la compilation entière échoue.
 Le coût est propre au fichier et calculé sans état partagé ni ressource supplémentaire. Dans la borne, le code généré et les règles de nullité, d'ordre d'évaluation et de concurrence ne changent pas. Aucun compteur ni contrôle supplémentaire n'est ajouté au rendu.
@@ -293,18 +328,23 @@ La compilation échoue dès la première erreur ; les sources déjà générées
 |`VERNE-LIM-006` |Plus de huit mébioctets lus pour les sources dans une compilation
 |`VERNE-LIM-007` |Saturation après 64 erreurs Verne détaillées ; arrêt de la vérification
 |`VERNE-LIM-008` |Coût pondéré de génération supérieur à 60 000 unités pour un gabarit
+|`VERNE-LIM-009` |Plus de 32 blocs imbriqués
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
 |`VERNE-SEC-002` |Interpolation dans un contexte HTML, XML ou JSON non pris en charge
+|`VERNE-SEC-003` |Directive de bloc hors du contenu HTML ou XML, ou dans un littéral de chaîne JSON
 |`VERNE-SYN-001` |Interpolation, déclaration ou commentaire non fermé
 |`VERNE-SYN-002` |Syntaxe, directive, identifiant ou échappement non pris en charge
 |`VERNE-SYN-003` |Séquence d'octets UTF-8 invalide
 |`VERNE-SYN-004` |Caractère interdit par XML 1.0 dans le texte d'un gabarit XML
+|`VERNE-SYN-005` |Structure de blocs invalide : `{#else}` isolé ou répété, fermeture sans ouverture ou croisée, bloc non fermé
 |`VERNE-TYP-001` |Paramètre inconnu ou propriété inaccessible
-|`VERNE-TYP-002` |Déclaration du même paramètre plusieurs fois
+|`VERNE-TYP-002` |Déclaration du même paramètre plusieurs fois, ou variable de boucle portant le nom d'un paramètre ou d'une variable englobante
 |`VERNE-TYP-003` |Type inconnu, inaccessible, non exporté vers le module compilé ou non pris en charge
 |`VERNE-TYP-004` |Résultat d'interpolation non scalaire
 |`VERNE-TYP-005` |Avertissement : gabarits en attente non vérifiés après l'interruption des tours par une erreur
-|`VERNE-REN-001` |Valeur obligatoire ou objet de navigation nul pendant le rendu
+|`VERNE-TYP-006` |Condition d'un bloc `{#if}` qui n'est ni `boolean` ni `java.lang.Boolean`
+|`VERNE-TYP-007` |Collection d'une boucle qui n'est ni un tableau ni un `java.lang.Iterable`
+|`VERNE-REN-001` |Valeur obligatoire, objet de navigation, condition `Boolean` ou collection de boucle nul pendant le rendu
 |`VERNE-REN-002` |Caractère interdit par XML 1.0 dans une valeur rendue avec le profil XML
 |`VERNE-REN-003` |Nombre infini ou `NaN` interpolé hors d'une chaîne avec le profil JSON
 |===
@@ -542,10 +582,18 @@ Les cinq bornes hautes sont inférieures à +3 % : le critère révisé est sati
 Allocations par rendu (`gc.alloc.rate.norm`, moyenne des processus, identique d'un processus à l'autre après arrondi à l'octet) : inchangées dans 12 combinaisons sur 15. La fiche JSON passe de 3 607 à 2 563 octets par rendu à 10 % et de 8 270 à 2 918 octets à 50 % : la référence construisait une chaîne `\uxxxx` à chaque contrôle échappé, et le corpus JSON contient U+0001 ; la table la précalcule. La facture XML à 0 % passe de 1 344 à 1 320 octets, écart non expliqué ; une différence d'analyse d'échappement par le compilateur à la volée est une hypothèse non vérifiée.
 Mémoire conservée, distincte des allocations par rendu : chaque classe générée garde ses tables pour toute sa durée de vie. Mesurées par `Instrumentation.getObjectSize` sur macOS aarch64, Java 25, références compressées et chaînes compactes, hors littéraux partagés et métadonnées de classe, les tables occupent 272 octets en HTML, 544 en XML (deux tables) et 1 688 en JSON, tableau de 93 références et 27 séquences `\uxxxx` calculées comprises. L'hypothèse de moins de 1 Kio par profil et par classe est donc réfutée pour JSON sur cette configuration ; le coût croît avec le nombre de classes JSON chargées, en contrepartie des allocations évitées à chaque rendu. L'inlining par le compilateur à la volée n'a pas été observé directement.
 
+== Conditions et boucles : vérification
+
+Les 62 cas de `ConditionsBouclesTest` (ticket VERNE-008) couvrent T-CTL-01 (branche choisie seule, branche non choisie non évaluée malgré une navigation nulle, `Boolean` en paramètre, imbrication), T-CTL-02 (condition chaîne, nombre, record et liste refusée par `VERNE-TYP-006` ; `Boolean` nul au rendu), T-CTL-03 (zéro, une et trois répétitions ; tableaux d'objets, de `int` et de `boolean`, liste, ensemble ordonné, joker borné), les portées de T-CTL-04 et T-CTL-07 (boucles imbriquées, nom réutilisé après fermeture, nom déjà utilisé, variable hors de sa portée), T-CTL-06 partiel (non itérable, collection nulle, élément nul utilisé ou non, itérable à parcours unique, exception de l'itérateur sans sortie partielle), vingt structures invalides, l'échappement HTML et XML dans les blocs avec relecture XML, un document JSON relu, dix directives hors du contenu refusées par `VERNE-SEC-003`, le profil texte, 32 et 33 blocs imbriqués, le budget à 60 000 et 60 008 unités, un grand document et 32 rendus concurrents.
+
+La phase rouge a été observée avant l'implémentation : 61 tests exécutés, 53 échecs, tous sur `VERNE-SYN-002` (« expression ou directive non prise en charge »), la cause attendue ; les huit réussites étaient des refus de syntaxe déjà en place. Après implémentation, deux échecs relevaient des tests eux-mêmes : un budget visé mal additionné (60 544 unités au lieu de 59 968) et une vérification d'absence de source faite après une compilation réussie dans le même répertoire. Ils ont été corrigés sans toucher au code de production. Le test du grand document a été ajouté après l'implémentation et n'a pas de phase rouge propre.
+
+Au budget maximal, avec 436 boucles naviguant chacune un élément et une condition `Boolean`, la méthode de rendu générée mesure 31 614 octets en profil HTML : les pondérations des blocs sont prudentes.
+
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 217 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné, profil par gabarit et profil JSON ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 324 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné, profil par gabarit profil JSON, échappement par table et conditions et boucles ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -555,7 +603,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 304 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 366 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -589,8 +637,9 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`ProfilParGabaritTest` |5 |0 |0 |0
 |`ProfilJsonTest` |15 |0 |0 |0
 |`EchappementExhaustifTest` |6 |0 |0 |0
+|`ConditionsBouclesTest` |62 |0 |0 |0
 |`OracleMesuresTest` (module `verne-mesures`) |39 |0 |0 |0
-|Total |304 |0 |0 |0
+|Total |366 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

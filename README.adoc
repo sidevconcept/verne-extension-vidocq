@@ -23,6 +23,7 @@ ____
 * Gabarits `.verne` en UTF-8 strict ; texte Unicode, espaces et fins de ligne conservés.
 * Paramètres obligatoires typés, interpolation de chaînes et de scalaires, navigation par composants de records publics.
 * Commentaires et échappement des délimiteurs.
+* Conditions sur une valeur booléenne avec branche alternative, et boucles sur tableaux et collections, avec variables de boucle à portée vérifiée.
 * Classes de rendu sans état partagé et sources générées déterministes, sans chemin machine ni horodatage.
 * Découverte automatique du processeur par javac, sur le chemin des processeurs ou des modules processeurs, depuis un répertoire ou un JAR.
 * Exemple Maven autonome : compilateur déclaré uniquement sur le chemin des processeurs et application modulaire sans dépendance Verne à l'exécution.
@@ -112,10 +113,10 @@ Le link:docs/fr/modules/ROOT/pages/compilateur-minimal.adoc[contrat livré] déc
 == État du projet
 
 *Version de développement : `0.4.0-SNAPSHOT`*, alignée sur celle de l'écosystème Vidocq. Le sous-ensemble texte est implémenté.
-La dernière vérification complète sur Mac réussit avec *304 tests, zéro échec, zéro erreur et zéro test ignoré*.
-Les 42 tests initiaux ont également été exécutés sur Windows ; les 262 tests supplémentaires restent à qualifier sur Windows et Linux.
+La dernière vérification complète sur Mac réussit avec *366 tests, zéro échec, zéro erreur et zéro test ignoré*.
+Les 42 tests initiaux ont également été exécutés sur Windows ; les 324 tests supplémentaires restent à qualifier sur Windows et Linux.
 
-Les conditions, boucles, inclusions, contenus déclarés fiables, rendu en flux et asynchronisme ne sont pas encore livrés.
+Les opérateurs, choix multiples, métadonnées d'itération, inclusions, contenus déclarés fiables, rendu en flux et asynchronisme ne sont pas encore livrés.
 L'intégration Vidocq et les reconstructions incrémentales restent à réaliser ou à qualifier.
 Aucune performance n'est revendiquée sans mesures reproductibles.
 Les prochaines priorités figurent dans link:docs/fr/modules/ROOT/pages/index.adoc[le dossier de conception].

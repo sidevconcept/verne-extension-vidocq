@@ -24,7 +24,8 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Le profil JSON est intégré par la PR nº 24 : **259 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Le banc de micro-mesures versionné (ticket VERNE-001) ajoute le module `verne-mesures` et 39 tests d'oracle : **298 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Les échappeurs HTML, XML et JSON par table constante (ticket VERNE-003) conservent exactement les sorties, vérifiées sur 261 unités par profil, et accélèrent le rendu échappé jusqu'à 25 %, sans perte au-delà de la marge de +3 % décidée par l'utilisateur sur les documents sans caractère spécial : **304 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 262 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Les conditions booléennes avec branche alternative et les boucles sur tableaux et collections (ticket VERNE-008) ajoutent 62 tests : **366 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 324 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -64,8 +65,8 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 - [ ] Ajouter les expressions, opérateurs, littéraux, parenthèses et accès indexés avec un typage vérifié.
 - [ ] Définir la navigation optionnelle et les valeurs de remplacement, en distinguant absence, nullité et chaîne vide.
-- [ ] Ajouter les conditions, branches alternatives et choix multiples.
-- [ ] Ajouter les boucles, variables locales, portées et métadonnées d'itération.
+- [ ] Ajouter les conditions, branches alternatives et choix multiples. Conditions sur une valeur booléenne et branche `{#else}` livrées (VERNE-008) ; restent les opérateurs, `else if` et les choix multiples.
+- [ ] Ajouter les boucles, variables locales, portées et métadonnées d'itération. Boucles sur tableaux et `Iterable` avec variable à portée vérifiée livrées (VERNE-008) ; restent les métadonnées d'itération, les tables associatives et les variables locales hors boucle.
 - [ ] Prendre en charge les tableaux, collections et tables typées nécessaires à ces capacités.
 - [ ] Ajouter les fonctions et espaces de noms explicitement déclarés, ainsi que les blocs littéraux.
 

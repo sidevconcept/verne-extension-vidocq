@@ -70,6 +70,11 @@ final class ContexteBalisage {
         };
     }
 
+    /** Vrai hors de toute balise, déclaration ou élément brut ou échappé : seul état admis pour une directive de bloc. */
+    boolean dansContenu() {
+        return etat == Etat.DONNEES;
+    }
+
     /** Vrai si l'interpolation acceptée se trouve dans une valeur d'attribut entre guillemets. */
     boolean dansAttribut() {
         return etat == Etat.VALEUR_GUILLEMETS || etat == Etat.VALEUR_APOSTROPHES;
