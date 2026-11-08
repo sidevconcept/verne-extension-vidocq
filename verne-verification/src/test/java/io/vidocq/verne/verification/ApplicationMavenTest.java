@@ -29,7 +29,8 @@ final class ApplicationMavenTest {
     /** Le compilateur et son parent sont installés dans un dépôt temporaire, hors des sorties du réacteur actif. */
     @BeforeAll @Timeout(120)
     void preparerCompilateur(@TempDir Path temporaire) throws Exception {
-        preparation = temporaire;
+        // Chemin réel : Maven compare les répertoires de -pl sans résoudre les noms courts Windows (RUNNER~1).
+        preparation = temporaire.toRealPath();
         Path depot = Files.createDirectories(preparation.resolve("depot"));
         String cache = Path.of(System.getProperty("verne.depot.maven")).toUri().toASCIIString();
         reglages = preparation.resolve("reglages.xml");
