@@ -3,7 +3,7 @@
 ** xref:matrice-fonctionnelle.adoc[Matrice fonctionnelle]
 ** xref:cas-de-test.adoc[Cas de test]
 ** xref:compilateur-minimal.adoc[Compilateur minimal]
-** xref:expressions.adoc[Contrat des expressions (proposé)]
+** xref:expressions.adoc[Contrat des expressions]
 ** xref:application-maven.adoc[Application Maven consommatrice]
 ** xref:coexistence-processeurs.adoc[Coexistence des processeurs]
 ** xref:chargement-conjoint.adoc[Chargement conjoint Maven et modules]
