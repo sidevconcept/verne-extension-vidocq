@@ -25,8 +25,8 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Le banc de micro-mesures versionné (ticket VERNE-001) ajoute le module `verne-mesures` et 39 tests d'oracle : **298 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Les échappeurs HTML, XML et JSON par table constante (ticket VERNE-003) conservent exactement les sorties, vérifiées sur 261 unités par profil, et accélèrent le rendu échappé jusqu'à 25 %, sans perte au-delà de la marge de +3 % décidée par l'utilisateur sur les documents sans caractère spécial : **304 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Les conditions booléennes avec branche alternative et les boucles sur tableaux et collections (ticket VERNE-008) ajoutent 64 tests : **368 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les expressions typées des interpolations et des conditions (ticket VERNE-009) ajoutent 90 tests : **458 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Les 42 tests initiaux ont également été exécutés sur Windows. Les 416 tests supplémentaires restent à qualifier sur Windows et Linux.
+- Les expressions typées des interpolations et des conditions (ticket VERNE-009) ajoutent 91 tests : **459 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Les 42 tests initiaux ont également été exécutés sur Windows. Les 417 tests supplémentaires restent à qualifier sur Windows et Linux.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur

@@ -190,6 +190,16 @@ class ExpressionsTest {
         assertEquals("1|0", rendre("texte", "{" + "(".repeat(32) + "1" + ")".repeat(32) + "}", ""));
     }
 
+    /** R1 de la revue : un littéral de chaîne reste sous la limite d'une constante Java, contrôlé par Verne. */
+    @Test void borneLaLongueurDesLitterauxDeChaine() throws Exception {
+        verifierRefus("texte", "§{\"" + "a".repeat(4_001) + "\"}", "VERNE-LIM-011");
+        verifierRefus("texte", "§{\"" + "a".repeat(65_536) + "\"}", "VERNE-LIM-011");
+        verifierRefus("texte", "§{\"" + "漢".repeat(4_001) + "\" == l.statut}", "VERNE-LIM-011");
+        assertEquals("a".repeat(4_000) + "|0", rendre("texte", "{\"" + "a".repeat(4_000) + "\"}", ""));
+        assertEquals("漢".repeat(4_000) + "|0", rendre("texte", "{\"" + "漢".repeat(4_000) + "\"}", ""));
+        assertEquals("🚀".repeat(2_000) + "|0", rendre("texte", "{\"" + "🚀".repeat(2_000) + "\"}", ""));
+    }
+
     @Test void echappeLesChainesEtPasLesNombresEnHtmlEtXml() throws Exception {
         assertEquals("<p title=\"true\">&lt;b&gt; 6</p><i>x</i>|0", rendre("html",
                 "<p title=\"{l.statut == \"payé\"}\">{\"<b>\"} {l.quantite * 2}</p>{#if l.quantite < 5 && l.active}<i>x</i>{/if}", ""));

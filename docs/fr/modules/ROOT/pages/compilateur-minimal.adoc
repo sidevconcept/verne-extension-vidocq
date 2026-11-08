@@ -332,6 +332,7 @@ La compilation échoue dès la première erreur ; les sources déjà générées
 |`VERNE-LIM-008` |Coût pondéré de génération supérieur à 60 000 unités pour un gabarit
 |`VERNE-LIM-009` |Plus de 32 blocs imbriqués
 |`VERNE-LIM-010` |Plus de 64 opérateurs ou de 32 niveaux de parenthèses dans une expression
+|`VERNE-LIM-011` |Littéral de chaîne d'une expression de plus de 4 000 unités UTF-16
 |`VERNE-SEC-001` |Ressource réelle située hors de la racine
 |`VERNE-SEC-002` |Interpolation dans un contexte HTML, XML ou JSON non pris en charge
 |`VERNE-SEC-003` |Directive de bloc hors du contenu HTML ou XML, ou dans un littéral de chaîne JSON
@@ -597,12 +598,12 @@ Au budget maximal, avec 436 boucles naviguant chacune un élément et une condit
 
 == Expressions : vérification
 
-La vérification des expressions (ticket VERNE-009) est décrite dans xref:expressions.adoc#_implémentation_et_vérification[le contrat des expressions] : 90 cas de `ExpressionsTest`, phase rouge observée, méthode de rendu de 17 525 octets au budget maximal et 40 sources sans expression identiques à la base.
+La vérification des expressions (ticket VERNE-009) est décrite dans xref:expressions.adoc#_implémentation_et_vérification[le contrat des expressions] : 91 cas de `ExpressionsTest`, phase rouge observée, méthode de rendu de 17 525 octets au budget maximal et 40 sources sans expression identiques à la base.
 
 == Limites de validation
 
 Les tests observés concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
-Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 416 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné, profil par gabarit profil JSON, échappement par table, conditions et boucles, et expressions ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
+Les 42 tests initiaux ont été exécutés sur les deux systèmes ; les 417 nouveaux tests de noms, racines, liens symboliques, nombre de gabarits, nombre d'interpolations, grands documents, nombre de paramètres, profondeur des navigations, volume des sources, nombre de diagnostics, budget de génération, découverte du processeur, application Maven, coexistence, chargement conjoint, origines, invalidation, paquet généré, visibilité des modules, robustesse, assemblage unique, profils HTML et XML, tampon dimensionné, profil par gabarit profil JSON, échappement par table, conditions et boucles, et expressions ont été exécutés sur Mac uniquement. Ils ne qualifient pas tous les cas de portabilité restant à écrire.
 Les essais Linux, les versions de dépendances alternatives et le raccordement sous forme d'extension restent à réaliser. Les campagnes de performances du banc indépendant ne remplacent pas ces vérifications fonctionnelles.
 Les 105 scénarios du plan initial restent un objectif plus large ; cette suite ne les remplace pas.
 Les budgets et fonctions non livrés restent visibles dans la matrice.
@@ -612,7 +613,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 458 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 459 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -647,9 +648,9 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`ProfilJsonTest` |15 |0 |0 |0
 |`EchappementExhaustifTest` |6 |0 |0 |0
 |`ConditionsBouclesTest` |64 |0 |0 |0
-|`ExpressionsTest` |90 |0 |0 |0
+|`ExpressionsTest` |91 |0 |0 |0
 |`OracleMesuresTest` (module `verne-mesures`) |39 |0 |0 |0
-|Total |458 |0 |0 |0
+|Total |459 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

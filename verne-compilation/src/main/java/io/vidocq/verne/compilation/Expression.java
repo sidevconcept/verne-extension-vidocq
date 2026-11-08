@@ -9,6 +9,7 @@ import java.math.BigInteger;
 sealed interface Expression {
     int OPERATEURS_MAXIMAUX = 64;
     int PARENTHESES_MAXIMALES = 32;
+    int LONGUEUR_MAXIMALE_CHAINE = 4_000;
 
     /** Littéral déjà validé ; java est sa forme source Java, sans signe. */
     record Litteral(Sorte sorte, String java) implements Expression {}
@@ -231,6 +232,10 @@ sealed interface Expression {
                 } else {
                     valeur.append(caractere);
                 }
+            }
+            // Même borne que les fragments statiques : la constante Java reste sous 65 535 octets, quel que soit l'encodage.
+            if (valeur.length() > LONGUEUR_MAXIMALE_CHAINE) {
+                throw new Invalide("VERNE-LIM-011", "littéral de chaîne de plus de 4 000 unités UTF-16.");
             }
             return new Litteral(Sorte.CHAINE, "\"" + ProcesseurVerne.echapper(valeur.toString()) + "\"");
         }
