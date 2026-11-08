@@ -44,11 +44,16 @@ final class CompilateurGabarit {
     private final ArrayDeque<Variable> locales = new ArrayDeque<>();
     private String texte;
     private String identifiant;
+    /** Vrai si la classe générée appelle l'arithmétique entière contrôlée. */
+    private boolean arithmetique;
 
     /** Le type symbolique est conservé pour vérifier chaque navigation avant génération. */
     private record Parametre(String nom, TypeMirror type) {}
-    /** Texte, interpolation ou directive de bloc ; contenu porte le chemin d'un bloc, variable le nom d'une boucle. */
-    private record Partie(String contenu, Genre genre, int position, String variable) {
+    /**
+     * Texte, interpolation ou directive de bloc ; contenu porte le texte de l'expression ou le chemin d'une boucle,
+     * variable le nom d'une boucle, expression l'arbre d'une interpolation ou d'une condition.
+     */
+    private record Partie(String contenu, Genre genre, int position, String variable, Expression expression) {
         boolean interpolation() {
             return genre == Genre.INTERPOLATION;
         }
@@ -61,6 +66,20 @@ final class CompilateurGabarit {
     private record Variable(String nom, String java, TypeMirror type) {}
     /** Expression Java d'un chemin navigué et son type final. */
     private record Chemin(String expression, TypeMirror type) {}
+    /** Valeur typée d'une sous-expression : code Java déjà contrôlé non nul et déballé, et sa catégorie. */
+    private record Valeur(String code, Categorie categorie) {}
+    /** Catégories du contrat des expressions ; les numériques sont rangés par ordre de promotion. */
+    private enum Categorie {
+        INT("nombre"), LONG("nombre"), FLOAT("nombre"), DOUBLE("nombre"), BOOLEEN("booléen"), CARACTERE("caractère"),
+        CHAINE("chaîne"), AUTRE("objet");
+        private final String nom;
+        Categorie(String nom) {
+            this.nom = nom;
+        }
+        boolean numerique() {
+            return compareTo(DOUBLE) <= 0;
+        }
+    }
     /** Expression Java d'une interpolation ; texte vaut vrai pour une chaîne ou un char, seuls échappés. */
     private record Resolution(String expression, boolean texte, boolean primitif, boolean flottant) {}
 
@@ -96,6 +115,7 @@ final class CompilateurGabarit {
             var emplacements = verifierContextes().iterator();
             boolean echappement = false;
             boolean nombreFini = false;
+            arithmetique = false;
             var instructions = new ArrayList<String>();
             var valeurs = new ArrayList<String>();
             var elements = new ArrayList<String>();
@@ -207,6 +227,7 @@ final class CompilateurGabarit {
                     });
                 }
                 if (nombreFini) sortie.write(NOMBRE_FINI_JSON);
+                if (arithmetique) sortie.write(ARITHMETIQUE_EXACTE);
                 sortie.write("}\n");
             }
         } catch (Refus refus) {
@@ -220,7 +241,9 @@ final class CompilateurGabarit {
     private void verifierBudgetGeneration() {
         long cout = 128 + 12L * parametres.size();
         for (Partie partie : parties) {
-            if (partie.interpolation() || partie.genre() == Genre.SI || partie.genre() == Genre.POUR) {
+            if (partie.interpolation() || partie.genre() == Genre.SI) {
+                cout += 48 + Expression.cout(partie.expression());
+            } else if (partie.genre() == Genre.POUR) {
                 cout += 48 + 16L * partie.contenu().chars()
                         .filter(caractere -> caractere == '.').count();
             } else if (partie.bloc()) {
@@ -529,6 +552,68 @@ final class CompilateurGabarit {
             }
             """;
 
+    /** Arithmétique entière du contrat : dépassement, division ou reste par zéro lèvent VERNE-REN-004. */
+    private static final String ARITHMETIQUE_EXACTE = """
+            private static java.lang.ArithmeticException depassement() {
+            return new java.lang.ArithmeticException("VERNE-REN-004 : dépassement de capacité entier ou division entière par zéro.");
+            }
+            private static int ajouter(int a, int b) {
+            int r = a + b;
+            if (((a ^ r) & (b ^ r)) < 0) throw depassement();
+            return r;
+            }
+            private static long ajouter(long a, long b) {
+            long r = a + b;
+            if (((a ^ r) & (b ^ r)) < 0) throw depassement();
+            return r;
+            }
+            private static int soustraire(int a, int b) {
+            int r = a - b;
+            if (((a ^ b) & (a ^ r)) < 0) throw depassement();
+            return r;
+            }
+            private static long soustraire(long a, long b) {
+            long r = a - b;
+            if (((a ^ b) & (a ^ r)) < 0) throw depassement();
+            return r;
+            }
+            private static int multiplier(int a, int b) {
+            long r = (long) a * b;
+            if ((int) r != r) throw depassement();
+            return (int) r;
+            }
+            private static long multiplier(long a, long b) {
+            long haut = java.lang.Math.multiplyHigh(a, b);
+            long r = a * b;
+            if (haut != (r >> 63)) throw depassement();
+            return r;
+            }
+            private static int diviser(int a, int b) {
+            if (b == 0 || a == java.lang.Integer.MIN_VALUE && b == -1) throw depassement();
+            return a / b;
+            }
+            private static long diviser(long a, long b) {
+            if (b == 0 || a == java.lang.Long.MIN_VALUE && b == -1) throw depassement();
+            return a / b;
+            }
+            private static int reste(int a, int b) {
+            if (b == 0) throw depassement();
+            return a % b;
+            }
+            private static long reste(long a, long b) {
+            if (b == 0) throw depassement();
+            return a % b;
+            }
+            private static int moins(int a) {
+            if (a == java.lang.Integer.MIN_VALUE) throw depassement();
+            return -a;
+            }
+            private static long moins(long a) {
+            if (a == java.lang.Long.MIN_VALUE) throw depassement();
+            return -a;
+            }
+            """;
+
     /** Hors d'un littéral JSON, un nombre infini ou NaN produirait un document invalide. */
     private static final String NOMBRE_FINI_JSON = """
             private static double fini(double valeur) {
@@ -569,21 +654,18 @@ final class CompilateurGabarit {
                     if (fin < 0) throw refus("VERNE-SYN-001", position, "commentaire non fermé.");
                     position = fin + 2;
                 } else {
-                    int fin = texte.indexOf('}', position + 1);
+                    int fin = finDirective(position);
                     if (fin < 0) throw refus("VERNE-SYN-001", position, "interpolation ou déclaration non fermée.");
                     String contenu = texte.substring(position + 1, fin).trim();
                     if (contenu.startsWith("@")) declarer(contenu.substring(1), position);
                     else if (contenu.startsWith("#") || contenu.startsWith("/")) {
                         analyserBloc(contenu, position, ouverts, alternatives);
                     } else {
-                        if (!nomQualifie(contenu)) {
-                            throw refus("VERNE-SYN-002", position, "expression ou directive non prise en charge.");
-                        }
+                        Expression expression = expression(contenu, position);
                         if (++nombreInterpolations > NOMBRE_MAXIMAL_INTERPOLATIONS) {
                             throw refus("VERNE-LIM-003", position, "plus de 1 024 interpolations dans un gabarit.");
                         }
-                        verifierProfondeur(contenu, position);
-                        parties.add(new Partie(contenu, Genre.INTERPOLATION, position, null));
+                        parties.add(new Partie(contenu, Genre.INTERPOLATION, position, null, expression));
                     }
                     position = fin + 1;
                 }
@@ -601,11 +683,12 @@ final class CompilateurGabarit {
         String[] mots = contenu.substring(1).trim().split("\\s+");
         String mot = contenu.charAt(0) + mots[0];
         Partie partie;
-        if (mot.equals("#if") && mots.length == 2 && nomQualifie(mots[1])) {
-            partie = new Partie(mots[1], Genre.SI, position, null);
+        if (mot.equals("#if") && mots.length >= 2) {
+            String source = contenu.substring(1).trim().substring(2).trim();
+            partie = new Partie(source, Genre.SI, position, null, expression(source, position));
         } else if (mot.equals("#for") && mots.length == 4 && nomSimple(mots[1]) && mots[2].equals("in")
                 && nomQualifie(mots[3])) {
-            partie = new Partie(mots[3], Genre.POUR, position, mots[1]);
+            partie = new Partie(mots[3], Genre.POUR, position, mots[1], null);
         } else if (mots.length == 1 && (mot.equals("#else") || mot.equals("/if") || mot.equals("/for"))) {
             Genre attendu = mot.equals("/for") ? Genre.POUR : Genre.SI;
             if (ouverts.isEmpty() || ouverts.peek().genre() != attendu || mot.equals("#else") && alternatives.peek()) {
@@ -615,11 +698,11 @@ final class CompilateurGabarit {
             if (mot.equals("#else")) {
                 alternatives.pop();
                 alternatives.push(true);
-                parties.add(new Partie("", Genre.SINON, position, null));
+                parties.add(new Partie("", Genre.SINON, position, null, null));
             } else {
                 ouverts.pop();
                 alternatives.pop();
-                parties.add(new Partie("", attendu == Genre.POUR ? Genre.FIN_POUR : Genre.FIN_SI, position, null));
+                parties.add(new Partie("", attendu == Genre.POUR ? Genre.FIN_POUR : Genre.FIN_SI, position, null, null));
             }
             return;
         } else {
@@ -628,10 +711,51 @@ final class CompilateurGabarit {
         if (ouverts.size() >= PROFONDEUR_MAXIMALE_BLOCS) {
             throw refus("VERNE-LIM-009", position, "plus de 32 blocs imbriqués.");
         }
-        verifierProfondeur(partie.contenu(), position);
+        if (partie.genre() == Genre.POUR) verifierProfondeur(partie.contenu(), position);
         ouverts.push(partie);
         alternatives.push(false);
         parties.add(partie);
+    }
+
+    /** Première accolade fermante hors d'un littéral de chaîne, ou -1. */
+    private int finDirective(int position) {
+        boolean chaine = false;
+        for (int index = position + 1; index < texte.length(); index++) {
+            char caractere = texte.charAt(index);
+            if (chaine) {
+                if (caractere == '\\') index++;
+                else if (caractere == '"') chaine = false;
+            } else if (caractere == '"') {
+                chaine = true;
+            } else if (caractere == '}') {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    /** Analyse syntaxique bornée, puis profondeur de chaque chemin. */
+    private Expression expression(String source, int position) {
+        Expression expression;
+        try {
+            expression = Expression.analyser(source);
+        } catch (Expression.Invalide invalide) {
+            throw refus(invalide.code, position, invalide.getMessage());
+        }
+        verifierChemins(expression, position);
+        return expression;
+    }
+
+    private void verifierChemins(Expression expression, int position) {
+        switch (expression) {
+            case Expression.Chemin chemin -> verifierProfondeur(chemin.texte(), position);
+            case Expression.Unaire unaire -> verifierChemins(unaire.operande(), position);
+            case Expression.Binaire binaire -> {
+                verifierChemins(binaire.gauche(), position);
+                verifierChemins(binaire.droite(), position);
+            }
+            case Expression.Litteral litteral -> { }
+        }
     }
 
     private void verifierProfondeur(String chemin, int position) {
@@ -642,7 +766,15 @@ final class CompilateurGabarit {
 
     /** Condition stricte : boolean, ou Boolean contrôlé non nul ; aucune conversion depuis un autre type. */
     private String condition(Partie partie) {
-        Chemin chemin = naviguer(partie);
+        if (!(partie.expression() instanceof Expression.Chemin seul)) {
+            Valeur valeur = typer(partie.expression(), partie.position());
+            if (valeur.categorie() != Categorie.BOOLEEN) {
+                throw refus("VERNE-TYP-006", partie.position(), "la condition doit être de type boolean ou java.lang.Boolean.");
+            }
+            return valeur.code();
+        }
+        // Chemin seul, éventuellement entre parenthèses : génération inchangée.
+        Chemin chemin = naviguer(seul.texte(), partie.position());
         if (chemin.type().getKind() == TypeKind.BOOLEAN) return chemin.expression();
         var booleen = environnement.getElementUtils().getTypeElement("java.lang.Boolean").asType();
         if (!environnement.getTypeUtils().isSameType(chemin.type(), booleen)) {
@@ -706,7 +838,7 @@ final class CompilateurGabarit {
     /** Vide le tampon sans modifier les espaces ou fins de ligne qui l'entourent. */
     private void vider(StringBuilder fragment) {
         if (!fragment.isEmpty()) {
-            parties.add(new Partie(fragment.toString(), Genre.TEXTE, 0, null));
+            parties.add(new Partie(fragment.toString(), Genre.TEXTE, 0, null, null));
             fragment.setLength(0);
         }
     }
@@ -732,11 +864,28 @@ final class CompilateurGabarit {
         parametres.put(morceaux[1], new Parametre(morceaux[1], type.asType()));
     }
 
-    /** Vérifie le type scalaire final d'un chemin interpolé. */
+    /** Vérifie le type scalaire final d'un chemin interpolé, ou type l'expression interpolée. */
     private Resolution resoudre(Partie partie) {
-        Chemin chemin = naviguer(partie);
+        if (!(partie.expression() instanceof Expression.Chemin seul)) {
+            Valeur valeur = typer(partie.expression(), partie.position());
+            Categorie categorie = valeur.categorie();
+            if (categorie == Categorie.AUTRE) {
+                throw refus("VERNE-TYP-004", partie.position(), "la valeur interpolée doit être une chaîne ou un scalaire primitif.");
+            }
+            return new Resolution(valeur.code(), categorie == Categorie.CHAINE || categorie == Categorie.CARACTERE,
+                    categorie != Categorie.CHAINE, categorie == Categorie.DOUBLE || categorie == Categorie.FLOAT);
+        }
+        // Chemin seul, éventuellement entre parenthèses : génération inchangée.
+        Chemin chemin = naviguer(seul.texte(), partie.position());
         TypeMirror type = chemin.type();
         String expression = chemin.expression();
+        TypeMirror deballe = deballer(type);
+        if (deballe != null) {
+            // Enveloppe de primitif (D-006d) : contrôlée non nulle puis rendue comme son primitif.
+            return new Resolution("((" + deballe + ") requireNonNull(" + expression
+                    + ", \"VERNE-REN-001 : valeur interpolée nulle.\"))", deballe.getKind() == TypeKind.CHAR, true,
+                    deballe.getKind() == TypeKind.DOUBLE || deballe.getKind() == TypeKind.FLOAT);
+        }
         var chaine = environnement.getElementUtils().getTypeElement("java.lang.String").asType();
         if (!type.getKind().isPrimitive() && !environnement.getTypeUtils().isSameType(type, chaine)) {
             throw refus("VERNE-TYP-004", partie.position(), "la valeur interpolée doit être une chaîne ou un scalaire primitif.");
@@ -750,27 +899,31 @@ final class CompilateurGabarit {
 
     /** Part d'une variable de boucle visible ou d'un paramètre, puis résout seulement les composants déclarés des records. */
     private Chemin naviguer(Partie partie) {
-        String[] chemin = partie.contenu().split("\\.");
+        return naviguer(partie.contenu(), partie.position());
+    }
+
+    private Chemin naviguer(String texteChemin, int position) {
+        String[] chemin = texteChemin.split("\\.");
         var depart = locales.stream().filter(variable -> variable.nom().equals(chemin[0])).findFirst()
                 .orElseGet(() -> {
                     Parametre parametre = parametres.get(chemin[0]);
                     return parametre == null ? null : new Variable(parametre.nom(), parametre.nom(), parametre.type());
                 });
-        if (depart == null) throw refus("VERNE-TYP-001", partie.position(), "paramètre inconnu.");
+        if (depart == null) throw refus("VERNE-TYP-001", position, "paramètre inconnu.");
         TypeMirror type = depart.type();
         String expression = depart.java();
         for (int index = 1; index < chemin.length; index++) {
-            if (type.getKind() == TypeKind.ERROR) throw attendreType(partie.position());
+            if (type.getKind() == TypeKind.ERROR) throw attendreType(position);
             if (!(type instanceof DeclaredType declare)
                     || !(declare.asElement() instanceof TypeElement element)
                     || element.getKind() != ElementKind.RECORD || !visibilite.accessible(element)) {
-                throw refus("VERNE-TYP-001", partie.position(), "propriété inconnue ou inaccessible.");
+                throw refus("VERNE-TYP-001", position, "propriété inconnue ou inaccessible.");
             }
             String nom = chemin[index];
             var composant = element.getRecordComponents().stream()
                     .filter(candidat -> candidat.getSimpleName().contentEquals(nom)).findFirst()
                     .filter(candidat -> candidat.getAccessor().getModifiers().contains(Modifier.PUBLIC))
-                    .orElseThrow(() -> refus("VERNE-TYP-001", partie.position(), "propriété inconnue ou inaccessible."));
+                    .orElseThrow(() -> refus("VERNE-TYP-001", position, "propriété inconnue ou inaccessible."));
             // Un composant générique peut donner un joker : sa borne supérieure est le type navigué.
             type = borne(((ExecutableType) environnement.getTypeUtils().asMemberOf(
                     declare, composant.getAccessor())).getReturnType());
@@ -778,8 +931,131 @@ final class CompilateurGabarit {
             expression = "requireNonNull(" + expression
                     + ", \"VERNE-REN-001 : objet de navigation nul.\")." + nom + "()";
         }
-        if (type.getKind() == TypeKind.ERROR) throw attendreType(partie.position());
+        if (type.getKind() == TypeKind.ERROR) throw attendreType(position);
         return new Chemin(expression, type);
+    }
+
+    /** Type primitif d'une enveloppe (Integer, Boolean…), ou null pour tout autre type. */
+    private TypeMirror deballer(TypeMirror type) {
+        if (type.getKind() != TypeKind.DECLARED) return null;
+        try {
+            return environnement.getTypeUtils().unboxedType(type);
+        } catch (IllegalArgumentException autre) {
+            return null;
+        }
+    }
+
+    /**
+     * Type une sous-expression selon le contrat : opérandes évalués de gauche à droite, chaque référence contrôlée non
+     * nulle au moment de son évaluation, arithmétique entière contrôlée, aucune conversion hors de la promotion de Java.
+     */
+    private Valeur typer(Expression expression, int position) {
+        return switch (expression) {
+            case Expression.Litteral litteral -> new Valeur(litteral.java(), switch (litteral.sorte()) {
+                case INT -> Categorie.INT;
+                case LONG -> Categorie.LONG;
+                case DOUBLE -> Categorie.DOUBLE;
+                case CHAINE -> Categorie.CHAINE;
+                case BOOLEEN -> Categorie.BOOLEEN;
+            });
+            case Expression.Chemin chemin -> operande(naviguer(chemin.texte(), position));
+            case Expression.Unaire unaire -> {
+                Valeur operande = typer(unaire.operande(), position);
+                if (unaire.operateur().equals("!") && operande.categorie() == Categorie.BOOLEEN) {
+                    yield new Valeur("(!" + operande.code() + ")", Categorie.BOOLEEN);
+                }
+                if (unaire.operateur().equals("-") && operande.categorie().numerique()) {
+                    if (operande.categorie().compareTo(Categorie.LONG) <= 0) {
+                        arithmetique = true;
+                        yield new Valeur("moins(" + operande.code() + ")", operande.categorie());
+                    }
+                    yield new Valeur("(-" + operande.code() + ")", operande.categorie());
+                }
+                throw inapplicable(unaire.operateur(), position, operande.categorie(), null);
+            }
+            case Expression.Binaire binaire -> binaire(binaire, position);
+        };
+    }
+
+    private Valeur binaire(Expression.Binaire binaire, int position) {
+        Valeur gauche = typer(binaire.gauche(), position);
+        Valeur droite = typer(binaire.droite(), position);
+        Categorie a = gauche.categorie();
+        Categorie b = droite.categorie();
+        String operateur = binaire.operateur();
+        boolean numeriques = a.numerique() && b.numerique();
+        Categorie promue = a.compareTo(b) >= 0 ? a : b;
+        switch (operateur) {
+            case "+", "-", "*", "/", "%" -> {
+                if (numeriques) {
+                    if (promue.compareTo(Categorie.LONG) <= 0) {
+                        arithmetique = true;
+                        String methode = switch (operateur) {
+                            case "+" -> "ajouter";
+                            case "-" -> "soustraire";
+                            case "*" -> "multiplier";
+                            case "/" -> "diviser";
+                            default -> "reste";
+                        };
+                        return new Valeur(methode + "(" + gauche.code() + ", " + droite.code() + ")", promue);
+                    }
+                    return new Valeur("(" + gauche.code() + " " + operateur + " " + droite.code() + ")", promue);
+                }
+                if (operateur.equals("+") && (a == Categorie.CHAINE || b == Categorie.CHAINE)) {
+                    throw refus("VERNE-TYP-008", position,
+                            "concaténation non prise en charge : juxtaposer les interpolations, par exemple {a}{b}.");
+                }
+            }
+            case "<", "<=", ">", ">=" -> {
+                if (numeriques) return new Valeur("(" + gauche.code() + " " + operateur + " " + droite.code() + ")", Categorie.BOOLEEN);
+            }
+            case "==", "!=" -> {
+                if (a == Categorie.CHAINE && b == Categorie.CHAINE) {
+                    String egal = gauche.code() + ".equals(" + droite.code() + ")";
+                    return new Valeur(operateur.equals("==") ? egal : "(!" + egal + ")", Categorie.BOOLEEN);
+                }
+                if (numeriques || a == b && (a == Categorie.BOOLEEN || a == Categorie.CARACTERE)) {
+                    return new Valeur("(" + gauche.code() + " " + operateur + " " + droite.code() + ")", Categorie.BOOLEEN);
+                }
+            }
+            default -> {
+                if (a == Categorie.BOOLEEN && b == Categorie.BOOLEEN) {
+                    return new Valeur("(" + gauche.code() + " " + operateur + " " + droite.code() + ")", Categorie.BOOLEEN);
+                }
+            }
+        }
+        throw inapplicable(operateur, position, a, b);
+    }
+
+    /** Opérande issu d'un chemin : primitif tel quel, enveloppe déballée et chaîne contrôlées non nulles. */
+    private Valeur operande(Chemin chemin) {
+        TypeMirror type = chemin.type();
+        String code = chemin.expression();
+        TypeMirror primitif = type.getKind().isPrimitive() ? type : deballer(type);
+        if (primitif != null) {
+            if (primitif != type) {
+                code = "((" + primitif + ") requireNonNull(" + code + ", \"VERNE-REN-001 : valeur nulle dans une expression.\"))";
+            }
+            return new Valeur(code, switch (primitif.getKind()) {
+                case BOOLEAN -> Categorie.BOOLEEN;
+                case CHAR -> Categorie.CARACTERE;
+                case LONG -> Categorie.LONG;
+                case FLOAT -> Categorie.FLOAT;
+                case DOUBLE -> Categorie.DOUBLE;
+                default -> Categorie.INT;
+            });
+        }
+        var chaine = environnement.getElementUtils().getTypeElement("java.lang.String").asType();
+        if (environnement.getTypeUtils().isSameType(type, chaine)) {
+            return new Valeur("requireNonNull(" + code + ", \"VERNE-REN-001 : chaîne nulle dans une expression.\")",
+                    Categorie.CHAINE);
+        }
+        return new Valeur(code, Categorie.AUTRE);
+    }
+
+    private Refus inapplicable(String operateur, int position, Categorie a, Categorie b) {
+        return refus("VERNE-TYP-008", position, "opérateur " + operateur + " inapplicable à : " + a.nom
+                + (b == null ? "" : " et " + b.nom) + ".");
     }
 
     /** Les origines standard permettent à l'outillage de relier une sortie à ses modèles Java. */

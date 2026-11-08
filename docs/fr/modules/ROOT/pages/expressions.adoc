@@ -2,7 +2,7 @@
 :lang: fr
 :toc:
 
-État : contrat proposé par le ticket VERNE-006 (nº 31), non implémenté. Il fixe la grammaire, la précédence, le typage, l'évaluation, les diagnostics et les limites des expressions avant toute implémentation. Le comportement livré reste celui du link:compilateur-minimal.adoc[contrat du compilateur] tant qu'un ticket d'implémentation n'a pas été intégré.
+État : contrat établi par le ticket VERNE-006 (nº 31) et implémenté par le ticket VERNE-009 (nº 42). Il fixe la grammaire, la précédence, le typage, l'évaluation, les diagnostics et les limites des expressions. Le link:compilateur-minimal.adoc[contrat du compilateur] y renvoie pour les interpolations et les conditions.
 
 == Portée
 
@@ -22,6 +22,7 @@ Il exclut l'accès indexé (`liste[0]`), la navigation optionnelle et les valeur
 |D-006d |Interpolation étendue aux enveloppes de primitives (`Integer`, `Long`, `Boolean`, `Character`, etc.) ; `BigDecimal`, dates, énumérations et autres objets restent refusés jusqu'aux formats et à la localisation. |Utilisateur, 8 novembre 2026
 |D-006e |Dépassement de capacité entier et division entière par zéro : échec du rendu par `VERNE-REN-004`, jamais de résultat tronqué. |Utilisateur, 8 novembre 2026
 |D-006f |Opérateurs écrits avec les symboles de Java (`&&`, `\|\|`, `!`, `==`…), cohérents avec les mots-clés anglais des blocs. |Proposition de l'auteur, confirmée par l'utilisateur le 8 novembre 2026
+|D-006g |`{!` ouvre toujours un commentaire ; une négation en tête d'interpolation s'écrit `{(!x)}`. |Précision de l'auteur pendant l'implémentation (VERNE-009), à confirmer à la relecture
 |===
 
 == Grammaire
@@ -51,6 +52,10 @@ chaine         = '"' , { caractere-de-chaine | "\" , ( '"' | "\" | "n" | "t" | "
 Les comparaisons et les égalités ne s'enchaînent pas : `a < b < c` et `a == b == c` sont refusés par `VERNE-SYN-002`. Des parenthèses rendent l'intention explicite : `(a == b) == c`.
 
 Une directive se termine à la première accolade fermante située hors d'un littéral de chaîne : `{#if c.statut == "}"}` est une seule directive. Une chaîne non fermée produit `VERNE-SYN-001`, comme une directive non fermée.
+
+Un chemin s'écrit sans espace autour de ses points : `l.quantite`, pas `l . quantite`.
+
+`{!` ouvre toujours un commentaire, fermé par `!}`, comme dans le contrat livré. Une interpolation qui commence par une négation s'écrit donc entre parenthèses, `{(!l.active)}` ; `{!l.active}` est un commentaire non fermé (`VERNE-SYN-001`). Une condition `{#if !l.active}` n'est pas concernée. Cette précision (D-006g) a été établie pendant l'implémentation pour conserver la compatibilité des commentaires.
 
 === Précédence
 
@@ -154,6 +159,14 @@ L'égalité de deux chaînes compare leur contenu, jamais leur identité. Elle n
 |===
 
 Les diagnostics de compilation pointent le délimiteur ouvrant de la directive, comme aujourd'hui.
+
+== Implémentation et vérification
+
+Le ticket VERNE-009 (nº 42) implémente ce contrat : une analyse descendante récursive bornée (`Expression`) produit un arbre purement syntaxique ; le compilateur le type et génère du Java. Un chemin seul, éventuellement entre parenthèses, garde exactement la génération antérieure. L'arithmétique entière appelle des méthodes privées générées seulement si nécessaire (`ajouter`, `soustraire`, `multiplier`, `diviser`, `reste`, `moins`, en `int` et en `long`), qui lèvent `VERNE-REN-004`.
+
+Les 90 cas de `ExpressionsTest` reprennent T-EXP-01 et T-EXP-03 ci-dessous, les limites de 64 opérateurs et 32 parenthèses, la syntaxe des commentaires devant une négation, les profils HTML, XML et JSON, le budget à 60 000 et 60 032 unités et 32 rendus concurrents. La phase rouge a été observée avant l'implémentation : 89 tests exécutés, 66 échecs, sur `VERNE-SYN-002` (expressions non reconnues) et `VERNE-TYP-004` (enveloppes refusées). Elle a révélé le conflit avec la syntaxe des commentaires (D-006g). Après implémentation, trois échecs relevaient des tests eux-mêmes (une négation écrite `{!…}` et deux contrôles d'absence de source après une compilation réussie dans le même répertoire) et ont été corrigés sans toucher au code de production.
+
+Au budget maximal, composé de 393 interpolations `{l.quantite * l.quantite + 1}`, la méthode de rendu générée mesure 17 525 octets en profil HTML : les pondérations sont prudentes. Quarante sources générées sans expression, dans les quatre profils, avec 0, 3 999, 4 000 et 70 000 caractères de texte statique, avec et sans blocs, sont identiques octet par octet à celles de la base `931739b`.
 
 == Compatibilité et sécurité
 
