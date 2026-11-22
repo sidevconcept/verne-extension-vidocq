@@ -28,7 +28,8 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - Les expressions typées des interpolations et des conditions (ticket VERNE-009) ajoutent 91 tests : **459 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - La qualification des positions des diagnostics (ticket VERNE-004) ajoute 6 tests : **465 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
 - Les racines multiples et le refus des noms réservés de Windows (ticket VERNE-010) ajoutent 10 tests : **475 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
-- Depuis le ticket VERNE-005, l'intégration continue de la forge exécute la suite complète sur Linux, Windows et macOS : 475 tests, zéro échec et zéro erreur sur chacun ; le seul test ignoré, sous Windows, exige des permissions POSIX.
+- La qualification du budget de génération face aux limites de javac (ticket VERNE-011) ajoute 4 tests : **479 tests réussissent sur Mac**, sans échec, erreur ni test ignoré.
+- Depuis le ticket VERNE-005, l'intégration continue de la forge exécute la suite complète sur Linux, Windows et macOS : 479 tests, zéro échec et zéro erreur sur chacun ; le seul test ignoré, sous Windows, exige des permissions POSIX.
 - Le banc indépendant dispose de mesures de performances ; elles ne qualifient pas les fonctionnalités restant à développer.
 
 ## 1. Publier la découverte automatique du processeur
@@ -61,7 +62,7 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 - [ ] Rattacher les erreurs du Java généré aux identifiants et positions des gabarits.
 - [x] Diagnostics de gabarit pendant la construction : format relatif `identifiant.verne:ligne:colonne` conservé par la décision D-002 (VERNE-002) et positions qualifiées (VERNE-004) ; le chemin absolu cliquable et l'extrait de ligne sont reportés en évolution future, non planifiée.
 - [ ] Étudier puis, si faisable, créer un greffon IntelliJ pour les fichiers `.verne` : type de fichier et coloration, erreurs soulignées à leur position, navigation vers les types et membres Java référencés, complétion. Vérifier d'abord la réutilisation de l'analyse de `verne-compilation` hors de javac sans dupliquer la grammaire, l'isolement des dépendances du SDK IntelliJ hors du moteur, ainsi que le mode de distribution.
-- [ ] Compléter la qualification du budget de génération et des limites restantes de javac.
+- [x] Compléter la qualification du budget de génération et des limites restantes de javac : pire cas à 49 053 octets sur 65 535 avec sauts longs, pool de constantes et variables locales mesurés (VERNE-011).
 - [ ] Compléter les règles de nommage portable, les racines multiples et les collisions entre fournisseurs. Racines multiples et noms réservés de Windows livrés (VERNE-010) ; les sous-répertoires restent hors du paquet (D-010b) ; restent les collisions entre fournisseurs, qui attendent les fournisseurs de gabarits (F-21).
 
 ## 4. Compléter le langage
@@ -123,4 +124,4 @@ Ce document sert au suivi. Les contrats de référence restent dans [docs/fr](do
 
 ## Prochaine priorité
 
-Poursuivre la section 3 : qualification du budget de génération et des limites de javac, puis raccordement de l'invalidation sélective et qualification des IDE. Le rattachement des erreurs du Java généré (T-DIA-02) est reporté sur décision de l'utilisateur. Les bibliothèques de processeurs tierces restent une qualification distincte.
+Poursuivre la section 3 : raccordement de l'invalidation sélective et qualification des IDE. Le rattachement des erreurs du Java généré (T-DIA-02) est reporté sur décision de l'utilisateur. Les bibliothèques de processeurs tierces restent une qualification distincte.
