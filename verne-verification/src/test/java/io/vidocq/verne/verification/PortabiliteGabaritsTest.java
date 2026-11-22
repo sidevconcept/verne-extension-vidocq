@@ -35,6 +35,33 @@ class PortabiliteGabaritsTest {
                 () -> assertEquals("café / cafe\u0301s", execution.sortie()));
     }
 
+    /** D-010c : noms de périphériques réservés par Windows ; le refus vaut sur tous les systèmes. */
+    @Test void refuseLesNomsReservesDeWindowsSansTenirCompteDeLaCasse() throws Exception {
+        var noms = java.util.List.of("con.verne", "PRN.verne", "Aux.html.verne", "nul.json.verne",
+                "conin$.verne", "CONOUT$.verne", "com0.verne", "COM9.verne", "lpt1.xml.verne", "Lpt9.verne");
+        var gabarits = new java.util.HashMap<String, String>();
+        for (String nom : noms) gabarits.put("reserves/" + nom, "{inconnu}");
+        var compilation = BancCompilation.compiler(repertoire, gabarits, BancCompilation.application("\"témoin\""), true);
+        assertFalse(compilation.reussie(), compilation.diagnostics());
+        for (String nom : noms) {
+            assertTrue(compilation.diagnostics().contains("VERNE-LIA-001 : reserves/" + nom
+                    + ":1:1 : nom réservé par Windows."), compilation.diagnostics());
+        }
+        assertFalse(compilation.diagnostics().contains("VERNE-TYP-001"), "Un nom réservé ne doit pas être lu");
+    }
+
+    @Test void accepteLesNomsVoisinsDesNomsReserves() throws Exception {
+        var compilation = BancCompilation.compiler(repertoire,
+                Map.of("console.verne", "a", "com10.verne", "b", "nulle.verne", "c", "lpt.verne", "d", "conin.verne", "e"),
+                BancCompilation.application("exemple.gabarits.Console.rendre() + exemple.gabarits.Com10.rendre()"
+                        + " + exemple.gabarits.Nulle.rendre() + exemple.gabarits.Lpt.rendre()"
+                        + " + exemple.gabarits.Conin.rendre()"), true);
+        assertTrue(compilation.reussie(), compilation.diagnostics());
+        var execution = BancCompilation.executer(compilation);
+        assertAll(() -> assertEquals(0, execution.codeSortie(), execution.erreurs()),
+                () -> assertEquals("abcde", execution.sortie()));
+    }
+
     private void refuserCollision(String premier, String second) throws Exception {
         var compilation = BancCompilation.compiler(repertoire,
                 Map.of("premier/" + premier + ".verne", "un", "second/" + second + ".verne", "deux"),

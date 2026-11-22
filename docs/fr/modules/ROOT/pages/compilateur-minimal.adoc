@@ -54,9 +54,22 @@ Deux modules chargés ensemble doivent déclarer des paquets distincts, car la p
 Les sous-répertoires de la racine ne participent pas encore au paquet. Verne ne vérifie pas qu'une classe applicative du même nom existe déjà dans ce paquet ; une création impossible relève de `VERNE-IO-001` ou du diagnostic de javac.
 Les essais de liens symboliques sur plusieurs systèmes restent à compléter.
 
+=== Racines multiples
+
+`verne.racine.gabarits` accepte une ou plusieurs racines, séparées par le séparateur de chemins du système qui exécute javac : `:` sous Linux et macOS, `;` sous Windows, comme un chemin des classes (décision D-010a du ticket VERNE-010). Avec Maven, `${path.separator}` l'écrit de façon portable.
+
+* Les racines sont parcourues dans l'ordre déclaré ; dans chaque racine, l'ordre déterministe des fichiers est conservé.
+* L'identifiant d'un gabarit reste relatif à sa racine, sans mention de celle-ci.
+* Un même identifiant présent dans deux racines est refusé par `VERNE-LIA-001` à `identifiant.verne:1:1` sur l'occurrence de la racine déclarée plus tard, sans priorité implicite ni masquage ; ce fichier n'est ni lu ni généré.
+* Les collisions de noms de classe décrites dans link:#_encodage_et_noms[Encodage et noms] s'appliquent à l'ensemble des racines : la ressource refusée est la seconde dans l'ordre déclaré des racines, puis des fichiers.
+* Un segment vide (option vide, séparateur initial, final ou doublé), une racine déclarée deux fois ou une racine contenue dans une autre, comparées par leur chemin réel, produisent `VERNE-CFG-001` sans lecture d'aucun gabarit : un fichier n'a ainsi jamais deux identifiants.
+* Chaque racine obéit aux règles ci-dessous et définit sa propre frontière : un lien d'une racine vers un fichier d'une autre racine reste refusé par `VERNE-SEC-001`.
+* Le nombre de ressources et le budget cumulé de lecture portent sur l'ensemble des racines de l'invocation.
+* Une racine unique conserve exactement le comportement antérieur.
+
 === Racine et liens symboliques
 
-La racine déclarée doit résoudre un répertoire existant : une cible existante qui n'est pas un répertoire produit `VERNE-CFG-001` ; une racine introuvable ou impossible à résoudre produit `VERNE-IO-001`.
+Chaque racine déclarée doit résoudre un répertoire existant : une cible existante qui n'est pas un répertoire produit `VERNE-CFG-001` ; une racine introuvable ou impossible à résoudre produit `VERNE-IO-001`.
 Un lien symbolique utilisé comme racine est accepté et sa cible réelle définit la frontière autorisée.
 Un lien de fichier `.verne` est accepté si sa cible réelle reste sous cette frontière ; son nom logique détermine la classe générée. Une cible externe est refusée avec `VERNE-SEC-001` avant lecture de son contenu.
 Un lien de fichier `.verne` cassé ou impossible à résoudre produit `VERNE-IO-001`, avec son identifiant relatif et la position `1:1` ; les autres ressources continuent à être vérifiées et la compilation entière échoue.
@@ -67,7 +80,7 @@ Les parcours et flux sont fermés à la fin de leur utilisation ; aucun état ni
 
 === Nombre de ressources
 
-Une compilation accepte de zéro à 1 024 ressources `.verne`, borne incluse. Cette première borne fixe limite l'inventaire conservé en mémoire ; elle ne constitue ni une mesure de performance ni un budget mémoire global.
+Une compilation accepte de zéro à 1 024 ressources `.verne`, borne incluse, toutes racines confondues. Cette première borne fixe limite l'inventaire conservé en mémoire ; elle ne constitue ni une mesure de performance ni un budget mémoire global.
 Les fichiers ordinaires sélectionnés, liens de fichiers et liens cassés sont comptés ; les répertoires et les liens vers des répertoires ne le sont pas.
 À la 1 025e ressource sélectionnée, l'inventaire s'arrête et la compilation produit `VERNE-LIM-002`, sans chemin machine ni contenu source. Aucun gabarit n'est lu, analysé ou généré dans cette invocation.
 Dans la borne, le tri et les diagnostics existants sont conservés. Le compteur et la liste appartiennent à l'invocation du processeur ; aucun état partagé ni ressource persistante n'est ajouté et le parcours est fermé, y compris au refus.
@@ -75,7 +88,7 @@ Cette borne ne limite pas le nombre de répertoires ou de fichiers non sélectio
 
 === Budget cumulé de lecture des sources
 
-Une invocation du processeur accepte au plus 8 mébioctets, soit 8 388 608 octets lus pour les sources `.verne`, borne incluse. Le budget porte sur les octets UTF-8, avant décodage et retrait des commentaires ; il ne borne ni la taille des documents rendus ni toute la mémoire du compilateur Java.
+Une invocation du processeur accepte au plus 8 mébioctets, soit 8 388 608 octets lus pour les sources `.verne` de toutes ses racines, borne incluse. Le budget porte sur les octets UTF-8, avant décodage et retrait des commentaires ; il ne borne ni la taille des documents rendus ni toute la mémoire du compilateur Java.
 Les ressources sont lues dans l'ordre déterministe de l'inventaire, après les contrôles de cible autorisée et de nom. Chaque lecture consomme le budget, y compris celle d'un fichier ensuite refusé pour encodage, syntaxe ou taille individuelle ; l'octet de sondage de dépassement individuel est compté. Plusieurs noms logiques visant le même fichier sont comptés séparément. Les ressources rejetées avant lecture ne consomment pas ce budget.
 La lecture de chaque fichier s'arrête au premier octet au-delà de la plus petite des deux bornes restantes : un mébioctet pour le fichier et le budget cumulé disponible. Au premier dépassement cumulé, `VERNE-LIM-006` désigne la ressource à `1:1`, sans chemin machine ni contenu source. Le traitement s'arrête avant décodage, analyse et génération de ce fichier et des suivants ; les sources déjà générées ne sont pas retirées et la compilation entière échoue. Si les deux bornes sont franchies par le même octet, la limite cumulée est prioritaire ; sinon `VERNE-LIM-001` conserve son rôle pour un dépassement individuel.
 Un fichier vide reste accepté lorsque le budget est exactement atteint. Le compteur appartient à l'invocation, sans état partagé entre compilations, y compris concurrentes. Les flux sont fermés avant tout refus ; les entrées doivent rester stables pendant la compilation. Aucun nouveau contrôle n'est ajouté au rendu.
@@ -90,13 +103,13 @@ Cette limite concerne les octets sources, et non le nombre de caractères ou la 
 Le nom simple du fichier, normalisé en NFC et privé de son éventuel suffixe de profil, détermine la classe, en mettant sa première lettre en majuscule : avec `-Averne.paquet=exemple.gabarits`, `bonjour.verne` et `bonjour.html.verne` produisent `exemple.gabarits.Bonjour`.
 Le suffixe de profil est le dernier segment avant `.verne`, séparé par un point : `texte`, `html`, `xml` ou `json`, en minuscules. Tout autre suffixe, comme `yaml` ou `HTML`, produit `VERNE-LIA-001` à `identifiant.verne:1:1`, sans lecture du fichier ; les autres ressources continuent à être vérifiées. Deux fichiers qui ne diffèrent que par leur suffixe produisent la même classe et sont refusés comme collision.
 Un même nom écrit en NFC ou en NFD, selon le système de fichiers ou l'outil qui l'a créé, produit donc la même classe, utilisable depuis des sources Java écrites en NFC.
-Les répertoires ne participent pas encore au nom de classe : deux ressources de même nom simple sont donc refusées, même dans des sous-répertoires différents.
+Les répertoires ne participent pas au nom de classe ni au paquet (décision D-010b) : ils servent seulement à ranger les gabarits, et deux ressources de même nom simple sont refusées, même dans des sous-répertoires ou des racines différents.
 Le nom doit être un identifiant Java admissible.
+Il ne doit pas non plus être un nom de périphérique réservé par Windows, sans tenir compte de la casse : `CON`, `PRN`, `AUX`, `NUL`, `CONIN$`, `CONOUT$`, `COM0` à `COM9` et `LPT0` à `LPT9`. Windows réserve ces noms de périphériques ; selon la version et l'outil, un fichier `Con.java` ou `Con.class` y est refusé ou désigne le périphérique, alors que les versions récentes acceptent certains de ces noms suivis d'une extension (le Windows Server 2025 de la forge crée bien `con.verne`). Pour ne pas dépendre de ces variations, ces noms sont refusés sur tous les systèmes par `VERNE-LIA-001` à `identifiant.verne:1:1`, sans lecture du fichier, pour qu'un projet construit sous Linux ou macOS construise aussi sous Windows (décision D-010c). Les noms voisins, comme `console`, `com10` ou `nulle`, restent admis.
 Pour détecter les collisions, le nom de classe est normalisé en NFC, converti en minuscules avec `Locale.ROOT`, puis normalisé à nouveau en NFC. Deux noms donnant la même clé sont refusés avec `VERNE-LIA-001`, indépendamment de la langue du poste.
 Cette clé ne modifie ni la casse de la classe générée ni les données du document. Les équivalences de compatibilité Unicode ne sont pas fusionnées ; cette règle ne prétend pas reproduire tous les systèmes de fichiers.
 Le diagnostic porte l'identifiant relatif et la position `1:1` de la seconde ressource dans l'ordre de parcours ; le fichier en collision n'est ni lu ni généré. La compilation entière échoue, même si le programme ne référence aucun de ces gabarits.
 La table des noms reste locale à l'invocation du processeur ; aucun état partagé, accès réflexif ou ressource supplémentaire à fermer n'est introduit.
-Les autres règles de nommage portable restent à préciser avant généralisation.
 Les sources générées ne contiennent ni horodatage, ni chemin absolu.
 Une création ou une écriture de source Java impossible, par exemple un type déjà produit par un autre processeur, produit `VERNE-IO-001` à `identifiant.verne:1:1` ; les ressources suivantes continuent à être vérifiées et la compilation échoue.
 
@@ -613,6 +626,12 @@ La qualification des positions (ticket VERNE-004, T-DIA-01) vérifie la règle c
 
 Le comportement existait : les six cas ont réussi sur la base `68c01d2` sans modification du compilateur, il n'y a donc pas de phase rouge de code. Leur capacité à détecter un écart a été contrôlée en décalant chaque colonne attendue d'une unité : les six cas ont alors échoué, et les diagnostics observés étaient exactement ceux attendus ci-dessus.
 
+== Racines multiples et noms réservés : vérification
+
+La tranche du ticket VERNE-010 complète T-COM-03 selon les décisions D-010a à D-010c. Les huit cas de `RacinesMultiplesTest` couvrent la compilation et le rendu de gabarits de deux racines, un même identifiant dans deux racines (un seul diagnostic, sur la seconde), une collision de classe entre racines dans les deux ordres de déclaration, quatre segments vides, une racine en double, imbriquée ou englobante, un lien d'une racine vers une autre, et le partage entre racines de la borne de 1 024 ressources et du budget de 8 Mio. Deux cas de `PortabiliteGabaritsTest` refusent dix noms réservés de Windows, avec casses et suffixes de profil variés, sans les lire, et acceptent cinq noms voisins.
+
+Phase rouge observée avant implémentation : les huit cas de racines multiples échouaient, l'option étant lue comme un chemin unique (`VERNE-IO-001`) ; les noms réservés étaient acceptés puis lus (`VERNE-TYP-001`). Le cas des noms voisins réussissait déjà. Aucun test existant n'est modifié.
+
 == Limites de validation
 
 Historique local : les campagnes antérieures concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
@@ -627,7 +646,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 465 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 475 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -637,7 +656,7 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`CompilationGabaritsTest` |7 |0 |0 |0
 |`RenduGabaritsTest` |10 |0 |0 |0
 |`CasLimitesCompilationTest` |21 |0 |0 |0
-|`PortabiliteGabaritsTest` |4 |0 |0 |0
+|`PortabiliteGabaritsTest` |6 |0 |0 |0
 |`RacinesEtLiensGabaritsTest` |9 |0 |0 |0
 |`NombreGabaritsTest` |4 |0 |0 |0
 |`NombreInterpolationsTest` |5 |0 |0 |0
@@ -664,8 +683,9 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`ConditionsBouclesTest` |64 |0 |0 |0
 |`ExpressionsTest` |91 |0 |0 |0
 |`PositionsDiagnosticsTest` |6 |0 |0 |0
+|`RacinesMultiplesTest` |8 |0 |0 |0
 |`OracleMesuresTest` (module `verne-mesures`) |39 |0 |0 |0
-|Total |465 |0 |0 |0
+|Total |475 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.

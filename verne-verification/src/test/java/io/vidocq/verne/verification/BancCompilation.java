@@ -76,6 +76,24 @@ final class BancCompilation {
                                 Map<String, String> sources, boolean avecVerne,
                                 Path racineDeclaree, List<String> chargementProcesseur,
                                 Iterable<? extends javax.annotation.processing.Processor> processeurs) throws IOException {
+        return compilerAvecRacines(racine, gabarits, sources, avecVerne, racineDeclaree.toString(),
+                chargementProcesseur, processeurs);
+    }
+
+    /**
+     * La déclaration brute de verne.racine.gabarits, éventuellement une liste séparée par File.pathSeparator :
+     * elle ne passe pas par Path, qui refuserait le séparateur sous Windows.
+     */
+    static Compilation compilerAvecRacines(Path racine, Map<String, String> gabarits,
+                                           Map<String, String> sources, String racinesDeclarees) throws IOException {
+        return compilerAvecRacines(racine, gabarits, sources, true, racinesDeclarees, chargementVerne(), null);
+    }
+
+    private static Compilation compilerAvecRacines(Path racine, Map<String, String> gabarits,
+                                                   Map<String, String> sources, boolean avecVerne,
+                                                   String racineDeclaree, List<String> chargementProcesseur,
+                                                   Iterable<? extends javax.annotation.processing.Processor> processeurs)
+            throws IOException {
         Path repertoireJava = Files.createDirectories(racine.resolve("java"));
         Path repertoireGabarits = Files.createDirectories(racine.resolve("gabarits"));
         Path classes = Files.createDirectories(racine.resolve("classes"));
