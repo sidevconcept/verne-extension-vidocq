@@ -317,7 +317,7 @@ Le diagnostic ne contient ni donnée du document ni chemin machine ; aucun flux 
 === Budget de génération de la méthode de rendu
 
 Chaque gabarit accepte un coût pondéré de génération d'au plus 60 000 unités, borne incluse. Le coût est fixé pour le générateur actuel : 128 unités fixes, 12 par paramètre déclaré, 12 par fragment de texte émis (au plus 4 000 unités UTF-16, sans couper une paire de substituts), 48 par occurrence d'interpolation, 48 par ouverture de bloc `{#if}` ou `{#for}`, 8 par `{#else}` et par fermeture, 16 par accès de record dans les interpolations et les ouvertures de blocs, et, dans les expressions, 16 par chemin au-delà du premier, 24 par opérateur et 8 par littéral. Les commentaires et déclarations ne produisent aucun fragment ; un commentaire séparant deux textes empêche leur fusion dans le générateur actuel et leurs fragments sont comptés séparément.
-Ce budget prudent encadre le cumul d'opérations dans une méthode, au-delà des bornes indépendantes d'interpolations et de profondeur. Il s'agit d'unités conventionnelles, et non d'une mesure exacte des octets de bytecode ou d'une garantie sur toutes les limites de javac et de la JVM. Les pondérations devront être réexaminées avant toute modification de la forme du code généré.
+Ce budget prudent encadre le cumul d'opérations dans une méthode, au-delà des bornes indépendantes d'interpolations et de profondeur. Il s'agit d'unités conventionnelles, et non d'une mesure exacte des octets de bytecode. Leur marge face à la taille de méthode, au mode des sauts longs, au pool de constantes et aux variables locales est qualifiée par le ticket VERNE-011 (voir link:#_budget_de_génération_et_limites_de_javac_vérification[sa vérification]) ; les pondérations devront être réexaminées, et ces mesures refaites, avant toute modification de la forme du code généré.
 Après analyse syntaxique et déclarations, le dépassement produit `VERNE-LIM-008` à `identifiant.verne:1:1`, avant résolution des expressions et ouverture de la source Java du fichier. Le message ne contient ni expression, ni valeur source, ni chemin machine. Les autres fichiers continuent à être vérifiés dans les budgets existants ; les sources déjà produites ne sont pas retirées et la compilation entière échoue.
 Le coût est propre au fichier et calculé sans état partagé ni ressource supplémentaire. Dans la borne, le code généré et les règles de nullité, d'ordre d'évaluation et de concurrence ne changent pas. Aucun compteur ni contrôle supplémentaire n'est ajouté au rendu.
 
@@ -632,6 +632,28 @@ La tranche du ticket VERNE-010 complète T-COM-03 selon les décisions D-010a à
 
 Phase rouge observée avant implémentation : les huit cas de racines multiples échouaient, l'option étant lue comme un chemin unique (`VERNE-IO-001`) ; les noms réservés étaient acceptés puis lus (`VERNE-TYP-001`). Le cas des noms voisins réussissait déjà. Aucun test existant n'est modifié.
 
+== Budget de génération et limites de javac : vérification
+
+La qualification du ticket VERNE-011 mesure, avec l'API `java.lang.classfile` du JDK 25, les octets de la méthode `rendre` par unité de budget pour chaque construction, par différence entre n et 2n répétitions d'un motif :
+
+[cols="3,1",options="header"]
+|===
+|Construction |Octets par unité
+|32 `{#for}` imbriqués |0,720
+|navigation de 32 accès |0,675
+|`{#for}` sur une `List` / sur un tableau |0,667 / 0,625
+|interpolation `String` en texte, HTML, XML ou JSON |0,56 à 0,59
+|interpolation `Integer`, `Boolean` ou `Double` en JSON |0,52 à 0,56
+|opérateur arithmétique, de comparaison ou logique |0,41 à 0,56
+|`{#if}` et `{#else}` |0,30 à 0,41
+|===
+
+Quand un bloc englobe plus de 32 Kio de code, javac élargit les sauts de toute la méthode (`goto_w`), ce qui augmente sa taille d'environ 14 à 23 % selon les constructions. Le pire cas observé, 830 boucles vides dans une boucle englobante à 59 984 unités, produit une méthode de 49 053 octets, soit 0,82 octet par unité et 16 482 octets de marge sous la limite de 65 535 octets de la JVM (25 %). Les pondérations actuelles restent donc prudentes ; elles ne sont pas modifiées.
+
+Les quatre cas de `LimitesJavacTest` conservent ces pires cas : 830 boucles dans une boucle englobante et 26 séries de 31 boucles imbriquées dans une condition englobante, chacune compilée, rendue et contrôlée en présence de `goto_w` et sous 60 000 octets (49 053 et 47 514 octets observés) ; 4 989 fragments distincts au budget, qui occupent 10 003 entrées du pool de constantes sur 65 535 ; 255 paramètres et 31 boucles imbriquées, qui occupent 318 variables locales. La pile maximale observée dans l'exploration est de 6. La longueur des constantes de chaîne reste bornée par les fragments de 4 000 unités et par `VERNE-LIM-011`.
+
+Il n'y a pas de phase rouge de code : le comportement existait. La détection des sauts longs a été contrôlée en réduisant la boucle à 300 itérations : la méthode, de 15 676 octets, n'en contient pas et le test échoue. Les mesures brutes de l'exploration sont archivées hors du dépôt.
+
 == Limites de validation
 
 Historique local : les campagnes antérieures concernent Windows 11 amd64 avec OpenJDK 25.0.1, et macOS 26.6.2 aarch64 avec Temurin 25.0.1+8 ; les deux utilisent Maven 3.9.16.
@@ -646,7 +668,7 @@ Les budgets et fonctions non livrés restent visibles dans la matrice.
 La commande `.\mvnw.cmd clean verify` réussit après suppression des résultats précédents.
 Le 18 octobre 2026, `./mvnw clean verify` réussit également sur Mac avec `BUILD SUCCESS`, après ajout des tests de noms, racines, liens symboliques, nombre de gabarits et nombre d'interpolations ; les rapports Surefire XML ont été contrôlés.
 Les six contrôles des grands documents complètent cette vérification : budget d'allocations d'un rendu Unicode de 64 Kio, accesseurs évalués une fois avec collisions de noms, primitives et valeur dépassant le texte statique, nullité, 32 rendus concurrents et compilation à la limite de 1 024 interpolations. Le test de budget a d'abord échoué avec 639 552 octets par rendu avant préallocation ; il réussit après l'optimisation, sans seuil de durée.
-Résultat sur Mac : 475 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
+Résultat sur Mac : 479 tests exécutés, zéro échec, zéro erreur, zéro test ignoré ; les archives de compilation et de vérification sont construites. La vérification Windows antérieure portait sur les 42 tests initiaux.
 Le journal de la vérification Windows était `target/verification-propre.log` ; les rapports détaillés sont recréés dans `verne-verification/target/surefire-reports` et restent exclus de Git.
 
 [cols="3,1,1,1,1",options="header"]
@@ -683,9 +705,10 @@ Le journal de la vérification Windows était `target/verification-propre.log` ;
 |`ConditionsBouclesTest` |64 |0 |0 |0
 |`ExpressionsTest` |91 |0 |0 |0
 |`PositionsDiagnosticsTest` |6 |0 |0 |0
+|`LimitesJavacTest` |4 |0 |0 |0
 |`RacinesMultiplesTest` |8 |0 |0 |0
 |`OracleMesuresTest` (module `verne-mesures`) |39 |0 |0 |0
-|Total |475 |0 |0 |0
+|Total |479 |0 |0 |0
 |===
 
 Les link:dependances-recompilation.adoc[origines Java des gabarits générés] sont désormais transmises au Filer. Ce préalable à l’invalidation sélective ne modifie pas les sources générées et conserve le nettoyage des exemples Maven.
