@@ -1,5 +1,6 @@
 package io.vidocq.verne.compilation;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -37,6 +38,14 @@ public final class ProcesseurVerne extends AbstractProcessor {
     private static final int VOLUME_MAXIMAL_SOURCES = 8 * 1_048_576;
     private static final int NOMBRE_MAXIMAL_GABARITS = 1_024;
     private static final int NOMBRE_MAXIMAL_DIAGNOSTICS = 64;
+
+    /** Noms de périphériques que Windows refuse comme nom de fichier, même suivis d'une extension (D-010c). */
+    private static final Set<String> NOMS_RESERVES_WINDOWS = Set.of("con", "prn", "aux", "nul", "conin$", "conout$",
+            "com0", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
+            "lpt0", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9");
+
+    /** Une ressource inventoriée et la racine qui définit son identifiant et sa frontière. */
+    private record Ressource(Path racine, Path fichier) {}
 
     private record GabaritEnAttente(String classe, String texte, String identifiant, Profil profil, String diagnostic) {}
 
@@ -88,27 +97,54 @@ public final class ProcesseurVerne extends AbstractProcessor {
                 return false;
             }
             visibilite = new VisibiliteModules(processingEnv.getElementUtils(), moduleCourant(tour));
-            Path racine = Path.of(racineDeclaree).toRealPath();
-            if (!Files.isDirectory(racine)) {
-                erreur("VERNE-CFG-001", "la racine des gabarits doit être un répertoire.");
-                return false;
+            String[] segments = racineDeclaree.split(java.util.regex.Pattern.quote(File.pathSeparator), -1);
+            var racines = new ArrayList<Path>();
+            for (String segment : segments) {
+                if (segment.isEmpty()) {
+                    erreur("VERNE-CFG-001", "déclarer des racines de gabarits non vides.");
+                    return false;
+                }
             }
-            List<Path> fichiers;
-            try (var parcours = Files.walk(racine)) {
-                fichiers = parcours.filter(chemin -> chemin.toString().endsWith(".verne"))
-                        .filter(chemin -> Files.isRegularFile(chemin)
-                                || (Files.isSymbolicLink(chemin) && !Files.exists(chemin)))
-                        .limit(NOMBRE_MAXIMAL_GABARITS + 1L).sorted().toList();
+            for (String segment : segments) {
+                Path racine = Path.of(segment).toRealPath();
+                if (!Files.isDirectory(racine)) {
+                    erreur("VERNE-CFG-001", "la racine des gabarits doit être un répertoire.");
+                    return false;
+                }
+                for (Path autre : racines) {
+                    if (racine.startsWith(autre) || autre.startsWith(racine)) {
+                        erreur("VERNE-CFG-001", "racines de gabarits déclarées en double ou imbriquées.");
+                        return false;
+                    }
+                }
+                racines.add(racine);
             }
-            if (fichiers.size() > NOMBRE_MAXIMAL_GABARITS) {
-                erreur("VERNE-LIM-002", "plus de 1 024 ressources de gabarits dans une compilation.");
-                return false;
+            var ressources = new ArrayList<Ressource>();
+            for (Path racine : racines) {
+                try (var parcours = Files.walk(racine)) {
+                    parcours.filter(chemin -> chemin.toString().endsWith(".verne"))
+                            .filter(chemin -> Files.isRegularFile(chemin)
+                                    || (Files.isSymbolicLink(chemin) && !Files.exists(chemin)))
+                            .limit(NOMBRE_MAXIMAL_GABARITS + 1L - ressources.size()).sorted()
+                            .forEach(fichier -> ressources.add(new Ressource(racine, fichier)));
+                }
+                if (ressources.size() > NOMBRE_MAXIMAL_GABARITS) {
+                    erreur("VERNE-LIM-002", "plus de 1 024 ressources de gabarits dans une compilation.");
+                    return false;
+                }
             }
+            var identifiants = new HashSet<String>();
             var noms = new HashSet<String>();
             int volumeLu = 0;
-            for (Path fichier : fichiers) {
+            for (Ressource ressource : ressources) {
                 if (diagnosticsSatures) break;
+                Path racine = ressource.racine();
+                Path fichier = ressource.fichier();
                 String identifiant = racine.relativize(fichier).toString().replace('\\', '/');
+                if (!identifiants.add(Normalizer.normalize(identifiant, Normalizer.Form.NFC))) {
+                    erreur("VERNE-LIA-001", identifiant + ":1:1 : identifiant déjà fourni par une racine précédente.");
+                    continue;
+                }
                 Path cible;
                 try {
                     cible = fichier.toRealPath();
@@ -134,6 +170,10 @@ public final class ProcesseurVerne extends AbstractProcessor {
                 }
                 if (!SourceVersion.isIdentifier(base) || SourceVersion.isKeyword(base)) {
                     erreur("VERNE-LIA-001", identifiant + ":1:1 : nom de gabarit incompatible avec une classe Java.");
+                    continue;
+                }
+                if (NOMS_RESERVES_WINDOWS.contains(base.toLowerCase(Locale.ROOT))) {
+                    erreur("VERNE-LIA-001", identifiant + ":1:1 : nom réservé par Windows.");
                     continue;
                 }
                 String classe = Character.toUpperCase(base.charAt(0)) + base.substring(1);
