@@ -98,16 +98,16 @@ class RacinesMultiplesTest {
             if (!declarees.isEmpty()) declarees.append(File.pathSeparator);
             declarees.append(racine(base, racine));
         }
-        return BancCompilation.compiler(base, gabarits, BancCompilation.application(expression), true,
-                Path.of(declarees.toString()));
+        return BancCompilation.compilerAvecRacines(base, gabarits, BancCompilation.application(expression),
+                declarees.toString());
     }
 
     /** Prépare les racines premiere et seconde, puis vérifie le refus de configuration sans lecture. */
     private void refuserConfiguration(String nom, String declaration) throws Exception {
         Path base = repertoire.resolve("configuration-" + nom);
-        var compilation = BancCompilation.compiler(base,
+        var compilation = BancCompilation.compilerAvecRacines(base,
                 Map.of("premiere/sous/invalide.verne", "{inconnu}", "seconde/invalide.verne", "{inconnu}"),
-                BancCompilation.application("\"témoin\""), true, Path.of(declaration));
+                BancCompilation.application("\"témoin\""), declaration);
         refuser(compilation, "VERNE-CFG-001");
         assertFalse(compilation.diagnostics().contains("VERNE-TYP-001"), compilation.diagnostics());
     }

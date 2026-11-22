@@ -35,7 +35,7 @@ class PortabiliteGabaritsTest {
                 () -> assertEquals("café / cafe\u0301s", execution.sortie()));
     }
 
-    /** D-010c : Windows ne peut créer ni Con.java ni Con.class ; le refus vaut sur tous les systèmes. */
+    /** D-010c : noms de périphériques réservés par Windows ; le refus vaut sur tous les systèmes. */
     @Test void refuseLesNomsReservesDeWindowsSansTenirCompteDeLaCasse() throws Exception {
         var noms = java.util.List.of("con.verne", "PRN.verne", "Aux.html.verne", "nul.json.verne",
                 "conin$.verne", "CONOUT$.verne", "com0.verne", "COM9.verne", "lpt1.xml.verne", "Lpt9.verne");
